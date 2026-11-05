@@ -97,6 +97,16 @@ this storage-free selection has no Store keys consumer. Use the
 for its exact staging delta, receiver, one-shot boot and restore
 prerequisites; the document grants no physical or live-service authority.
 
+**Read-only core boot medium (merged 2026-10-29).** Aienux
+[#461](https://github.com/aien-dev/aienux/pull/461) landed as
+[`f9147df9`](https://github.com/aien-dev/aienux/commit/f9147df97e684fc8b6d4678ee34215f32b927a4b):
+`tools/spark-image/spark-image.om` is a seeded-Omega GPT/FAT32 writer for `BOOTAA64.EFI`. This
+is packaging; the C/assembly kernel is unchanged. Read-only by construction means the core-only
+link (source `659ddd2d`). Never use the full legacy device stage, which runs `ck_disk_rw_probe`
+before Store refusal. QEMU with fresh AAVMF, a read-only ESP and read-only NVMe was EXERCISED; its
+NVMe trace shows read commands only. Physical qualification is NOT_RUN, and the merge grants no
+boot or hardware authority.
+
 ### Runtime and learning
 
 - [aien-sovereign-core-mv](https://github.com/aien-dev/aien-sovereign-core-mv): host runtime, `aien` CLI, inference ABI, scheduling/KV state and verification tooling. Product source and gate manifests determine implementation; installed service state requires separate evidence.
