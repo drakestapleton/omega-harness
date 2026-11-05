@@ -1318,6 +1318,324 @@ omega MCP pin `2c824805…`, lack both.
   - Host words and `global` need program mode: without `fn main` the unit compiles in function mode
     and every host word is error 9 with an empty output file, which reads like a broken pin.
 
+## 9a. GPU kernels written in `.om` (GB10 sm_121, raw driver)
+
+Observed 2026-11-02 to 2026-11-04 while building the Omega LLM GPU training path in aien-dev/aien-train
+[#56](https://github.com/aien-dev/aien-train/pull/56) (head `4e0039070cce87802654a74b869288159ce94f5d`;
+merged `e186ea29`): rungs 4 and 5 at `d6ff5f5`, `geval` and the
+Kahan CE sum at `154fd8c`, kernel round k1 (one-warp softmax, split-K weight gradients, `gprof`) at
+`ed2e1925d7a838995582131196b60cbfda1b666b`, k2 (64×64 GEMM tile) at
+`ea0f078ed8bec21f9a50cccaf85a7cba11bc3a34`, k3 (warp-per-row RMS norm) at
+`1d241c38d213c8921d24ab970c7260aaf93c5a36`, k4 (warp-per-row cross-entropy) at
+`9a5225a4bbc4df0ee19d4cc416ebe72db5c518b0`, k5 (causal attention GEMMs) at
+`f84a657246e80686302f534017540fee68e85171`, k6 (causal predicated softmax loads and stores) at
+`8dff0ba1d249583c1a9f00e6f47b2dc3d80c3c9a` (evidence crumb `af29657423dc548a40a9e685484cf95a1ccc0e7e`,
+README fix `099fa9e68e94516404486c2c3ef27956149e249b`), k7 (FFMA operand reuse plus an accumulator
+remap) at `d3d4551d2c3726e3927c9cf0a95b8091e11919f7`, k7b (remap removed) at
+`574e78afaa80976538c8f08cf1a2ddbf8e5a36c2`, k8 (pipelined 64×64 GEMM, per-kernel shared-memory
+TARGET, GPR guard) at `c05b89f7e08ea8d2c3717a500fc3e17af8e30a9d`, k9 (ReLU fused into the FFN GEMM
+epilogues) at `1575dc866bb556c8b6b605044e5bd43d17c3f2a0`, rung 6 (30000 steps, evidence
+`0d744749465cf31c5220ac0eaad26462a993b0e4`); rung 7 (v2 shape D 384, F 1536, #57, head
+`43f374a6042769a3d853d9b953dbe4d86348b01b`) at
+`b312942460bc81ef590a92fde8f23a298e119916` (files `native/omegallm/gpu/gk.om`,
+`gr.om`, `gg.om`), the BF16 path (#58, head `cb556468380944f4aa1a9a5da389f4ad193f4154`) at
+`a82fc1a11f01031162fd305e9ce6158afb760eb6` (adds `gb.om`), rung 8 (60000-step schedule, #59, head
+`7baaf8b4bda00a4394f1f094aece5ce7b3b6ed5c`, evidence only) at
+`2d19e6fec5b12930e17d6ad6ddbb038263732c5b`, v3 (L ≤ 16, banked storage, #60, head
+`b92c96b627f33beadd69dc2d8f70833e973a377f`), rung 9 (first long BF16 run, #61, head
+`fcf6cdedec3024806a82f40e977c1d1389d684a4`, evidence only) at
+`687bbcb82aa0bf03e9d3fa71447ce544909f642c`, and rung 10 (BF16 on the 60000-step schedule, #62, head
+`3ed47a0503f15cdff38ad911eeddb13cf13b4c32`, evidence only) at
+`6929722a36023f0c807d8b05945e845bbe88534e`; every cited commit is an ancestor of its PR head. All
+merged on aien-train main (checked with `gh pr view` 2026-11-04): #56 `e186ea29`, #57 `16e9932e`,
+#58 `4461e3fa`, #59 `24d21497`, #60 `a9c720db`, #61 `930ae21c`, #62 `56cc8870` (main head). The
+best trained model is rung 10's BF16 v2 checkpoint (P 15,833,472, T 256, held-out `E 60000 2243
+1204466`). The Omega LLM is the planned model for `:18091` (Linear P-DRA-7), not served yet: its
+only inference path is the CPU command `ollm sample`, and no HTTP server exists. Compiled with omc `2c824805…` (omega-mv
+`e5b32567`). The device words come from the vendored CUDApp `context.om`/`vector.om`/`launch.om`
+(`dcba8bb8`). Status EXERCISED on one GB10, non-quiet windows; not QUALIFIED. These are pin-specific
+facts, not rules of the language.
+
+- The kernels are instruction words that the program emits itself: `.om` code writes 16-byte SASS
+  words into a code slot, then launches them through a QMD. Verify every new instruction encoding
+  with nvdisasm (CUDA 13.0, `nvdisasm -b SM121`) as a read-only oracle. A slot dumped whole ends in
+  zero bytes that disassemble as illegal instructions. Trim trailing zero bytes to a 16-byte
+  multiple first (`tests/omegallm/gpu-disasm.sh`).
+- `LDC.64` loads a 64-bit constant-bank value and needs an 8-byte aligned offset. A pointer
+  argument must start at an even 32-bit argument slot (`gr.om` `grptr`: pointer i sits in slots
+  i+1, i+2), with the argument area laid out so slot pairs start 8-byte aligned.
+- Allocate GPU-uncached any memory that the CPU writes or polls (pushbuffer, constant bank, QMD,
+  completion marks, code). When cached, a release sat in L2 for about 1.06 s (recorded in the
+  `gk.om` note at lines 1023-1026 at `1575dc8`, the 1.06 s on line 1024). The data arena can stay
+  cached, provided the host invalidates it after host writes and every launch ends with
+  `L2_FLUSH_DIRTY` before the CPU reads results.
+- Output buffered in the program (`oputu`/`oputc`, flushed by `oflush` in aien-train `lio.om`)
+  is lost on `exit` or `trap` unless it is flushed first. Call `oflush` before every diagnostic
+  `exit N` (`gg.om` `ggdie`), or the failure prints nothing.
+- Host loops over parameter-sized arrays need chunking. A `for` with a computed bound gets the
+  1000000-pass guard (section 8), and P = 7409920 parameters exceed it (trap 4, exit 104). Loop over
+  chunks of at most 999999 elements (`gg.om` `ggupc`, `OCH`).
+- Host glue around launches needs many values at once (pointer halves, grid sizes, argument
+  counts), and each live name takes a register from the 16-register pool (section 6). Pass launch
+  arguments through a small global (`gkarg`) and split pointers in a helper (`ggpt`), so callers
+  stay inside the pool.
+- For f32 Adam on chip, use `sqrt(v) + eps` followed by a reciprocal (`MUFU.SQRT`, then `MUFU.RCP`,
+  `gr.om` `gradam`). Avoid `v · rsqrt(v)`, because v = 0 occurs for parameters with zero gradient
+  and 0 · inf is NaN.
+- Gate f32 chip numerics against the f64 CPU reference with a tolerance derived from the summation
+  length, not a fixed constant. The gradient gate uses relative error < R·2^-24 for a reduction
+  over R rows. A fixed tolerance of 1e-4 failed at 1.61e-4 on the night shape. The maximum came
+  from ReLU units whose pre-activation lies within f32 resolution of zero. Both sides are valid
+  subgradients, and forcing the CPU onto the chip's side gave 7.1e-5 (aien-train
+  `evidence/OMEGALLM/gpu/README.md`, `probe/`). Never loosen the gate to make it pass; explain the
+  maximum.
+- A mutant must be able to change the observed value. A wrong Adam β1 is invisible on a step-0
+  checkpoint, because m = 0. Run the Adam gate's negative control on a trained checkpoint
+  (mutant h fails at step 1000, resid 0.114 against 2^-16).
+- A long f32 sum in one register is biased, not just noisy. The CE kernel summed exp(l − m) over
+  V = 4096 logits sequentially; once the running sum is large, terms below half its ulp vanish, so
+  log Σ came out ~1.04e-5 low on every row and the chip's held-out loss missed the f64 CPU's by
+  11 µnats on a 10 µnat gate. Find such a bias by comparing per-row intermediates against the CPU,
+  not the final loss (`gg.om` `ggdiag`: max logit and l_y agreed to ~3e-7, log Σ did not). The fix
+  is a compensated (Kahan) sum (`gr.om` `grce`, `OMUTK`), after which the chip printed the CPU's
+  E line exactly (aien-train `evidence/OMEGALLM/geval/`). There the plain sum (`--mutant k`) failed
+  the gate by 11 µnats. Since k4 each lane sums only V/32 = 128 terms before the warp tree, and the
+  plain per-lane sum moves `geval` by at most 1 µnat (`gpu-k4/`): a mutant whose effect falls below
+  the gate is an observation, not a control. Replace it with one the gate can see.
+- A kernel launched with `gkgpr` G may use R0 to R(G−3) only. On Volta and later two registers of the
+  QMD count go to the program counter (Mesa `0b6d3f401e2b2e53be44786692f12e31055b749c`, main
+  2026-11-04: NAK `src/nouveau/compiler/nak/sm70.rs:101` `hw_reserved_gprs`; `api.rs:275` sets the
+  count to `max(4, num_gprs + 2)`). Two hangs fit that rule: Kahan
+  state in R69-R71 under `put gkgpr id 72` (`gr.om` `grall`) timed out every launch (`GX 121 -110`,
+  exit 84) while R40-R42 ran (`evidence/OMEGALLM/geval/a1/`), and k8's 64×64 GEMM using R158 under
+  160 did the same (`GX 99 -110`, `gpu-k8/a1/`); 168 runs. `tests/omegallm/gpu-disasm.sh` now prints
+  `GPR <id> max R<n> need <n+3> declared <g> OK|LOW` per slot from the dump's `gkgpr` table and exits
+  4 (`GPR_LOW`) on any LOW; its negative control is the 160 tree (`gpu-k8/disasm-neg-gpr160.txt`).
+- Every ordered comparison with NaN is false in the pinned omc (0/0 takes neither `gt n 1.0`,
+  `lt n 1.0` nor `gt 1.0 n`), so a running max `if gt d best` silently skips NaN. Count non-finite
+  values separately and fail on any (`gg.om` gcmp2).
+- ReLU sign flips grow with the shape: at P 7.4M the fixed-mask gradient gate failed at 1.58e-4 from
+  4 units whose pre-activation was within 2.4e-7 of zero. The rung-5 gate (`gcmp2`) bounds the
+  chip's pre-activations first, then compares gradients on the chip's branches (aien-train
+  `evidence/OMEGALLM/gpu-max/README.md`). A pass of one gate is not a pass of the other.
+- `ollm eval CK HELD W` needs W·T + 1 ≤ N held tokens and exits 23 otherwise (`cli.om` `cmdeval`):
+  doubling T from 128 to 256 halves the usable W (4486 → 2243 on the v1 held set). On rung 6's
+  `ck30000` the CPU `eval` (5519 s on one core, nice 19) and the chip `geval` (about 7 s) printed the
+  same line, `E 30000 2243 1338156 499194` (aien-train `evidence/OMEGALLM/gpu-r6/`).
+- Profile before tuning. `ollm-gb10 gprof` (k1) prints one `GP id gx gy gz m n k wait_ns` line per
+  launch of the last profiled step. With every launch synchronous, GPU wait was 91.6% of the 200-step
+  wall at k2 (`evidence/OMEGALLM/gpu-k2/`), so per-kernel wait, not launch preparation, names the
+  next kernel to fix. A batching variant (one wait per group of launches) could save at most 0.69%
+  of the measured step and was dropped.
+- A retile that keeps every output element's FFMA order over k gives a result that is
+  bit-identical, not just within tolerance. The k2 64×64 tile (`gk.om` ids 32-39, `gktile` picks it
+  when m and n are multiples of 64, ids 0-7 stay for the rest) left the checkpoint after 200
+  `gtrainf` steps byte-equal to k1's (sha256 `fde1fae9…`). Use that equality as a check in
+  addition to the f32 gates. Its budget: 64 threads, an 8×8 microtile each, K8, 144 GPRs and 4352 B
+  of shared memory (`put gkgpr id 144`, `put gksm id 4352`).
+- A row kernel with one thread per row reads its row at a stride of 4·D bytes across the warp, so
+  each warp load touches 32 lines. k3 runs `gr.om` RMS norm (ids 10, 11) one warp per row: lane l
+  holds columns l + 32u in registers, loads and stores are coalesced 128-byte lines, each input is
+  read once, and the row sum is a per-lane FFMA chain plus a 16-8-4-2-1 `SHFL.BFLY` butterfly
+  (`grwred`). Launch R·32 threads (`gg.om` `ggrmsf`), and refuse D or T not a multiple of 32
+  (`grall`). Forward 2.50× and backward 2.47× faster per profiled step, 237.6 and 215.8 GB/s of
+  required traffic (aien-train `evidence/OMEGALLM/gpu-k3/`). The sum order changes, so the result is
+  within the f32 gates but not bit-identical to the thread-per-row kernel.
+- The same layout serves the CE kernel (k4, `gr.om` `grce`, id 21, one warp per row over V 4096):
+  warp max, per-lane Kahan sum of e without storing it, warp sum, then a third pass recomputes e
+  with the same FFMA and `MUFU.EX2` (the same value), scales and stores it, so the logit matrix is
+  read 3 times and written once instead of 3 + 2. The lane that stored L[y] (y & 31) alone applies
+  L[y] − sc and writes the row stats, so no lane reads another lane's store. 13.51 → 3.68 ms per
+  profiled step (3.68×, 99 → 292 GB/s of required traffic); `grall` refuses V not a multiple of 256.
+- `grwred` uses R65 as its shuffle scratch register (and R64 for the value). A value parked in R65
+  across a butterfly is overwritten; k3's backward kernel keeps s in R67 for that reason, and k4's
+  first CE build read R65 as −m·log2e after the warp sum. The slot-21 disassembly showed it before any
+  chip run; the fix keeps m in R43 and recomputes R65 = R43·R29. Check a helper's scratch registers
+  before giving a live value a register near the reduction.
+- Skip causal work with runtime argument words, not new kernel ids (k5, `gk.om` words 22, 26, 27,
+  28; `gg.om` `ggbh` sets the mode with `gkopz`, and `gkmm` reads and clears it, so an unmarked
+  GEMM stays dense). The GEMM prologue exits a block whose column tile is above row tile + X (S and
+  DP: X = 0), and reads kn = r·ka + base K tiles from tile r·kc (P·U and DS·K: ka = pt; Pᵀ·DO and
+  DSᵀ·Q: ka = −pt, kc = pt). `gkczok` refuses a shape the mode does not fit (nverr −22). Every
+  skipped FFMA term is ±0 and a +0 accumulator stays +0 under round-to-nearest, so the checkpoint
+  after 200 steps stayed byte-equal to k4's. The three attention GEMMs ran 1.35×, 1.52× and 1.42×
+  faster per profiled step, and 200 steps 1.059× faster (aien-train `evidence/OMEGALLM/gpu-k5/`).
+  Skipped output tiles are no longer written and keep stale arena data, so every consumer must mask
+  them rather than multiply by zero: p · (stale NaN) is NaN even when p = 0. `grsoftb` (id 16)
+  `FSEL`s dp to 0 for columns > t.
+- A bandwidth-bound row kernel gets faster only by moving fewer bytes: skip the causal upper triangle
+  with predicated `LDG`/`STG` (k6, `gr.om` `grsoftf`/`grsoftb`, ids 15/16). `gk.om` `gkldgp`/`gkstgp`
+  put the guard predicate in word 0 bits 12-15 (p 7 = PT, +8 negates; `gkldg`/`gkstg` are these with
+  p 7). Set the load predicates (t ≥ 32u) with `ISETP` before the first load: an `ISETP` placed
+  between loads waits on their scoreboard. Recompute them before the stores if a mask loop reused a
+  predicate. Store only what a consumer reads (here chunk pairs with t ≥ 64·⌊u/2⌋, the end of the
+  diagonal tile), and `FSEL` every unloaded register before arithmetic (−∞ in softf, +0 in softb),
+  so the checkpoint after 200 steps stayed byte-equal to k5's. Softmax 1.639× and 1.676× faster per
+  profiled step at about the same GB/s, 200 steps 1.053× (aien-train `evidence/OMEGALLM/gpu-k6/`).
+- Check a new predicate encoder in the disassembly at a shape that uses it. `gk.om` `gkisge` wrote its
+  destination predicate at word 0 bit 16; `ISETP`'s field is word 2 bit 17 (as in `gkisetp`), so every
+  `gkisge` wrote P0. It went unseen because every caller asked for P0 and the parity shape (T = 32,
+  one chunk) emits no predicates; the first max-shape dump showed seven `ISETP`s all writing P0.
+- Mark FFMA operand reuse in the instruction word; nothing sets it for you (k7, `gk.om` `gkffma`'s
+  reuse mask `ru`, control word 3 bits 26-28: Ra 1, Rb 2, Rc 4). `gkru` sets Ra reuse on every FFMA
+  of a row run that reads the same a register except the last, which releases it; in a 64×64 slot
+  that is 448 of the 512 k-loop FFMAs. Set control bit 109 (word 3 bit 13) with every nonzero mask:
+  nvdisasm 13.0 prints `.reuse` only when bit 109 is also set, and ptxas 13.0 `-arch sm_121` sets it on
+  every `.reuse` instruction of a probe kernel. What bit 109 does alone is unknown, so attribute
+  results to the pair. Switch `OKREU` (`build.sh --variant r0` builds it off, byte-equal to k6's
+  code). The checkpoint after 200 steps stayed byte-equal; the GEMMs' profiled wait fell to 0.955× of
+  k6's over three rotated rounds and 200 steps ran 1.0457× faster (aien-train
+  `evidence/OMEGALLM/gpu-k7b/`). A Volta-style register-bank remap (accumulator column j xor 1, off
+  the b registers' low two bits) gave no measured gain on sm_121: remap-only 0.989× of k6, inside
+  the k6 spread (`gpu-k7/`). k7b removed it, and 200 steps stayed equal to k7 (1.0003). Measure a
+  bank model before coding to it; sm_121's is unpublished.
+- Size the shared-memory carveout per kernel in QMD word 36, or a kernel that uses more shared
+  memory loses blocks per SM. Word 36 holds `SHARED_MEMORY_SIZE_SHIFTED7` and the MIN, MAX and TARGET
+  SM configs at bits 11, 17 and 23 (hw value = KiB / 4 + 1 over the GB10 carveouts 0, 8, 16, 32, 64 and
+  100 KiB, Mesa `0b6d3f40` `src/nouveau/winsys/nouveau_device.c:218-231`). `gk.om` used a fixed
+  TARGET of 32 KiB.
+  `gksmw` now picks the smallest carveout holding smem × ⌊65536 / (`gkgpr` · `gkthr`)⌋ bytes, as Mesa
+  NAK `qmd.rs` `gv100_get_hw_smem_sizes` does from its own residency bound. k8 double-buffered the
+  64×64 GEMM's K loop (ids 40, 42, …, 54, two 16 KiB slots each, 2 × 4352 B shared, staging in
+  R142-R157, one barrier per K tile). Under the fixed TARGET it was bit-identical but its GEMM wait
+  1.12× k7b's (6 blocks × 8704 B do not fit in 32 KiB). Under `gksmw` its 64×64 wait was 0.913× of k7b's
+  kernel under the same rule (max below min in all three rotated rounds), GEMM wait 0.914× and 200
+  steps 0.969× of k7b's wall, checkpoint byte-equal (aien-train `evidence/OMEGALLM/gpu-k8/`). The
+  carveout the hardware chose was not read back, so the cause is inferred from the reversal. In the
+  same window k7b's own kernel with an identical QMD (arm C against B) ran 0.982× of B in every
+  round: identical code spreads about 2% in a non-quiet window, so a gain must clear that.
+- Fuse an elementwise kernel into the GEMM that produces or consumes the same tensor through an
+  epilogue the caller arms per launch, and make the GEMM refuse every combination the epilogue was
+  not written for. k9 removed `gr.om` RELUF/RELUB (ids 17/18): `gkope 1 y` makes the next `gkmm`
+  with operand modes ma 1 mb 0 (W1 forward) store FP and also relu(FP) to y (ids 25 for the 32×32
+  tile, 56 for the 64×64); `gkope 2 FP` makes the ma 1 mb 1 GEMM (dF backward) store C only where
+  FP > 0 (ids 26, 58). `gkepok` refuses any other mode, beta or epilogue with -22. The select is the
+  same `FSETP.GT` against RZ plus `FSEL` the separate kernels used (NaN → 0), so the result stayed
+  bit-identical: equal gate lines, equal `geval` E lines, equal checkpoint after 200 steps. Launches
+  fell by 16 per max-shape step, and summed GPU wait was 0.924× of k8's (144.56 → 133.54 ms/step, max
+  k9 below min k8 in all three rounds; the pre-registered model gave an 8.49-14.15 ms/step saving and
+  11.02 was measured). 200 steps took 0.942× of k8's wall (aien-train `evidence/OMEGALLM/gpu-k9/`).
+  When `gktile` picks 32 at some shape, the 32×32 epilogue needs its own gate: neither the parity nor
+  the max shape reaches it, so k9 ran `gcmp2` and mutant m at F = 96 (`ollm init … 256 32 64 2 96 2`).
+- Make mutants build-time constants (`OMUTT`, `OMUTS`, `OMUTP`, `OMUTR`, `OMUTX`, `OMUTQ`, `OMUTW`;
+  BF16 `OMUTU`, `OMUTL`, `OMUTO`, `OMUTV`, `OMUTN`; v3 `OMUTY`, selected with
+  `tests/omegallm/build.sh --mutant t|s|p|r|x|q|w|u|l|o|v|n|y`), not runtime switches, so the
+  product binary carries no mutant path. Check statically that a mutant changes exactly the intended
+  slots before the window: mutant t differs from the product only in the 64×64 slots (32-39 until k7b,
+  40-54 since k8), with one FFMA fewer per K tile (511 FFMA in slot 32 against 512; since k7, 447 of
+  them `.reuse` against 448; k8's β kernels 575/447 against 576/448); mutant r's
+  slot 11 has four `SHFL.BFLY` steps instead of five (the lane-1 step of the backward row sum is
+  missing) and fails `gcmp2` with rc 47;
+  mutant x's slot 21 has nine instead of ten (the CE sum's lane-1 step), fails `gcmp2` with rc 47 and
+  moves `geval` by −362083 µnats. Mutant q is host-only (P·U and DS·K row tiles stop one K tile short
+  through word 22), so its device code dump equals the product's; it fails `gcmp2` with rc 47.
+  Mutant w differs from k6 only in the seven softmax `ISETP` immediates (+32, so each row's diagonal
+  chunk is not loaded) and fails `gcmp2` at the max shape with rc 47. At the small shape its code is
+  the product's and it passes with rc 0: a mutant needs a shape where its code differs.
+- `tests/omegallm/gpu-disasm.sh` builds the CPU sources without `gg.om`. Every hook that `model.om`
+  calls must therefore come from `nogpu.om`, or omc stops with error 5 at the call (seen from
+  rung 5 until k2's fix). The dump writes all 64 slots of `gkcode` (1 MiB). A 32-slot dump silently
+  drops ids 32-39. Since k6 `SHAPE="V T D H F B"` (the `grset` arguments, default the parity shape
+  `256 32 64 2 128 2`) dumps any shape; the script exits 2 with `SHAPE_NOT_SET` when the substitution
+  into `gpu-dump.om` did not take, and an empty slot prints `SLOT n empty`.
+- Widening a shape past a register or scratch bound needs the old shape's code to stay byte-equal,
+  and every host scratch sized by the old cap found before the window. Rung 7 (aien-train
+  [#57](https://github.com/aien-dev/aien-train/pull/57) at `b312942`, `docs/omegallm/CONTRACT-V2.md`:
+  D ≤ 384, F ≤ 1536) moved the warp-per-row RMS kernels' four D/32-word register banks above the
+  scalars once D/32 > 8 (`gr.om` `grrb`: R32 + 8k up to 8 words, R72 + n·k beyond, ending at R119
+  for D 384), so the v1-shape `gpu-code.bin` and GPR dump stayed byte-identical (`gpu-disasm.sh` with
+  the rung-6 `SHAPE`). The first gate window still trapped (exit 103, BOUNDS) in `gcmp2` at the v2
+  maximum: the host row scratch `gg.om` `ggfs` held 1024 rows, indexed by FFN unit j < F. grep the
+  `global … f64 N` arrays for the old cap before opening a window. The v2 model (P 15,833,472) then
+  trained 30000 steps on rung 6's data, seed and schedule to a chip `geval` of 1.254741 nats against
+  1.338156 (EXERCISED, non-quiet; `evidence/OMEGALLM/gpu-r7/`); the CPU `eval` of that checkpoint
+  printed the same `E 30000 2243 1254741 468077` (`gpu-r7/run/eval30000.txt`, `5bd9993`, 15,371 s
+  on one core). An init-loss bound written without
+  a derivation (v2 init within 0.05 nats of ln V, then of the v1 init) failed twice while the Python
+  referee reproduced the product's init loss exactly: the contract init (uniform, sd 0.02) does not
+  scale with D, so a wider model starts further above ln V. Derive such bounds or check against the
+  referee instead.
+- A BF16 tensor-core path can be added beside the f32 kernels without touching them. aien-train
+  [#58](https://github.com/aien-dev/aien-train/pull/58) (`docs/omegallm/CONTRACT-BF16.md`, at
+  `a82fc1a`) puts ten `gkgemmb` kernels in slots 27-36 (64x64 tile per 128-thread block, K tile 32,
+  two 8192-byte shared buffers, `HMMA.16816.F32.BF16` with f32 accumulation, the f32 epilogues
+  including fused 1 and 2). Operands stay f32 in memory and are rounded RNE by
+  `F2FP.BF16.F32.PACK_AB` while staged into shared memory; master weights, Adam and checkpoints do
+  not change, and `geval` keeps the f32 kernels, so the held-out metric is the same measure. It is
+  opt-in (`gtrainb`/`gprofb`, `gkbf 1`). Every slot outside 27-36 (f32 ids 0-26 and 37-63) keeps its
+  code and register bytes and the AArch64
+  CPU build is byte-identical, so every f32 receipt still stands. Gates: `gbfrag` (exit 50) is exact
+  per kernel on fixed data with NaN in every word the kernel must not read, both operand roles, and
+  long-K cases; `gbcmp` (48) samples every BF16 launch of a gradient pass against an f64 sum over the
+  bf16-rounded operands with bound (kn·2^-23 + 2^-22)·(|α|·Σ|a·b| + |old C|); `gbcmp2` (49) is
+  `gcmp2` with the loose heuristic tolb = n_c·(2u + u²), u = 2^-8, n_c = 10L + 3 (0.6497 at L 8),
+  which catches gross failures only. Put the rounding in the reference: then the gate checks the
+  stated numerics, and bf16-vs-f32 distance is a separate, pre-registered training comparison. At
+  B 64 (kn 16384) `gbcmp` is blind to one wrong K tile, so long K loops need `gbfrag`'s exact
+  long-K cases (mutant o, one K tile short, is invisible at k = 32 because the K loop is a
+  do-while). Mutants l (lane g / g^1 A rows swapped in the LDS layout), o and v (F2FP toward zero)
+  are caught by `gbfrag` and `gbcmp`; mutant u (reference skips the rounding) is caught by
+  `gbfrag`, while `gbcmp` only reports it, since per-sample RNE error can sit inside the f32 bound.
+  Mutant n (`gb.om` `OMUTN`: the host overwrites one C padding word after each short case's launch,
+  no kernel change) is the negative control of `gbfrag`'s padding check, the only check that can see
+  it; in the v3-g1 window (aien-train #60 at `b92c96b`, `evidence/OMEGALLM/v3/chip-g1/REPORT.txt`)
+  the product printed `GFS 0` and mutant n failed with rc 50, `GFS 26`.
+  Window bf-t1 (EXERCISED, non-quiet): `E 2000 2243 1749889` against
+  rung 7's f32 1756935 (bound 1765719), the 250→2000 leg 1.18117x faster (367.57 s vs 434.16 s), median
+  GEMM wait 135.3 vs 176.6 ms/step; BF16 GEMMs reached 11.6-22.4 TFLOP/s against 118.81 measured
+  HMMA, and 54 ms/step of non-GEMM wait plus the synchronous launch round trip now dominate. It
+  relaxes the bitwise f64-CPU gate on the GEMM path. Drake adopted it for training on 2026-11-03
+  (CONTRACT-BF16 section 7): long runs use `gtrainb`, every f32 command keeps its behaviour, `geval`
+  stays f32, and the CPU `eval` of a final checkpoint must still print the chip's line. Adoption is
+  not a quality claim; the first long BF16 run carries its own prereg.
+- Rung 8 (aien-train [#59](https://github.com/aien-dev/aien-train/pull/59), stacked on #57,
+  `evidence/OMEGALLM/gpu-r8/`) changes only the schedule: rung 7's binary, seed, data and batch with
+  init TOTAL 60000 (`cmp -l` against rung 7's ckL0: bytes 81-82 only). Chip `geval`
+  `E 60000 2243 1206290 450002`, 1.206290 nats against rung 7's 1.254741 (−3.86%), the curve
+  strictly decreasing over 22 points, summed `gtrainf` wall 14,688-14,864 s for 250→60000
+  (0.24471 s/step on undisturbed legs, non-quiet). EXERCISED; the CPU `eval` of ck60000 (P4) printed
+  the same E line (`gpu-r8/run/eval60000.txt`, `8915b46`). At step 30000 rung 8 was 30,366 µnats above rung 7's final value, because its
+  learning rate there is still 0.5508 of peak: comparing intermediate steps across different
+  schedules says nothing, so the prereg only compares final values. Two infrastructure events, both
+  disclosed and counted in the wall sum: a full root disk (`gtrainf` rc 70 on the checkpoint write;
+  `ck.bin.tmp` plus rename left `ck.bin` intact), and an agent session ending that killed a leg
+  mid-window. Launch long drivers with `setsid nohup` so they do not belong to the agent session;
+  batches derive from (seed, step), so resuming from the last checkpoint trains the same steps.
+- Rung 9 (aien-train [#61](https://github.com/aien-dev/aien-train/pull/61), stacked on #58,
+  `evidence/OMEGALLM/gpu-r9/`) is the first long BF16 run after adoption. It replays rung 7 step for
+  step with `gtrainb` (same ckL0, data, seed, schedule and legs; binary 54fb8233…). Chip `geval`
+  `E 30000 2243 1251860 467002`, against rung 7's f32 1254741 (−2,881 µnats, −0.230%), and the
+  pre-registered bound was ≤ 1261014 (+0.5%). BF16 sits 0.14-0.81% below f32 at all 12 shared
+  steps. With one seed per arm that is no regression, not a demonstrated gain. The CPU `eval` of
+  ck30000 printed the same E line. Summed `gtrainb` wall for 250→30000 was 5,740.26 s
+  (0.19295 s/step, 1.2387x rung 7, non-quiet). ck2000 and E 2000 reproduced bf-t1 byte for byte, so
+  `gtrainb` is deterministic across windows on one chip. EXERCISED on one GB10.
+- Rung 10 (aien-train [#62](https://github.com/aien-dev/aien-train/pull/62), stacked on #58,
+  `evidence/OMEGALLM/gpu-r10/`) replays rung 8's 60000-step schedule with `gtrainb` (same ckL0
+  e02c6234…, data, seed and legs; binary 54fb8233…). Chip `geval` `E 60000 2243 1204466 449322`,
+  against rung 8's f32 1206290 (−1,824 µnats, −0.151%); the pre-registered bound was ≤ 1212321
+  (+0.5%). BF16 sits 0.05-0.76% below f32 at all 22 shared steps, and 0.09-0.16% over
+  30000→60000, so the gap does not widen with twice the steps. The CPU `eval` of ck60000 printed the
+  same E line. Summed `gtrainb` wall for 250→60000 was 11,478.56 s (0.192110 s/step, 1.2738x
+  rung 8's undisturbed rate, non-quiet). Hazard seen here: a run script written without the
+  execute bit makes `spark-window` return leg rc 126 ("Permission denied") with no training done;
+  `chmod +x` the leg script before the first window (its sha256 is unaffected). EXERCISED on one GB10.
+- v3 (aien-train [#60](https://github.com/aien-dev/aien-train/pull/60) at `b92c96b`, stacked on
+  #57 with #58 merged in; `docs/omegallm/CONTRACT-V3.md`) raises the L maximum from 8 to 16 at the
+  v2 width (P 29,995,392) by moving parameters, gradients and activations into banked storage while
+  every sum keeps its order, so v0-v2 commands, files and outputs keep their bytes. Test the bank
+  boundaries at a small shape by shrinking the bank-A capacities (variant bx: `OWC 8400`, `OGC 5000`,
+  `OAC 12344`, so `256 8 16 2 32 4` crosses every bank) and comparing checkpoint, T lines, eval and
+  sample against the normal build; mutant y (bx plus `OMUTY 0`: `ostw` stages the first bank-B layer
+  for every layer) must fail all four. Two branches that each add an `OMUTV` collide when merged
+  (omc error 10, a duplicate name): v3's mutant was renamed `OMUTY`/`--mutant y`, and receipts that
+  predate the rename keep the file name `ollm-mut-v`. Keep every `const OMUT*` unique across
+  branches. Chip gates F1-F8, L1-L4 and B1-B6 ran pre-registered in window v3-g1 (2026-11-04) and
+  all held, every gated mutant failing as predicted (`evidence/OMEGALLM/v3/chip-g1/REPORT.txt`).
+  v3 is not trained yet: at aien-train main `56cc8870` `evidence/OMEGALLM/v3/` holds the host
+  checks and `chip-g1` only, no training run.
+  EXERCISED on one GB10, non-quiet.
+
 ## 10. Wire serialization (only what the pin defines)
 
 - There is no byte-layout type. Encode and decode integers with shifts and masks into `uchar`
