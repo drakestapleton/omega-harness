@@ -613,6 +613,14 @@ rebuilt for this note.
   `seed/out/omc` `62775d2a...712b` (AArch64 host), `seed/omc/om2/s4/v-text-empty.om` compiled
   and ran with exit 0, and `v-bad-text-empty.om` refused with `omc: line 5: error 21`. Compiler
   pins in this file older than the #904 batch predate the fix.
+- **Semantic tools, merged:** `seed/semhash` ([#830](https://github.com/aien-dev/omega-mv/pull/830),
+  train r4, main merge `f9a9a40b`, 2026-11-02) is a per-function meaning hash plus `diff` that ignores
+  local/parameter renames, notes, layout and function order; its oracle requires `omc(canon(x))` to be
+  byte-identical to `omc(x)` for every accepted unit. `seed/effects`
+  ([#820](https://github.com/aien-dev/omega-mv/pull/820), train r1, main squash `f56a372a`, 2026-10-30)
+  is described in section 9. Both build by concatenation and do not change the compiler. Observed
+  2026-11-04 at main `d3d1b1bc`, omc `b4f45121…`: `sh seed/semhash/check.sh` printed
+  `SEMHASH PASS cases=249 controls=13`, exit 0.
 
 ### Merged compiler batch: contracts, capacity and f32 returns
 
@@ -1306,6 +1314,24 @@ omega MCP pin `2c824805…`, lack both.
   SIGPIPE behaviour [INFERENCE from Linux semantics; not gated here].
 - These words carry the process's permissions; they are not a sandbox. Linux ARM64 is the only
   qualified host ([#L739-L743](https://github.com/aien-dev/omega-mv/blob/55f9b0af47de70a3d06357985cf99ae3e45c016f/docs/one_layer/OMEGESE.md#L739-L743)).
+- Merged: `seed/effects` ([omega-mv #820](https://github.com/aien-dev/omega-mv/pull/820), train r1,
+  main squash `f56a372a`, 2026-10-30) lists the host words a unit uses with their Linux syscalls,
+  checks that the omc binary issues no others, and emits a seccomp filter for `bwrap --seccomp`
+  (`effects src|elf|verify|bpf|table`, `seed/effects/README.md`). It works at syscall granularity
+  only and gives no filesystem isolation. **Its own qualification fails at current main:** observed
+  2026-11-04 at main `d3d1b1bc` (omc `b4f45121…`) and at `19b8340d` (omc `be8c5130…`),
+  `sh seed/effects/check.sh` printed `SEMANTIC EFFECTS FAIL failed=3 checks=49`, exit 1: the closure
+  check found the host-coded keywords of `seed/omc/genkw.awk` and the effects table different (the
+  table lacks `execpure`, added by #970, and lists `peercred`, `pollfds` and `sendmsg`, which the
+  closure list does not have), `execprog`'s ELF issues syscall 436 beyond its table row 221, and
+  `seed/host/tests/memcheck.om`, `process.om` and `peername.om` fail `verify`. Until that check
+  passes again, an `effects` manifest is not evidence that a unit's syscall set is complete.
+  PENDING fix, not merged: [omega-mv #1023](https://github.com/aien-dev/omega-mv/pull/1023) (head
+  `eb7b3c60`, open) makes the closure read every keyword list of `genkw.awk` by content, adds rows
+  `peername net 205`, `execprog proc 221 436` and an `execpure` row, and lets a table row hold any
+  number of syscalls (a pool replacing the fixed two slots `ws1`/`ws2`). Observed 2026-11-04 at
+  that head (its `seed/out/omc` `b4f45121…`): `sh seed/effects/check.sh` printed
+  `SEMANTIC EFFECTS PASS checks=50`, exit 0, with the tool mutants still killed.
 - Evidence for any host claim: compiler sha256, source sha256, output binary sha256, exact command,
   exit status, and the observed bytes. A program that ignores a negative result is not evidence.
 - Measured 2026-10-25 while building a disk image with the seed compiler `seed/out/omc` sha256
