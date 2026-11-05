@@ -1020,11 +1020,18 @@ the target's limits, and a NaN gives 0, with no trap (observed at `e5b32567`,
 ## 6. Names, scope, registers
 
 - Function names: up to 63 characters. Every other name (variable, parameter, global, text, const,
-  struct, field): **at most 8 characters** on the pinned omc `2c824805`, else error 13 ([#L423](https://github.com/aien-dev/omega-mv/blob/55f9b0af47de70a3d06357985cf99ae3e45c016f/docs/one_layer/OMEGESE.md#L423), gate15 `e13_long_variable`).
-- PENDING, not merged or pinned: [omega-mv #837](https://github.com/aien-dev/omega-mv/pull/837) (batch 3
-  candidate `21d34e12`) raises every such name to 63 bytes, compared in full (`counter_a` and
-  `counter_b` are distinct). Error 13 then means over 63. IR-mode locals and parameters, `abstract`/`layout`
-  names and layout fields stay at 8, and so does om4. Until the batch-3 pin lands, keep names at 8.
+  struct, field): **at most 8 characters**, else error 13 ([#L423](https://github.com/aien-dev/omega-mv/blob/55f9b0af47de70a3d06357985cf99ae3e45c016f/docs/one_layer/OMEGESE.md#L423), gate15 `e13_long_variable`).
+  Rechecked 2026-11-04 (Linux AArch64): `counter_a = int 20` is `omc: line 2: error 13` with both the
+  harness pin omc `be8c5130…` (omega-mv `9920aab1`) and omega-mv main `d3d1b1bc`'s omc `b4f45121…`.
+- PENDING, not merged or pinned: draft [omega-mv #837](https://github.com/aien-dev/omega-mv/pull/837)
+  (head `f1b9ecb5d13f3b7303c055a187fff06e802eb952`, base `integ/omc-batch3`, source-only: its committed
+  `seed/out/omc` is still the old `2c824805…`) raises every such name to 63 bytes, compared in full.
+  Rebuilt from that head with `sh seed/omega-from-seed.sh` on 2026-10-30 (`RC=0`, `PASS omc fixpoint
+  21d34e12eb6516a2c5f3fc160ccb0feca5054786c57def055056c04270c302fa`); with that compiler
+  `counter_a = int 20`, `counter_b = int 1`, `ret add counter_a counter_b` ran with exit 21, a 63-byte
+  local compiled and ran, a 64-byte local is error 13, and an IR-mode parameter `counter_a` is still
+  error 13. IR-mode locals and parameters, `abstract`/`layout` names and layout fields stay at 8, and so
+  does om4. Until #837 lands and is pinned, keep names at 8.
 - A new name may not equal a visible name, a function or a struct (error 10). A name first written
   inside `if` / `else` / `while` / `for` dies at its `end`; assign it before the block to carry it out.
 - A `global` is visible only to lines after its declaration: a function above it that reads it is
@@ -1710,7 +1717,7 @@ separate namespace in the same registry (OMEGESE section 11.1). The message form
 
 | Code | Meaning | Code | Meaning |
 |---|---|---|---|
-| 1, 2 | compiler input / output (stdin a directory: 1; stdout `/dev/full`: 2; both observed) | 13 | non-function name over 8 characters |
+| 1, 2 | compiler input / output (stdin a directory: 1; stdout `/dev/full`: 2; both observed) | 13 | non-function name over 8 characters (over 63 once #837 is pinned) |
 | 3 | unknown name or field | 14 | capacity at `91b3c932`: 8192 names, 4096 functions, 512 nested blocks, 1024 nesting depth, 8 MiB input/output |
 | 4 | line ends too early | 15 | missing `end` |
 | 5 | extra words on the line | 16 | syntax / unknown word |
