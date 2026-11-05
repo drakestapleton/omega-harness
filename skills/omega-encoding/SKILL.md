@@ -1656,6 +1656,14 @@ facts, not rules of the language.
   little-endian 32-bit descriptors; `fstat`/`stat` write the 128-byte Linux ARM64 stat structure;
   `waitpid` writes a 4-byte status. Any other protocol layout needs its own spec citation and test
   vectors.
+  At the pin `9920aab1` (OMEGESE lines 1050-1056) a packed list with embedded zero bytes, a truncated
+  record, extra trailing bytes or a count outside 1..64 traps 3; the first `execprog` record (path and
+  argument zero) must be nonempty, and `renames` needs exactly two nonempty records. These refusals are
+  gated by `seed/qualification/security673/packets.cases` (see `omega-harness`, seed tools section).
+- IR mode and floats, observed 2026-11-05 with omc `be8c5130…`: a float type in an `ir` function
+  signature (`fn fa a f64 b f64 to f64`) is `omc: line 2: error 9`, and a float word in the body
+  (`x = f64 a`) is `omc: line 3: error 3` (OMEGESE says error 3 only). No producer of float IR exists, so
+  float backends (`seed/stablehlo` wire v7, `irnki f32`) use hand-written fixtures or retyped u32 lanes.
 
 ## 11. Compiler errors (exit code = error number, stderr `omc: line N: error K`)
 
