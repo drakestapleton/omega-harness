@@ -386,10 +386,12 @@ Each row is a program in `examples/` with its observed refusal.
   `uchar`/`byte` and `f32` to `int` were not retested on 2026-10-29. Do not assume they are fixed.
   Decode signed values arithmetically when you have not measured the pair
   ([`examples/wire_le.om`](../../examples/wire_le.om)).
-- **Empty text through `view uchar *`** (omega-mv issue #775): a 2026-10-27 report said `len` was
-  60 or 28, not 0. A two-text unit on 2026-10-29 returned 0 on this pin and on `2c824805`, so that
-  report was not reproduced. Keep passing `part e 0 0`
+- **Empty text through `view uchar *`** (omega-mv issue #775): reproduced on 2026-11-04 with omc
+  `2c824805`: `om2`, `text e ""`, `fn n a view uchar * to ulong` / `ret len a`, `ret int n e` exits
+  28 (60 with one more 32-byte text). Pass `part e 0 0`
   ([`examples/empty_text_part.om`](../../examples/empty_text_part.om)).
+- **`and`/`or` are eager:** `if and gt n 0 eq get a sub n 1 13` traps 3 when `n` is 0. Guard an
+  index with a nested `if`.
 - **Function names:** a name of 9..63 bytes is not a keyword by its first 8 bytes. `continue_x`
   compiles and returns 7 ([`examples/defect_keyword_prefix.om`](../../examples/defect_keyword_prefix.om)).
   An exact keyword (`fn continue`) is still error 16. At omc `2c824805`, `continue_x` was error 16.

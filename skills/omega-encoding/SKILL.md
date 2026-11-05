@@ -382,9 +382,8 @@ Two defects recorded at `e5b32567` are fixed in this compiler (the #904 integrat
 `fn continue_x` compiles and the program exits 7 (`examples/defect_keyword_prefix.om`); `bitcast int`
 of `uint 4294967295` compares equal to -1 and `add` 2 returns 1, and `bitcast uint` of `int -1`
 compares equal to 4294967295. At `2c824805` those three programs were error 16, exit 2 and exit 2,
-and `add` 2 trapped 1. `fn continue` is still error 16. The #775 empty-text report was not
-reproduced: a two-text unit passing `text e ""` to `view uchar *` returned len 0 on both compilers.
-Keep the `part e 0 0` workaround until that report has an exact failing program. Other
+and `add` 2 trapped 1. `fn continue` is still error 16. The #775 empty-text defect is reproduced at
+`2c824805` (see the bullet below); keep the `part e 0 0` workaround while that omc is the pin. Other
 "observed at e5b32567" lines below are dated history; the example suite still matches them.
 
 ### Historical rerun at omega-mv `e5b32567` (2026-10-27)
@@ -474,10 +473,15 @@ Changes and confirmations against the rules below, each observed with a program:
   `int` were not retested on 2026-10-29. Do not assume they are fixed. Decode signed values
   arithmetically when you have not measured the pair (`examples/wire_le.om`).
 - **`byte` is signed 8-bit** (`i8`, OMEGESE line 109); `char` is not a type (error 3).
-- **Empty text through `view uchar *` (omega-mv #775).** A 2026-10-27 report said `len` was 60 with
-  one other text and 28 with none. A two-text unit on 2026-10-29 returned 0 on both `2c824805` and
-  `62775d2a`, so that report was not reproduced. Keep passing `part e 0 0`
-  (`examples/empty_text_part.om`) until an exact failing program exists.
+- **Empty text through `view uchar *` (omega-mv #775).** Reproduced on 2026-11-04 with omc
+  `2c824805` (MCP `omega_run`): `om2`, `text e ""`, `fn n a view uchar * to ulong` / `ret len a`,
+  `main` `ret int n e` exits 28; adding `text f "0123456789abcdef0123456789abcdef"` makes it exit 60.
+  `ret int n part e 0 0` exits 0. The earlier "not reproduced" note was wrong for `2c824805`. Pass
+  `part e 0 0` (`examples/empty_text_part.om`). synapse-mcp hit it: every empty-text record arrived
+  with len 28-60 and positional arguments were refused as too long.
+- **`and`/`or` are eager everywhere, not only in contracts.** `if and gt n 0 eq get a sub n 1 13`
+  traps 3 (exit 103) when `n` is 0, because `get a sub n 1` still runs (`2c824805`, `omega_run`,
+  2026-11-04). Guard an index with a nested `if`.
 - **Skill examples rerun:** `fnv1a32.om` compile exit 0, empty stderr; `abc`, `a`, empty and 65535
   zero bytes gave `0be9471a`, `2c290ce4`, `c59d1c81`, `47dac371`, each exit 0; 65536 zero bytes gave
   exit 2 and no output; the prime changed to `16777617` gave `55bedcf5` for `abc`.
