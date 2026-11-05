@@ -1399,6 +1399,30 @@ omega MCP pin `2c824805…`, lack both.
     (reproduced at omc `2c824805…`: `d = xor c get A 0` is error 7, `xor c ulong get A 0` compiles).
   - Host words and `global` need program mode: without `fn main` the unit compiles in function mode
     and every host word is error 9 with an empty output file, which reads like a broken pin.
+- **Owned DMA-window integration: PENDING, not the main compiler or a kernel driver.**
+  Depends on the VFIO words documented by pending
+  [guide #79](https://github.com/aien-dev/omega-harness/pull/79), compiler
+  [omega-mv#890](https://github.com/aien-dev/omega-mv/pull/890) stacked on #878, exact source
+  `397e67040fb74853c6814097fe02ae4e1ebd6f66`, omc sha256
+  `bcfa582892afca8f65e551fe56867d918d86e84540c7381be8fa9ef18d0cf0f6`.
+  Driver source
+  [`c69470f5`](https://github.com/aien-dev/omega-gpu-driver/blob/c69470f5fac6fe603a45b2c4af0c79eea3409ec6/chan/gmmu.om)
+  distinguishes simulator `mmwinit` (`mmwin`) from `mmwalloc` (owned shared anonymous handle).
+  CPU accesses use handle+offset; IOVA, informational CPU base and GPU VA remain separate.
+  `mmwdmap(epoch, fd)` maps the whole owned extent; `mmwpublish(epoch)` must precede any externally
+  visible DMA reference. Epoch/handle/length/IOVA/container identity stays fixed for that lifetime.
+  Rebuild MAP_DMA requests after every call: the compiler overwrites vaddr even on ioctl error.
+  An unpublished DMA-mapped extent closes only after UNMAP_DMA returns its exact original length,
+  then successful `mapdrop`; a never-mapped OWN extent drops directly. Only EBADF is proven no-target;
+  uncertain mapping errors,
+  failed/partial/unexpected unmaps and drop failures retain backing. Published or quarantined backing
+  cannot be reset/reused/dropped: TLB invalidation or a simulator idle is not a documented DMA-idle
+  proof, and no GB10 reclaim-proof API exists here. The single owner must retain process/container
+  lifetime (no fork, fd close/reuse or restart); the latch is process-local, not crash-safe containment.
+  `tests/dma_host.sh`: EXERCISED anonymous memory, real invalid-fd refusal/retry, 23 explicit host
+  replay/boundary cases and 11 compiling negative-control mutants. Simulator parity remains 391
+  byte-identical C-reference lines. This is Linux userspace VFIO, not a Linux kernel module;
+  hardware/DMA/kernel execution NOT_RUN. It neither opens a VFIO device nor grants authorization.
 - **VFIO device words: PENDING, not on `main`.** Draft
   [omega-mv#878](https://github.com/aien-dev/omega-mv/pull/878), rechecked 2026-10-30 at head
   `019108d5cbaae12bdad818741b6a97ac8572501b` (committed omc sha256
