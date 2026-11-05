@@ -139,8 +139,12 @@ Its records have different roles:
 - **Quant semantic declaration vs physical preparation request:** [QSCHEMA-1 source
   `fe25929ce71b11703eafa72395df2dd495aa61f2`](https://github.com/aien-dev/CUDApp/blob/fe25929ce71b11703eafa72395df2dd495aa61f2/docs/models/QUANT.md)
   separates these identities. Successful parsing does not establish executable repack
-  capability. The FNV values are lookup indexes, not content digests or authentication;
-  compare canonical bytes and bind actual weight/scale content independently.
+  capability: execution must call `quant_check` (`om/quant/quant.om`), and host repack success
+  still neither admits nor qualifies a GPU realization. The FNV values are lookup indexes, not
+  content digests or authentication; compare canonical fieldwise bytes, never raw struct padding,
+  and bind actual weight/scale content independently by SHA-256. A physical arithmetic contract
+  such as the folded E4M3 scale (word 40, layout 3 only) leaves the semantic prefix unchanged and
+  cannot redefine the original tensor's semantic contract.
 - **Realization identity vs qualification:** [component source
   `8bfc7083cb2a90506816f92f6854c829e5bf20ac`](https://github.com/aien-dev/CUDApp/blob/8bfc7083cb2a90506816f92f6854c829e5bf20ac/om/components/README.md)
   binds semantic, compiler, encoder, instruction-specification, code, launch and lineage
