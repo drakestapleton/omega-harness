@@ -2037,6 +2037,13 @@ are `seed/omc/omc.om` at `9920aab1`.
    ([#L72](https://github.com/aien-dev/omega-mv/blob/91c83438daec0bdb88bf5c077cae10f3d15d365d/docs/one_layer/OM_COMPLETION.md#L72))
    and `docs/X86-LINUX.md` line 450 now cite the same EMULATED differential at `62d1d0d6` (15182 PASS,
    0 FAIL, 2 NOT_RUN, 222 EXCLUDED, aggregate FAIL); native x86 stays NOT_RUN.
+7. `devctl` request set at the pin (unchanged at omega-mv main `d3d1b1bc7`, rechecked 2026-11-04 in
+   `hdevctl`, `seed/omc/omc.om`): FIONREAD (21531) and encoded read/write NVRM `'F'` requests only;
+   any DRM request is error 9. PENDING, not merged: aien-dev/omega-mv#899 (head `15fb0b88`, open,
+   its body says draft pending review, conflicting with main on 2026-11-04) adds an explicit list of
+   eleven accel/ethosu requests (the ten `DRM_IOCTL_ETHOSU_*` of Linux v7.3 plus
+   `DRM_IOCTL_GEM_CLOSE`), with the exact-size check unchanged. Until it merges and the pin moves,
+   code that issues those requests needs that branch's `omc` and must say so.
 
 ## 13. Examples
 
