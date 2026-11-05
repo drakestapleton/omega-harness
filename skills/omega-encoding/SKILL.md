@@ -74,6 +74,11 @@ with exit 105. The same `fnv1a32.om` prefixed with `target x86linux` printed `0b
 `abc` with exit 0 under `qemu-x86_64` 8.2.2: EMULATED, not native x86.
 
 The omega MCP tools (`compile`, `run`) use an older pin: omega-mv `e5b32567`, omc `2c824805…029f`.
+Their results do not describe main's omc `be8c5130…`; for main, run `git show main:seed/out/omc`
+directly. One visible difference: the MCP omc predates #848, so `while ... bound 1000000` is
+`error 8` there (1..999999), while `be8c5130…` compiles it (observed 2026-11-04, host only). It also
+still has the #775 empty-text defect: `len` of a `text e ""` passed as `view uchar *` returns a stale
+register value (exit 36 in the program recorded under "Empty text" below; 0 with `be8c5130…`).
 Their results do not describe main's omc `b4f45121…`; for main, run `git show main:seed/out/omc`
 directly.
 
@@ -510,6 +515,14 @@ Changes and confirmations against the rules below, each observed with a program:
   `int` were not retested on 2026-10-29. Do not assume they are fixed. Decode signed values
   arithmetically when you have not measured the pair (`examples/wire_le.om`).
 - **`byte` is signed 8-bit** (`i8`, OMEGESE line 109); `char` is not a type (error 3).
+- **Empty text through `view uchar *` (omega-mv #775).** A 2026-10-27 report said `len` was 60 with
+  one other text and 28 with none. A two-text unit on 2026-10-29 returned 0 on both `2c824805` and
+  `62775d2a`, so that report was not reproduced then. **Reproduced 2026-11-04 on the MCP omc
+  `2c824805…` only:** `om2`, `text ta "abc"`, `text te ""`, `text tb "xy"`, `fn f t view uchar * to
+  ulong` / `ret len t`, then `ret int f te` in `main` exits 36 (expected 0), while `ret int f tb`
+  exits 2 and `ret int f part tb 0 0` exits 0. With the guide pin `be8c5130…` the same program exits 0
+  (fixed by the #904 integration `e2662fff`). On the MCP pin pass `part T 0 0` of a non-empty text
+  instead (`examples/empty_text_part.om`).
 - **Empty text through `view uchar *` (omega-mv #775).** Reproduced on 2026-11-04 with omc
   `2c824805` (MCP `omega_run`): `om2`, `text e ""`, `fn n a view uchar * to ulong` / `ret len a`,
   `main` `ret int n e` exits 28; adding `text f "0123456789abcdef0123456789abcdef"` makes it exit 60.
@@ -855,7 +868,9 @@ disagree, `omc` is what compiles your program:
   `ir` / `fn dig c uchar to ulong` / `ret ulong sub c 48` / `end` compiles with exit 0 to output
   byte-identical to `24caacf4…`'s (sha256 `40b76639…6cba`).
 - `new` lengths: C path 1..64 ([#L85](https://github.com/aien-dev/omega-mv/blob/55f9b0af47de70a3d06357985cf99ae3e45c016f/docs/one_layer/OMEGESE.md#L85)); `omc` 1..16777216
-  per array and at most 4 MiB of local arrays per program ([#L460-L463](https://github.com/aien-dev/omega-mv/blob/55f9b0af47de70a3d06357985cf99ae3e45c016f/docs/one_layer/OMEGESE.md#L460-L463), gate12).
+  per array and at most 4 MiB of local arrays per function ([#L460-L463](https://github.com/aien-dev/omega-mv/blob/55f9b0af47de70a3d06357985cf99ae3e45c016f/docs/one_layer/OMEGESE.md#L460-L463), gate12; "per function" observed
+  2026-11-04 with omc `be8c5130…` and `2c824805…`: `examples/local_arrays_per_fn.om` and
+  `mistake_local_arrays.om`).
 - Unread names: the C path refuses a name that is written and never read ([#L37-L38](https://github.com/aien-dev/omega-mv/blob/55f9b0af47de70a3d06357985cf99ae3e45c016f/docs/one_layer/OMEGESE.md#L37-L38)).
   `omc` fixtures contain unread results (`w = write ...` in `seed/rung4/tests/bytecopy.om`). Do not
   rely on either behaviour; check every result you write.
@@ -1083,6 +1098,10 @@ the target's limits, and a NaN gives 0, with no trap (observed at `e5b32567`,
   does om4. Until #837 lands and is pinned, keep names at 8.
 - A new name may not equal a visible name, a function or a struct (error 10). A name first written
   inside `if` / `else` / `while` / `for` dies at its `end`; assign it before the block to carry it out.
+- **Declaration order.** Only functions may be named before their line. A `text`, `const` or
+  `global` named in a function above its own declaration line is error 3 at the use, so put them all
+  above the first `fn` (`examples/decl_order.om` exit 8, `mistake_decl_order.om` error 3; observed
+  2026-11-04 with omc `be8c5130…` and `2c824805…`, host only).
 - A `global` is visible only to lines after its declaration: a function above it that reads it is
   **error 3** (unknown name). `global` needs program mode, so the unit must have `fn main` (without
   it `global` is error 9). Checked 2026-11-04 on omc `2c824805…` via the omega MCP: `fn f to ulong`
@@ -1094,7 +1113,9 @@ the target's limits, and a NaN gives 0, with no trap (observed at `e5b32567`,
 - Reserved words cannot be names. Besides the obvious ones, the table reserves `len read write text
   new free own view edit global note exit const bound` and every host word, including `stat link bind
   send recv random fork cwd chdir umask accept listen connect waitio memfd mapget mapset`. `bits min
-  max abs sqrt` are deliberately **not** reserved (gate11). Check the keyword table, not memory.
+  max abs sqrt` are deliberately **not** reserved (gate11), and they are not operators either: `ret
+  min a b`, `max`, `abs` and `mod` are all error 3 (unknown name) with omc `be8c5130…`. Remainder is
+  `rem` (`ret rem a b` with ints a=7, b=3 exits 1). Check the keyword table, not memory.
   A reserved word used as a name is **error 16** (unknown word), not error 10, so the message does
   not say "reserved". Observed on omc `2c824805…` (omega-mv `e5b32567`), host only: `fn f len ulong
   to ulong` gives `omc: line 1: error 16`, and a local `len = ulong 3` gives `omc: line 2: error 16`.
@@ -1155,7 +1176,11 @@ the target's limits, and a NaN gives 0, with no trap (observed at `e5b32567`,
   temporaries of the current statement all draw from it; error 12 when the next one is not available
   ([omc.om#L1479-L1487](https://github.com/aien-dev/omega-mv/blob/55f9b0af47de70a3d06357985cf99ae3e45c016f/seed/omc/omc.om#L1479-L1487)). gate15 pins the 17th live name as
   error 12. In practice keep functions to about 10 live names and split deep nested expressions or
-  helpers into smaller functions.
+  helpers into smaller functions. A name first written inside a block gives its register back at the
+  block's `end`: 10 names, 5 more inside `if true` ... `end`, then 5 after it compile
+  (`examples/block_frees_registers.om`, exit 15), and the same 20 names without the block are error
+  12 on the 17th. One name is enough to exhaust the pool through nesting: `ret add a add a ...` with
+  16 `add`s compiles, 17 is error 12 (`mistake_deep_nest.om`); bind partial results on separate lines.
 
 ## 7. Arrays, globals, structs
 
@@ -1168,7 +1193,8 @@ From OMEGESE 9.4 and 9.7 ([#L449-L474](https://github.com/aien-dev/omega-mv/blob
   a part of it, in one call are also error 19 (omc `befb8199`). The arrays of one call must be distinct
   names (error 19).
 - `NAME = new T N v`: local stack array, N elements each v, only in a function's outermost block
-  (error 9 inside a block), at most 4 MiB of local arrays (error 23). **N must be a literal or an
+  (error 9 inside a block), at most 4 MiB of local arrays per function (error 23; another function's
+  arrays do not count, see `local_arrays_per_fn.om`). **N must be a literal or an
   integer `const`**; a variable length is error 16 (gate16 `len_varname`), so there are no
   run-time-sized arrays. No heap and no `free` (decision 24; `free` is error 9).
 - Array parameters state type and length exactly: `a view uchar 64` / `a edit uchar 64` (error 7 for

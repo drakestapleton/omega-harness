@@ -107,6 +107,8 @@ examples/gate.sh omega-src/seed/out/omc
 ```
 
 It prints `PASS name` or `FAIL name: reason` per program and ends with
+`GATE PASS examples=107 pass=107 fail=0 omc=be8c5130...` (exit 0), `GATE FAIL ...` (exit 1), or a hash
+refusal (exit 2), for example `GATE FAIL omc sha256 24caacf4..., pinned be8c5130... (omega-mv 9920aab1...)`
 `GATE PASS examples=101 pass=101 fail=0 omc=b4f45121...` (exit 0), `GATE FAIL ...` (exit 1), or a hash
 refusal (exit 2), for example `GATE FAIL omc sha256 be8c5130..., pinned b4f45121... (omega-mv d3d1b1bc...)`
 for the previous pin's compiler. The `omega-encoding` skill (section 0 and section 13) records the observed results
