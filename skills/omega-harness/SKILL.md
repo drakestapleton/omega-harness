@@ -86,6 +86,13 @@ say so and stop rather than estimating.
   state. Whole-source validation includes unused helpers and conservatively refuses arrays,
   globals, text, host effects, OM2 and types outside its declared integer/bool scalar subset.
   Traps return status without writing the result; nested and concurrent calls remain isolated.
+  PENDING [omega-bridge#45](https://github.com/aien-dev/omega-bridge/pull/45) (draft, head
+  `72d6dbc`, not merged): it lifts the OM2 refusal. OM-2 units get output `freest` plus `fapic`
+  (`omega_api_decl.h` and `omega_api_defs.{c,o}`, whose wrappers `__builtin_trap()` on a nonzero
+  status instead of calling `abort()`) on AArch64 and on `--target x86linux`. Verification is
+  HOST_TESTED on AArch64 (`tests/native/test_freestanding_om2.py` from `tests/native/v2/run.sh`)
+  and EMULATED on x86 under QEMU 10.0.14 (suite step `freestanding_om2_x86`, 345 PASS); native
+  x86 is NOT_RUN. Until #45 merges, main still refuses OM2 here.
   The undefined-import gate permits only the GPU_FS_LINK libc-string allowlist; failed symbol
   extraction/filtering refuses installation. One private input snapshot supplies profile,
   compilation, framing and identity. Tests exercise the pthread-import mutant, failed/missing
