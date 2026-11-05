@@ -1284,6 +1284,23 @@ Historical note: up to omc `2c824805…` (omega-mv `e5b32567`, the omega MCP pin
 the wrong word: `pwrite` from a `text` was error 20 and `pread` into a `text` compiled and returned
 `-EFAULT` at run time. Code written for that pin copied a text into a `new` array before `pwrite`.
 
+**x86efi firmware boundary word `efi`, OP 11 boot-file word (in the pin: omega-mv `d3d1b1bc` / omc `b4f45121…`, merged via [omega-mv#1015](https://github.com/aien-dev/omega-mv/pull/1015); the previous pin `9920aab1` / omc `be8c5130…` refuses `target x86efi` with error 25).**
+Read [omega-mv `docs/X86-EFI.md`](https://github.com/aien-dev/omega-mv/blob/main/docs/X86-EFI.md) for the full word. Under `target x86efi` it is `r = efi OP ARG A OFF N`:
+OP a literal 0..13 (14 is error 25), `ulong` result, bit 63 set means an error with its code in
+the low bits. OPs 0..10: info, key, stall, gop blt, time, rng, recv, tx, net up, pointer, clock;
+12 general file, 13 console. OP 11 is the boot-file word of the firmware Allen's self-install
+contract (first proposed in draft [omega-mv#981](https://github.com/aien-dev/omega-mv/pull/981)):
+`ARG` bits 0..7 = sub-op, bits 8..15 = volume index k. Sub 0 counts the Simple-File-System volumes
+and finds the one this image was loaded from, result `count | index << 8`. Sub 1 reads
+`\EFI\BOOT\BOOTX64.EFI` from volume k into `A[OFF..OFF+N)` and returns the byte count. Sub 2
+writes `A`'s N bytes as that file (the merged code deletes it first, unlike #981's "must already
+exist") and returns the bytes written. File and root handles close on every path (source notes
+above `fn xefile` in `seed/omc/omc.om` at `d3d1b1bc`; quote error codes from that source, not from #981).
+omega-mv's own table marks OP 11 "shipped, NOT_RUN" at `d3d1b1bc` (only OPs 12 and 13 are
+EXERCISED, EMULATED under QEMU q35 + OVMF); physical hardware NOT_RUN. Observed 2026-11-04 with
+the pinned omc `b4f45121…`: `efi 11 0 a 0 0` under `target x86efi` compiles (exit 0, `MZ` image) and the
+same unit with `efi 14` is `omc: line 4: error 25`; the previous pin's omc `be8c5130…` gives `line 1: error 25`.
+
 **`peername`: bounded peer address of an existing descriptor** (merged in
 [omega-mv#918](https://github.com/aien-dev/omega-mv/pull/918) as `2d848d939`, committed omc
 `38748442…`; in the current pin `d3d1b1bc` / omc `b4f45121`, since `3a163bc5` / omc `24caacf4`). `peername fd A off n` is host word 224,
