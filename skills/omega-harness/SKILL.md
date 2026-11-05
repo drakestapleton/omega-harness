@@ -318,6 +318,19 @@ synthetic evidence cannot establish production or economic improvement.
   `87489da90a1a7a750fd4a7f9eeb005b1221721f6`. It is written in seeded Omega.
   See `omega-encoding` section 0 for tested hashes, exact limits and refusal boundary.
   Source merge status does not establish browser deployment.
+- Optional kernel-leaf/compiler ABI work is pending
+  [omega-mv #925](https://github.com/aien-dev/omega-mv/pull/925) and
+  [omega-bridge #38](https://github.com/aien-dev/omega-bridge/pull/38);
+  exact tested sources/hashes are in `omega-encoding` section 0. It is a narrow
+  scalar experiment, not a driver-enabling prerequisite or supported kernel
+  transport. Linux callbacks already run in kernel context; direct userspace
+  EL1 access and OS replacement are not requirements. Existing function-mode
+  continuations need a checked primitive adapter and reviewed target hardening,
+  not arbitrary extern calls. Host scalar execution and single-object kbuild
+  comparison passed; module/kernel/device execution did not run. No active
+  compiler pin, native-command fingerprint, trust path or loading authority
+  changes. First-party policy/generation remains `.om`; GNU object tooling is
+  a disclosed dependency, not an independent Omega driver.
 - No outside dependency is adopted silently (Drake, 2026-10-25). When the work needs one, code it in seeded Omega and route any conversion through `aien-dev/omega-bridge` — which, per `docs/CAPABILITIES.md` and `docs/NATIVE-ABI.md`, emits checked C and Python from a bounded `.om` subset and lets foreign callers call compiled Omega units. It does **not** import arbitrary C or Python (`Python/C input conversion is not implemented`), so an existing host implementation cannot be pulled in; a missing converter is a concrete extension proposal, not an assumption. A host binary, library or language runtime that remains in the build or production path gets its exact version, what it does for us, and the Omega replacement recorded next to the artifact. Verification oracles are exempt: the pinned compiler, QEMU/OVMF and read-only checkers (mtools, sgdisk, fsck.vfat, git, gh) stay in use.
 
 ### Neuralese supplement: merged reference, not a second execution language
