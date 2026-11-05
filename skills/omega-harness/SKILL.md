@@ -234,7 +234,7 @@ reference from omega-mv #919 is **MERGED** and **IMPLEMENTED / EXERCISED (host)*
 not QUALIFIED or DEPLOYED: train r1 [#971](https://github.com/aien-dev/omega-mv/pull/971)
 merged it as `f56a372aec4909f0601bb4f74ce07b066dd54cf2`
 ([#919 close comment](https://github.com/aien-dev/omega-mv/pull/919#issuecomment-6529992046)).
-Current pin: omega-mv main `9920aab1413983c2867d02d75b2276341595adb8`. The original
+Current pin: omega-mv main `d3d1b1bc7e3b970016a2176435f78c8f0251bad1`. The original
 evidence pins were documentation `e79566c191ea8ef11888e69ce50d8fadf375d4fd` and clean
 implementation `39e89fb1c2aaed99ddc05ec565274dd05792b70f` on main `6999fa9e6`.
 
@@ -259,7 +259,7 @@ The original run used compiler `seed/out/omc` SHA-256
 `d6290c7663c2b4bafb59eb3fdf812476e977f4c144def71095c6248ef9b96b84` (receipt
 `neuralese/host-results.287fdc263f7af93107c378ba63c92202a0e6c1479cb1ff6971706b423b0b15fb.json`,
 kept unedited on main). The conductor refuses any compiler other than the pinned one,
-so at main `9920aab1` use the current omc SHA-256. From a fresh Linux AArch64 clone,
+so at main `d3d1b1bc` use the current omc SHA-256. From a fresh Linux AArch64 clone,
 with the scratch directory absent:
 
 ```sh
@@ -267,15 +267,17 @@ mkdir -p build
 if seed/out/omc < seed/qualification/om2/gate.om > build/neuralese-gate; then
   chmod +x build/neuralese-gate &&
   build/neuralese-gate seed/out/omc \
-    be8c51301307555254fc59e351d281aae1aa096d91521777e33a41c8b446448a \
+    b4f45121f6c6d5d8a6ed0f5c4f3934b7cc4bec369bfa89523699bd33928f9b55 \
     neuralese/host.cases build/neuralese-host
 else
   exit 1
 fi
 ```
 
-MEASURED 2026-10-31 at main `9920aab1` (omc `be8c5130...448a`, clean detached worktree):
-`OM2GATE PASS cases=54 pass=54 fail=0 invalid=0 not_run=0` (exit 0), the same count as at
+MEASURED 2026-11-04 at main `d3d1b1bc` (omc `b4f45121...9b55`, clean detached worktree):
+`OM2GATE PASS cases=54 pass=54 fail=0 invalid=0 not_run=0` (exit 0); passing the previous pin hash
+`be8c5130` gives `OM2GATE INVALID cases=54 pass=0 fail=0 invalid=0 not_run=54` (exit 3).
+MEASURED 2026-10-31 at main `9920aab1` (omc `be8c5130...448a`): the same PASS count as at
 `3a163bc5` (omc `24caacf4...abb7`), at `91c83438` (omc `2aec185d...d8d5`) and in the original
 `d6290c76` receipt; passing the previous pin hash `24caacf4` to the same conductor gives
 `OM2GATE INVALID cases=54 pass=0 fail=0 invalid=0 not_run=54` (exit 3). Earlier negative control (2026-10-31 at `91c83438`): one byte appended to
@@ -377,17 +379,17 @@ MJB/MJR authority or production qualification. The independent NL6 replay is
 
 Use the target repository's documented commands. A host-only seed workflow on AArch64 Linux, in a disposable clone pinned to an exact revision, looks like this:
 
-Current main source pin (checked 2026-10-31): omega-mv
-`9920aab1413983c2867d02d75b2276341595adb8` (squash of
-[#994](https://github.com/aien-dev/omega-mv/pull/994), `scrub` keeps live float registers, after
-#857, #967, #948, #875, #918, #853 and #848; the list is in `omega-encoding` section 0).
-`seed/omc/omc.om`: 16,432 lines, sha256
-`d4b4b89d8a58cc90d30d15a525b417e4b31e5bfe5288d21d665f1c7958a330f6`;
+Current main source pin (checked 2026-11-04): omega-mv
+`d3d1b1bc7e3b970016a2176435f78c8f0251bad1` (merge commit of
+[#1015](https://github.com/aien-dev/omega-mv/pull/1015), `target x86efi`; the only compiler change
+after #994; the list is in `omega-encoding` section 0).
+`seed/omc/omc.om`: 18,056 lines, sha256
+`16b4ca40a5bd7796ac08b55d1ceadac1260e52298ed123f45418e77b3221c749`;
 `seed/out/omc`: sha256
-`be8c51301307555254fc59e351d281aae1aa096d91521777e33a41c8b446448a`, 517,856 bytes, equal to
+`b4f45121f6c6d5d8a6ed0f5c4f3934b7cc4bec369bfa89523699bd33928f9b55`, 611,620 bytes, equal to
 `seed/out/omc.sha256`, and reproduced by `sh seed/omega-from-seed.sh` in a clean detached
 worktree (exit 0). Example reruns at this compiler are in `omega-encoding` section 0. The earlier
-main pins `3a163bc5e` (#857, omc `24caacf4…abb7`), `91c83438d` (#965, omc `2aec185d…d8d5`),
+main pins `9920aab14` (#994, omc `be8c5130…448a`), `3a163bc5e` (#857, omc `24caacf4…abb7`), `91c83438d` (#965, omc `2aec185d…d8d5`),
 `bf54b19fa` (#923, omc `62775d2a…712b`, unchanged through `4376c2112`), `1db941627` (#970, omc
 `7a8b84fc…`), the candidate pin `1fe5976d` (#911, compiler `d6290c76...6b84`) and older pins below
 remain dated history.

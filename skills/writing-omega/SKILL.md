@@ -14,8 +14,8 @@ For compiler internals, register rules, wire formats and the reasons behind each
 
 | Pin | Value |
 |---|---|
-| omega-mv commit | `9920aab1413983c2867d02d75b2276341595adb8` |
-| compiler `seed/out/omc` | sha256 `be8c51301307555254fc59e351d281aae1aa096d91521777e33a41c8b446448a` |
+| omega-mv commit | `d3d1b1bc7e3b970016a2176435f78c8f0251bad1` |
+| compiler `seed/out/omc` | sha256 `b4f45121f6c6d5d8a6ed0f5c4f3934b7cc4bec369bfa89523699bd33928f9b55` |
 | language reference | `docs/one_layer/OMEGESE.md` at that commit |
 | host | Linux AArch64 only; omc writes a static AArch64 Linux ELF |
 
@@ -26,7 +26,7 @@ decides; this guide records the known disagreements.
 
 ```sh
 git clone https://github.com/aien-dev/omega-mv && cd omega-mv
-git checkout 9920aab1413983c2867d02d75b2276341595adb8
+git checkout d3d1b1bc7e3b970016a2176435f78c8f0251bad1
 sha256sum seed/out/omc      # must print the pinned hash
 sh seed/omega-from-seed.sh  # optional: rebuild omc from the 408-byte loader
 seed/out/omc < prog.om > prog; echo "compile $?"
@@ -315,7 +315,7 @@ with its exact stderr line in the matching `.expect`, except 24, which needs a g
 | 22 | a text escape other than `\n \t \\ \"` | `err22_text_escape` | build other bytes with `put` |
 | 23 | array or pool size limit | `err23_size` | smaller arrays (section 8 limits) |
 | 24 | a conditional branch farther than 1 MiB of code | generated, below | move long bodies into functions |
-| 25 | unknown `target` name, or an AArch64-only path on another target | `err25_target` | omit `target` for AArch64, or name a target the unit fits (`target x86linux` with `fn main` compiles; `target x86efi` with the same unit is error 25) |
+| 25 | unknown `target` name, an AArch64-only path on another target, or (with omega-mv#1015) an x86efi refusal | `err25_target` | omit `target` for AArch64, or name a target the unit fits (`target x86linux` and `target x86efi` with `fn main` compile). omega-mv#1015 (head `19ee7e99`, merged as `d3d1b1bc`, the pin, omc `b4f45121…`) adds the x86efi backend; its error 25 is a bare unit (no `fn main`), a Linux host word, or an `efi` OP literal outside 0..13 (0..14 with omega-mv#1022, open); a non-literal OP is error 16 and `efi` under `target x86linux` is error 3. See `omega-encoding` |
 | 26 | never emitted at the pin | none | none |
 | 27 | OM-2 `fresh` element read before it is written | `err27_fresh` | `put` every element before the `get` |
 | 28 | OM-2 `seal` outside the constructor | `err28_seal` | `seal` only as the whole body of `fn NAMEmk ... to NAME` |

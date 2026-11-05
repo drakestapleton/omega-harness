@@ -19,7 +19,29 @@ The quantity and diagnostic audit is merged through omega-mv #914 at main
 `d94a503f7aae57d09697046405da2e9a5895be6d`. The older candidate observations
 below remain dated history, not claims about the newer integration.
 
-### Current main pin (checked 2026-10-31)
+### Current main pin (checked 2026-11-04)
+
+| Item | Value |
+|---|---|
+| Repository | `github.com/aien-dev/omega-mv`, branch `main` |
+| Commit | `d3d1b1bc7e3b970016a2176435f78c8f0251bad1` (merge commit of [#1015](https://github.com/aien-dev/omega-mv/pull/1015), `target x86efi`, head `19ee7e99`, merged 2026-11-04T13:50:27Z) |
+| Compiler source `seed/omc/omc.om` | 18,056 lines, 510 `^fn ` lines, sha256 `16b4ca40a5bd7796ac08b55d1ceadac1260e52298ed123f45418e77b3221c749` |
+| Compiler `seed/out/omc` | sha256 `b4f45121f6c6d5d8a6ed0f5c4f3934b7cc4bec369bfa89523699bd33928f9b55`, 611,620 bytes (equals `seed/out/omc.sha256`; last `seed/omc/size-history.tsv` row `x86efi-1015`) |
+| Seed loader `seed/rung0/seed0.hex` | sha256 `baaf081fe6055a768485c5d25d7435681ce00b04cfa80b26c48169f78944e14d` (unchanged) |
+
+#1015 is the only merge after `9920aab14` that changes `seed/out/omc`: at `ba5559d9b`, `f9a9a40b5`
+(train r4) and `19b8340db` (train r5) it is still `be8c5130…`. #1015 adds the x86efi backend
+(section below); AArch64 and x86linux output of the 1305 tracked `.om` files is unchanged except the
+4 x86efi test programs (#1015's corpus TSVs). `omc.om` went from 495 to 510 `^fn ` lines, so the om4
+cap (section 8) has 2 free entries at this pin.
+
+Observed 2026-11-04 on a Linux AArch64 host in a clean detached worktree at `d3d1b1bc7`:
+`sh seed/omega-from-seed.sh` exited 0 and left `seed/out/omc` at exactly `b4f45121…9b55`.
+`fnv1a32.om` and `trap_narrow.om` compiled to binaries byte-identical to the ones `be8c5130`
+emits; `abc` gave `0b e9 47 1a`, exit 0; `trap_narrow` exited 105. The example gate result is in
+the "Rerun at omega-mv `d3d1b1bc`" section.
+
+### Previous pin `9920aab1` (checked 2026-10-31, history)
 
 | Item | Value |
 |---|---|
@@ -52,7 +74,7 @@ with exit 105. The same `fnv1a32.om` prefixed with `target x86linux` printed `0b
 `abc` with exit 0 under `qemu-x86_64` 8.2.2: EMULATED, not native x86.
 
 The omega MCP tools (`compile`, `run`) use an older pin: omega-mv `e5b32567`, omc `2c824805…029f`.
-Their results do not describe main's omc `be8c5130…`; for main, run `git show main:seed/out/omc`
+Their results do not describe main's omc `b4f45121…`; for main, run `git show main:seed/out/omc`
 directly.
 
 ### Previous pin `3a163bc5` (2026-10-31, history)
@@ -154,7 +176,89 @@ At main `91c83438d` (omc `2aec185d…`, 2026-10-31), at main `3a163bc5e` (omc `2
 `omc: line 1: error 25`, exit 25 (observed); `vfioctl` is still absent from `omc.om` at `9920aab14`
 and #878 is still an open draft. Since #970, `docs/X86-LINUX.md`
 also lists `execpure` (word 198) among the `xhost` error-25 refusals on x86 (source text, not run
-here).
+here). These are observations of the omc before #1015; since #1015 merged (`d3d1b1bc7`, omc
+`b4f45121…`) error 25 on `target x86efi` covers only the refusals listed in the next section.
+
+### `target x86efi`: omega-mv#1015 (merged `d3d1b1bc7`, the current pin; observed 2026-11-01 to 2026-11-04)
+
+[omega-mv#1015](https://github.com/aien-dev/omega-mv/pull/1015), branch `feat/x86efi-main`,
+head `19ee7e99fafaa6a509e0fd166126a16226e414f7`, merged 2026-11-04 with the merge commit
+`d3d1b1bc7e3b970016a2176435f78c8f0251bad1`, so the commits cited below stay reachable. First observed at
+`5ce9ecaa7b2034d5a7b4502403591d5c2489c06d` on main `ba5559d9b` (2026-11-01); the omc is the same
+at both: sha256 `b4f45121f6c6d5d8a6ed0f5c4f3934b7cc4bec369bfa89523699bd33928f9b55` (committed
+`seed/out/omc`, reproduced by `seed/omega-from-seed.sh`). An omc built before the merge, such as
+the previous pin's `be8c5130…`, refuses every `target x86efi` unit with error 25 (section above).
+Observed 2026-11-04 at `d3d1b1bc7`: `target x86efi` with `fn main to int` / `ret 0` / `end` compiles
+with exit 0 to a file starting `MZ`; the same unit with `be8c5130` gives `omc: line 1: error 25`.
+
+- The exact first line `target x86efi` emits a PE32+ EFI application for x86-64 UEFI firmware.
+  Only whole programs (`fn main`) are accepted. Error 25 there means one of three refusals: a bare
+  unit (`omc: line 1: error 25`), a Linux host word such as `read` or `write` (error 25 at its
+  line), or an `efi` OP literal outside 0..13 (0..14 with omega-mv#1022, open on
+  2026-11-04). An OP that is not a literal, such as a name, is error 16. `efi` under
+  `target x86linux` is an ordinary unknown name, error 3 (`docs/one_layer/OMEGESE.md` lines
+  441-451 at `19ee7e99`). Observed 2026-11-04 with omc `b4f45121`: `efi 13` compiles, `efi 14` and
+  `efi 15` give `omc: line 4: error 25`, `k = ulong 13` then `efi k …` gives `omc: line 5: error
+  16`, a unit without `fn main` gives `omc: line 1: error 25`, `write` gives `omc: line 4: error
+  25`; under `target x86linux` `efi` gives `omc: line 4: error 3`. With the #1022 omc `3ad9f10f`
+  `efi 14` compiles and `efi 15` is error 25.
+- Keyword 178 `efi`: `st = efi OP ARG BUF OFF N`. `efi 12` is files: ARG bits 0-7 are the sub-op
+  (0 OPEN-READ, 1 OPEN-WRITE, 2 READ, 3 WRITE, 4 CLOSE, 5 OPEN-UPDATE), bits 8-15 the volume
+  (255 = the boot volume), bits 16-63 the position; one open file at a time; an error returns
+  bit 63 | code. `efi 13` is the console: it accepts bytes 9, 10, 13 and 32..126 and writes LF as
+  CR LF; with a NULL ConOut it returns error 43 without calling firmware (source; NOT_RUN, OVMF
+  always installs ConOut). Ops 0..11 ship but are NOT_RUN (`docs/X86-EFI.md` ops table at `19ee7e99`).
+- Exit closes the open file: on `return`, `exit` or any trap, a still-open file is flushed (if
+  opened for writing) and closed with its volume root. Without this, a refusal path that exits
+  between OPEN-WRITE and CLOSE loses the data: `tests/x86efi/run.sh` at `5ce9ecaa` gave
+  `SUMMARY pass=11 fail=0` with `b4f45121` and `pass=9 fail=2` with the previous candidate
+  `d0f756d9…` (both exit checks: `X.TXT` left at 0 bytes). The runner prints NOT_RUN for each
+  check it cannot run (OVMF missing) and exits 77 when nothing ran; since review commit
+  `e6d14505` it no longer reports a false `PASS exit e1`.
+- At entry the program calibrates the TSC with a 100 ms `Stall(100000)` when CPUID reports an
+  invariant TSC.
+- `efi 14` machine identity: [omega-mv#1022](https://github.com/aien-dev/omega-mv/pull/1022)
+  (branch `feat/x86efi-ident`, stacked on #1015, observed at `fbcf08826` and at head `9bf67eff`;
+  omc sha256 `3ad9f10f64309e7acf8a725082b28e23a2a4aeb07e98322fb4dc0fcd8fc93194` at `9bf67eff`;
+  open, not merged, on 2026-11-04 at head `d07974da`). ARG
+  `L << 16` = CPUID leaf L (16 bytes EAX..EDX; N < 16 is error 5), 1 = FirmwareVendor UCS-2 units,
+  2 = FirmwareRevision as the result (nothing written), `3 + (P << 16)` = SMBIOS structure table from
+  byte P (SMBIOS 3 entry point first, else 2; none is error 44, NOT_RUN); anything else is error 32.
+  Structures are left to the program: read only the fields you print (`tests/x86efi/ident/id.om`
+  never reads type 1 serial or UUID). Gates at `fbcf08826`: `tests/x86efi/run.sh` pass=18 fail=0,
+  AArch64/x86linux sweep 2594 same, 0 differ; all EMULATED (QEMU q35 + OVMF). `seed/omc/omc.om` has
+  511 `fn` definitions with #1022 (510 with #1015 alone; the om4 cap is 512) and the seed bootstrap
+  still builds it. aien-train [#55](https://github.com/aien-dev/aien-train/pull/55) uses it for the
+  `M` line of `OUT.TXT`.
+- Gates at `19ee7e99` (`docs/X86-EFI.md`, committed TSVs): the 1305 tracked `.om` files compiled
+  by `b4f45121` against main's `be8c5130` with `tools/x86efi/corpus_diff.sh`: AArch64 663
+  identical, 638 same-refusal, 4 differ (`evidence/x86efi/corpus_b4f45121_vs_be8c5130.tsv`, sha256
+  `e07c912b…`); x86linux 647, 654, 4 (`…_x86linux.tsv`, sha256 `04604a9d…`). The 4 are the
+  `target x86efi` test programs, which only `b4f45121` accepts. Both TSVs were reproduced natively
+  on AArch64 on 2026-11-04. Since `e6d14505`, `corpus_diff.sh` prints NOT_RUN (exit 3) without
+  file(1) and reports the verdict `signal` for an exit above 128. The compiler uses 510 of the om4
+  cap of 512 functions (511 with #1022; #1013, the 4096 raise, is parked).
+- Evidence class: QEMU q35 + OVMF results are EMULATED; #1015 itself is IMPLEMENTED and EXERCISED
+  under emulation, not QUALIFIED. First physical run: EXERCISED on physical hardware (one
+  machine), aien-train `ollm.efi` on Drake's iMac (2026-11-01; `evidence/OMEGALLM/imac/` on
+  aien-train [#53](https://github.com/aien-dev/aien-train/pull/53) at `df1fd9a`, merged `19c952b6`).
+  The run records no machine identity; iMac18,3 and Core i5-7500 come from earlier aienux
+  evidence. The OUT.TXT body equals the AArch64 reference under `tests/omegallm/efi-check.sh` (next
+  bullet), and the written files TR.BIN, HE.BIN and S.CK match their recorded sha256. Reading the
+  stick back: macOS 26 refused to mount the partition the firmware wrote (fsck clean), so copy it
+  with `sudo dd if=/dev/rdiskNs1` and extract with mtools.
+- Pitfall met while porting: `le` is a keyword (comparison), so a local named `le` is error 16;
+  rename it (`lend`).
+- First application: aien-train's Omega LLM `ollm` (aien-train#52, #53 at `df1fd9a`) builds with
+  `TARGET=x86efi sh tests/omegallm/build.sh` (platform unit `native/omegallm/eio.om`, which reads
+  `\OLLM\JOB.TXT` and writes `\OLLM\OUT.TXT`). `tests/omegallm/efi-receipts.sh` boots it under OVMF
+  and requires `EV=` to name a new or empty directory, so it never overwrites receipts.
+  `tests/omegallm/efi-check.sh OUT.TXT REF JOBS BYTES` checks positions as well as content: the
+  first line must be exactly `OLLM efi BYTES`, each reference job must be followed by exactly one
+  `J <ms>` line (an extra one is refused), and the last line must be `OLLM DONE JOBS <ms>`.
+  J-shaped and DONE-shaped lines inside a job's output stay in the comparison. A `> ` job line
+  holding only spaces or tabs runs nothing, gets no J line and is not counted in JOBS. It prints
+  `EQUAL` (exit 0) or `DIFFERENT` (exit 1); exit 2 is a usage error.
 
 ### Historical quantity/check/next candidate (observed 2026-10-28)
 
@@ -202,7 +306,18 @@ correctness proof or a full gate5/host qualification.
 
 Every citation links to that commit: `https://github.com/aien-dev/omega-mv/blob/55f9b0af47de70a3d06357985cf99ae3e45c016f/<path>#L<n>`.
 
-### Rerun at omega-mv `9920aab1` (2026-10-31)
+### Rerun at omega-mv `d3d1b1bc` (2026-11-04)
+
+The example gate pins main `d3d1b1bc7e3b970016a2176435f78c8f0251bad1` (#1015), `seed/out/omc`
+sha256 `b4f45121f6c6d5d8a6ed0f5c4f3934b7cc4bec369bfa89523699bd33928f9b55`. #1015 adds the x86efi
+target and leaves AArch64 output unchanged; with only the pin moved and no expectation changed,
+`bash examples/gate.sh` against that binary printed
+`GATE PASS examples=101 pass=101 fail=0 omc=b4f45121f6c6d5d8a6ed0f5c4f3934b7cc4bec369bfa89523699bd33928f9b55`
+(exit 0) on 2026-11-04, Linux AArch64. Negative control: the gate pointed at the previous omc
+`be8c5130…448a` was refused with exit 2 (`GATE FAIL omc sha256 be8c5130…, pinned b4f45121…
+(omega-mv d3d1b1bc…)`). The section below is the previous pin.
+
+### Rerun at omega-mv `9920aab1` (2026-10-31, previous pin)
 
 The example gate pins main `9920aab1413983c2867d02d75b2276341595adb8` (#994), `seed/out/omc`
 sha256 `be8c51301307555254fc59e351d281aae1aa096d91521777e33a41c8b446448a`. #994 changed only the
@@ -213,9 +328,9 @@ sha256 `be8c51301307555254fc59e351d281aae1aa096d91521777e33a41c8b446448a`. #994 
 `24caacf4…abb7` was refused with exit 2 (`GATE FAIL omc sha256 24caacf4…, pinned be8c5130…
 (omega-mv 9920aab1…)`), and on a scratch copy `const N ulong 16` changed to 15 in
 `examples/consts.om` ended `GATE FAIL examples=101 pass=100 fail=1` with exit 1 (`stdout differs
-from consts.stdout`). The section below is the previous pin.
+from consts.stdout`). The section below is the pin before.
 
-### Rerun at omega-mv `3a163bc5` (2026-10-31, previous pin)
+### Rerun at omega-mv `3a163bc5` (2026-10-31)
 
 The example gate then pinned main `3a163bc5eafa5be4b9ca97b7f17046c33f0d9032` (#857), `seed/out/omc`
 sha256 `24caacf463cc29c5413d5b2565ef8f88c76e60a585bbad44d2388cb1ac29abb7`. With the previous tree
@@ -680,7 +795,7 @@ disagree, `omc` is what compiles your program:
   compile; `ret uchar 256` and `ret ulong sub c 300` (c uchar) are error 8; `ret bool c` and
   `ret ulong eq a b` are error 9. An earlier pin of this skill (omega-mv `91c83438`, omc `2aec185d…`)
   predates #967: it gives error 7 for the two widening casts and for `ret ulong eq a b`, and compiles
-  `ret bool c`. The current pin `9920aab1` includes #967 (since `3a163bc5`): observed 2026-10-31, the
+  `ret bool c`. The pins `9920aab1` and `d3d1b1bc` include #967 (since `3a163bc5`): observed 2026-10-31, the
   IR unit `fn dig c uchar to ulong` / `ret ulong sub c 48` compiles with omc `24caacf4…` (124 bytes of
   IR) and is `omc: line 3: error 7` with `2aec185d…`; with omc `be8c5130…` the `ir` unit
   `ir` / `fn dig c uchar to ulong` / `ret ulong sub c 48` / `end` compiles with exit 0 to output
@@ -900,6 +1015,14 @@ the target's limits, and a NaN gives 0, with no trap (observed at `e5b32567`,
   names and layout fields stay at 8, and so does om4. Until the batch-3 pin lands, keep names at 8.
 - A new name may not equal a visible name, a function or a struct (error 10). A name first written
   inside `if` / `else` / `while` / `for` dies at its `end`; assign it before the block to carry it out.
+- A `global` is visible only to lines after its declaration: a function above it that reads it is
+  **error 3** (unknown name). `global` needs program mode, so the unit must have `fn main` (without
+  it `global` is error 9). Checked 2026-11-04 on omc `2c824805…` via the omega MCP: `fn f to ulong`
+  / `ret get g 0` / `end` / `global g ulong 4` / `fn main to int` / `ret int f` / `end` gives
+  `omc: line 2: error 3`; the same seven lines with the `global` line first compile and exit 0;
+  the first four lines with the `global` first and no `fn main` give error 9 (`omc: line 5: error
+  9` with a trailing newline). In multi-file units (`build.sh` concatenation) the file that
+  declares a global must come before every file that uses it.
 - Reserved words cannot be names. Besides the obvious ones, the table reserves `len read write text
   new free own view edit global note exit const bound` and every host word, including `stat link bind
   send recv random fork cwd chdir umask accept listen connect waitio memfd mapget mapset`. `bits min
@@ -911,7 +1034,7 @@ the target's limits, and a NaN gives 0, with no trap (observed at `e5b32567`,
 - **`dit` and `scrub`: merged in [omega-mv#875](https://github.com/aien-dev/omega-mv/pull/875) as
   `2367874399001efdc7f1ff345fb327469bc1a135` (2026-10-31), committed omc sha256
   `3862655902e3bb9f502ebca2e1e5e5edb6175bf512be731a63c700a6dce8d355`; included in the current pin
-  `9920aab1` (omc `be8c5130…`) and in the previous pin `3a163bc5` (omc `24caacf4…`).** Keyword ids: `dit` 225, `scrub` 226 in `fn kw2`, the OM-2 table
+  `d3d1b1bc` (omc `b4f45121…`), in `9920aab1` (omc `be8c5130…`) and in `3a163bc5` (omc `24caacf4…`).** Keyword ids: `dit` 225, `scrub` 226 in `fn kw2`, the OM-2 table
   ([omc.om#L1329](https://github.com/aien-dev/omega-mv/blob/2367874399001efdc7f1ff345fb327469bc1a135/seed/omc/omc.om#L1329),
   [#L1384-L1388](https://github.com/aien-dev/omega-mv/blob/2367874399001efdc7f1ff345fb327469bc1a135/seed/omc/omc.om#L1384-L1388)).
   Both are emitted inline, not as helper functions, because om4 holds 512 functions and `omc.om` is at
@@ -998,7 +1121,7 @@ From OMEGESE 9.4 and 9.7 ([#L449-L474](https://github.com/aien-dev/omega-mv/blob
 ## 8. Loops and bounds
 
 From OMEGESE section 3 and 4 ([#L58-L60](https://github.com/aien-dev/omega-mv/blob/55f9b0af47de70a3d06357985cf99ae3e45c016f/docs/one_layer/OMEGESE.md#L58-L60), [#L131-L135](https://github.com/aien-dev/omega-mv/blob/55f9b0af47de70a3d06357985cf99ae3e45c016f/docs/one_layer/OMEGESE.md#L131-L135)) and [omc.om#L5493-L5494](https://github.com/aien-dev/omega-mv/blob/55f9b0af47de70a3d06357985cf99ae3e45c016f/seed/omc/omc.om#L5493-L5494);
-the bound ranges below are those of the pin `3a163bc5`, and the cited lines are unchanged at the current pin `9920aab1` (the `omc.om` ones moved down 10 lines) (OMEGESE [#L63-L69](https://github.com/aien-dev/omega-mv/blob/3a163bc5eafa5be4b9ca97b7f17046c33f0d9032/docs/one_layer/OMEGESE.md#L63-L69),
+the bound ranges below are those of the pin `3a163bc5`, and the cited lines are unchanged at the pin `9920aab1` (the `omc.om` ones moved down 10 lines) (OMEGESE [#L63-L69](https://github.com/aien-dev/omega-mv/blob/3a163bc5eafa5be4b9ca97b7f17046c33f0d9032/docs/one_layer/OMEGESE.md#L63-L69),
 [#L140-L149](https://github.com/aien-dev/omega-mv/blob/3a163bc5eafa5be4b9ca97b7f17046c33f0d9032/docs/one_layer/OMEGESE.md#L140-L149);
 `s_while` [omc.om#L8853-L8854](https://github.com/aien-dev/omega-mv/blob/3a163bc5eafa5be4b9ca97b7f17046c33f0d9032/seed/omc/omc.om#L8853-L8854),
 `sf_num` [#L8912-L8915](https://github.com/aien-dev/omega-mv/blob/3a163bc5eafa5be4b9ca97b7f17046c33f0d9032/seed/omc/omc.om#L8912-L8915),
@@ -1098,7 +1221,7 @@ Base words ([#L476-L486](https://github.com/aien-dev/omega-mv/blob/55f9b0af47de7
 `write fd A off n`, `pread`/`pwrite fd A off n pos`. Native host words ([#L624-L747](https://github.com/aien-dev/omega-mv/blob/55f9b0af47de70a3d06357985cf99ae3e45c016f/docs/one_layer/OMEGESE.md#L624-L747)):
 files, directories, clocks, sockets, poll, processes, arguments, environment, random.
 
-**cpufence / cpurelax: merged in [omega-mv#946](https://github.com/aien-dev/omega-mv/pull/946) as `d94617177`; in the current pin `9920aab1` / omc `be8c5130` (since `91c83438`).**
+**cpufence / cpurelax: merged in [omega-mv#946](https://github.com/aien-dev/omega-mv/pull/946) as `d94617177`; in the current pin `d3d1b1bc` / omc `b4f45121` (since `91c83438`).**
 Rechecked 2026-10-31 at omega-mv main `91c83438daec0bdb88bf5c077cae10f3d15d365d` (omc sha256
 `2aec185d4ed6d7a6a5779ed656b4e56904742bde5551b02893fb5f73916ad8d5`).
 These are operand-free statements. `cpufence` (keyword 199) is a full host CPU barrier, AArch64 `DSB SY`
@@ -1128,7 +1251,7 @@ the wrong word: `pwrite` from a `text` was error 20 and `pread` into a `text` co
 
 **`peername`: bounded peer address of an existing descriptor** (merged in
 [omega-mv#918](https://github.com/aien-dev/omega-mv/pull/918) as `2d848d939`, committed omc
-`38748442…`; in the current pin `9920aab1` / omc `be8c5130`, since `3a163bc5` / omc `24caacf4`). `peername fd A off n` is host word 224,
+`38748442…`; in the current pin `d3d1b1bc` / omc `b4f45121`, since `3a163bc5` / omc `24caacf4`). `peername fd A off n` is host word 224,
 program mode only. It writes the connected peer's address into `A[off, off+n)` through AArch64
 `getpeername` 205 (not `getsockname` 204) or x86-64 `getpeername` 52 (not 51), with the same slice and
 private 32-bit length convention as `sockname`. Zero capacity is allowed, at the array end too, and
@@ -1149,7 +1272,7 @@ candidate notes of harness draft #108 (candidate omc `4ef67f18`/`6a2916cd`).
 
 **`execpure` and descriptor closing in `execprog`** (merged in
 [omega-mv#970](https://github.com/aien-dev/omega-mv/pull/970) as `1db941627`; in the current pin
-`9920aab1` / omc `be8c5130`; observed below with the then pin `91c83438` / omc `2aec185d`). `execpure A off n` is host word 198
+`d3d1b1bc` / omc `b4f45121`; observed below with the then pin `91c83438` / omc `2aec185d`). `execpure A off n` is host word 198
 (AArch64 only; `target x86linux` is error 25): it decodes the packet as `execprog` does, pins the
 executable as descriptor 3, applies a fixed strict stdio profile (Landlock execute/read beneath that file,
 no-new-privs, seven `prlimit64` ceilings, a seccomp filter allowing only `read` on 0, `write` on 1 and 2,
@@ -1243,7 +1366,7 @@ separate namespace in the same registry (OMEGESE section 11.1). The message form
 | 11 | ambiguous bare number | 22 | bad text literal |
 | 12 | register pool exhausted | 23 | size capacity |
 | 24 | AArch64 branch displacement out of range | 28 | abstract type: `seal` outside its constructor, or an unsupported `holds` |
-| 25 | unknown target, or an AArch64-only path on another target | 29 | external `layout` out of bounds or misplaced |
+| 25 | unknown target, an AArch64-only path on another target, or an x86efi refusal (omega-mv#1015: bare unit, Linux host word, `efi` OP literal outside 0..13, 0..14 with #1022) | 29 | external `layout` out of bounds or misplaced |
 | 26 | unused (no emitting site) | 30 | contract syntax misplaced or not supported here (IR mode included) |
 | 27 | `fresh` element read before it is definitely written, or a fresh array passed on | | |
 
