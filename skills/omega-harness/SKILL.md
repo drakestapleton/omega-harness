@@ -670,6 +670,50 @@ Hardware facts for NVIDIA back ends follow `PROVENANCE.md` in aien-dev/CUDApp (C
 - Record every stored NVIDIA-tool listing in the repository's `PROVENANCE.md`. A golden copied from tool output is a regression pin, not independent evidence.
 - In public text, describe the work as independently implemented from public documentation and open source, checked with NVIDIA's tools on my own code. Avoid "reverse-engineered NVIDIA's compiler/driver", "CUDA clone" and an unqualified "byte-identical to nvcc".
 
+### Aienet M1 loopback microjobs (aien#24 and open-humanity#52, merged)
+
+Source of truth: `docs/GOAL_MICROJOBS.md` in aien-dev/aien at
+[`c149760e`](https://github.com/aien-dev/aien/blob/c149760e8722ed943abcc5e3c7a33e2065b4036c/docs/GOAL_MICROJOBS.md)
+(aien#24, merged 2026-10-31), sections "Canonical Aienet-0 adapter (M1)" and "M1 loopback execution
+and interruption acceptance". Rules an agent must keep when touching that path:
+
+- **Canon framing.** `canon emit` takes the 17-word header, one 23-word node, its `101` status and
+  the `4 …` binding record, and writes `document[640] || payload[15] || dag_digest[32]`. `canon ingest`
+  takes `document[640] || MJR1[404] || AN0V[236]` plus a 23-word ASCII record. Words 15..18 (objective)
+  and 19..22 (effective operand) come from the trusted header and from `recovery.om` replay of the
+  trusted plan+journal, never from the submitted document or bundle. Success prints exactly two
+  events, RESULT and then VERIFY. Refusals are `CANON_<NAME>` with exit 2..26.
+- **External sealing.** `aienet0-run bundle --keys DIR --out job.an0b --document FILE --payload FILE`
+  (open-humanity#52, merged as
+  [`4cbf6526`](https://github.com/aien-dev/open-humanity/commit/4cbf6526458b9251cd48e0a41946a1112de4c279)):
+  both flags together, never mixed with shape flags. It signs the unchanged bytes and self-admits them
+  with `admit_bundle` before writing output. It validates bytes, not provenance. Protocols pin stays
+  `7bfb4ee2`.
+- **P-256 stays in Open Humanity.** `canon.om` verifies no signature. The caller runs
+  `aienet0-run check` against its pinned executor and verifier keys before ingest; passing ingest alone
+  is not authenticated completion. Omega P-256 verification is not claimed, and `canon.om` handles
+  only the one-node COMPUTE/MATMUL Aienet-0 shape. It is not a general DAG serializer.
+- **Pinned recompute.** `run.sh` requires the recompute binary SHA-256 `d2cd7382…ea12`, the canon
+  binary `4d7d2a0b…2b1b` and the canon sources by git blob id. `recovery-build.sh` and
+  `canon-build.sh` refuse any omc other than `2c824805…` (exit 3, `BLOCKED`).
+- **Crash guards.** The sequencer persists and `sync`s the signed bundle before it proposes DISPATCH,
+  and resends using the worker's durable `--retry` state. After a crash, recovery compares an
+  already-persisted RESULT field by field with the canonical one (mismatch: Omega exit 33) and appends
+  only the matching VERIFY. It never re-dispatches or replaces a completion. Refusals: stale generation
+  14, changed operand 24 (checked first), objective 23. The kernel refuses duplicate completions
+  (wrong state, 33).
+- **`recovery.om`** reads `1\n` followed by the unchanged plan+journal bytes, applies every CORRECT
+  and emits the 40-word effective header/node. It has the kernel's 262144-byte buffer: input of
+  262143 bytes or more exits 3, and the prefix is not counted.
+- **Acceptance:** `tests/goal_microjobs/aienet-m1/run.sh FRESH_DIR` with `OH_TREE`, `PROTOCOLS`,
+  `OMEGA_WORKTREE`, `RECOMPUTE_OMC`, `SHA_OMEGA_TREE` and `CANON` set (full command in the doc). It
+  writes `summary.tsv`, `mutants.tsv`, `pin-refusals.tsv` and `capacity.tsv`. aien#24 reports
+  32 PASS / 0 FAIL and 7/7 mutants KILLED: HOST_TESTED, loopback only.
+- **Shell status.** `sequence.sh`, `run.sh`, `canon-build.sh` and `recovery-build.sh` are migration
+  adapters under [aien#22](https://github.com/aien-dev/aien/issues/22) (open). Admission, folding and
+  RESULT-identity decisions are Omega (`kernel.om`, `canon.om`, `recovery.om`). P1 two-machine, P2
+  federation, Core TUR settlement, GPU, hardware and deployment are NOT_RUN.
+
 ## 5. Communicate and learn
 
 Follow `omega-communication`. Keep proposed, implemented, exercised, qualified, merged and deployed separate. A receiver needs the minimum sufficient definitions, inputs, constraints, evidence and open uncertainty, not the whole conversation. Never drop a prerequisite just to make a handoff shorter.
