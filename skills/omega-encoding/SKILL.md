@@ -1852,6 +1852,67 @@ proved (`false.om`, `requires false`, must exit 109). Both run to exit 0, so the
 `seed/host/check.sh` requires with the exact `VERDICT` lines. A passing mutant suite would mean the
 check proves nothing.
 
+## 11b. Composed units and traps that compile
+
+Omega has no imports: a multi-file program is its units concatenated into one input
+(`cat a.om b.om main.om | omc`). These rules bite there, and several compile without a word.
+Observed 2026-11-04, Linux AArch64 host only, with the pinned omc `be8c5130…` (omega-mv
+`9920aab1`); the first three are gated as `examples/pitfall_*.om` in this skill. Source citations
+are `seed/omc/omc.om` at `9920aab1`.
+
+- **There is no `elif`.** A statement `NAME VALUE` is an assignment; the `=` is optional
+  (`s_assign`, [omc.om#L8197-L8207](https://github.com/aien-dev/omega-mv/blob/9920aab1413983c2867d02d75b2276341595adb8/seed/omc/omc.om#L8197-L8207)).
+  So `elif eq k 1` (or `elsif`, `elseif`) silently makes a local bool and the line after it runs
+  every time: `zz ulong 9` / `ret int zz` exits 9, and `examples/pitfall_elif.om` returns 20 where
+  10 is meant (compile exit 0, no diagnostic; same with omega-mv main omc `b4f45121`). Write
+  separate `if ... ret ... end` blocks or nest the test inside `else`; both forms of the same
+  function return 10, 20 and 0 for k = 0, 1, 2. A refusal (error 16) is omega-mv
+  [#858](https://github.com/aien-dev/omega-mv/pull/858), an open draft, not on main at `d3d1b1bc`.
+- **One namespace for the whole input.** Globals, texts, consts, structs and functions of every unit
+  are visible in every other one. A local named like another unit's global array is error 7, not
+  error 10 (`examples/pitfall_shared_name.om`, `omc: line 8: error 7`; renamed, exit 7); a local
+  named like another unit's value function, `const` or `text` is also error 7 (a function name
+  parses as a call). Two units that each define `fn twice` give `omc: line 4: error 10`; a second
+  `global sh`, `const` or `text` of the same name is error 10 on its line, a second `struct P`
+  error 9.
+  Prefix every global and helper with the unit's short name. Modules are roadmap RM6
+  ([omega-mv#795](https://github.com/aien-dev/omega-mv/issues/795)), not built.
+- **Line numbers count the composed input.** `omc: line N` and every `omc-check`/`omc-site` record
+  give N in the concatenated stream: composed from a 4-line unit (`global sh` and `seta`), a 4-line
+  unit with the clashing local, and `main`, the clash is `omc: line 6: error 7`, line 2 of the
+  second unit. Keep the per-unit `wc -l` or run `grep -n . composed.om` to map back.
+- **The `om2` line must be the first non-`note` line of the composed input.** It sets the mode of
+  the whole input. `om2 diag debug` as a one-line first unit, then a 3-line OM-1 library, then a
+  unit with `requires gt x 0` compiles, prints `omc-check 1 kept line=6 rule=runtime kind=requires`
+  and exits 4 as written; with a `note` line in front it prints `line=7`; the same header placed
+  after the library is `omc: line 4: error 16`.
+- **Four global `get` terms in one `or` chain exhaust the registers.** `or or or ne get hdr 0 1 …`
+  over a global is error 12 (`examples/pitfall_or_global.om`, `omc: line 5: error 12`; also with
+  `k`-relative indices). Three terms, the same four on a local `new` array (exit 9), or
+  `a = or …` / `b = or …` / `if or a b` (exit 9) compile.
+- **A trap names its code and function, never its line.** Each trap site records only its branch
+  and code; `finish` emits one stub per code used in the function and patches every site of that
+  code to it ([#L2939-L2952](https://github.com/aien-dev/omega-mv/blob/9920aab1413983c2867d02d75b2276341595adb8/seed/omc/omc.om#L2939-L2952),
+  [#L9852-L9898](https://github.com/aien-dev/omega-mv/blob/9920aab1413983c2867d02d75b2276341595adb8/seed/omc/omc.om#L9852-L9898)).
+  A function with `get ga i` (4 bytes) and `get gb i` (8 bytes) on two paths exits 103 with empty
+  stderr for index 9 on either path (indices 3 and 7 exit 0). When the site matters, test the range
+  yourself and give each site its own exit below 100 (`if ge i len ga` / `exit 21`): the same
+  inputs then exit 21 and 22. Bounds are per array, so an index from one buffer's offset space used
+  on another traps 3 only once the data grows past the smaller array.
+- **The output has no symbols.** `file` reports `statically linked, no section header`,
+  `readelf -S` `There are no sections in this file.`, `nm` `no symbols`; the function name `pick`
+  occurs 0 times in the binary while a `text` literal `pickmark` occurs once. perf and gdb cannot
+  name functions; profile by timing separate programs or entry points. A perf map from omc would be
+  a compiler change.
+- **Rechecked at this pin:** `le` as a local or function name is error 16 (`lte` compiles, exit 4);
+  `line` and `out` are *not* reserved (`line = ulong 3` / `ret int line` exits 3); `getppid` returns
+  the real parent (`sh -c 'echo $$ | ./ppid'` exit 0, a wrong pid exit 1); `\r` in a `text` is
+  `omc: line 1: error 22`; `global g uchar 16777217` is error 23 and 16777216 compiles; a global
+  argument is error 19 (copy into a local: exit 6). Eager `and`/`or` is section 3, the 16-register
+  pool section 6.
+- **Mutation runners:** write each mutant to a path that is not the build's own output `.om`;
+  otherwise the runner overwrites one with the other and tests the wrong file.
+
 ## 12. Before any claim
 
 1. Inspect the compiler, not memory. Find the rule in `omc.om` or a gate fixture at the pinned commit
@@ -1895,9 +1956,11 @@ check proves nothing.
 - `examples/fnv1a32.om`: reads all of stdin with a partial-read loop, hashes it (FNV-1a 32, unsigned
   wrap), writes 4 little-endian bytes with a partial-write loop, distinct exit codes for each failure.
 - `examples/trap_narrow.om`: a masked narrowing succeeds, an unmasked one traps 5 (exit 105).
+- `examples/pitfall_elif.om`, `pitfall_shared_name.om`, `pitfall_or_global.om`: the first three
+  traps of section 11b (exit 20, `omc: line 8: error 7`, `omc: line 5: error 12`).
 
-Both carry `.expect` (and for `fnv1a32`, `.stdin` `abc` and the 4 expected bytes in `.stdout`) and
-run in [`examples/gate.sh`](../../examples/gate.sh) with the 97 programs in the repository's
+Each carries `.expect` (and `fnv1a32` also `.stdin` `abc` and the 4 expected bytes in `.stdout`) and
+runs in [`examples/gate.sh`](../../examples/gate.sh) with the 99 programs in the repository's
 `examples/` directory; section 0 records the `e5b32567` rerun of every row below. The portable guide
 for writing a first program is [`skills/writing-omega/SKILL.md`](../writing-omega/SKILL.md).
 
