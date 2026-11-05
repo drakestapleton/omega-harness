@@ -74,13 +74,12 @@ with exit 105. The same `fnv1a32.om` prefixed with `target x86linux` printed `0b
 `abc` with exit 0 under `qemu-x86_64` 8.2.2: EMULATED, not native x86.
 
 The omega MCP tools (`compile`, `run`) use an older pin: omega-mv `e5b32567`, omc `2c824805…029f`.
-Their results do not describe main's omc `be8c5130…`; for main, run `git show main:seed/out/omc`
-directly. One visible difference: the MCP omc predates #848, so `while ... bound 1000000` is
-`error 8` there (1..999999), while `be8c5130…` compiles it (observed 2026-11-04, host only). It also
-still has the #775 empty-text defect: `len` of a `text e ""` passed as `view uchar *` returns a stale
-register value (exit 36 in the program recorded under "Empty text" below; 0 with `be8c5130…`).
-Their results do not describe main's omc `b4f45121…`; for main, run `git show main:seed/out/omc`
-directly.
+Their results do not describe main's omc `b4f45121…` (omega-mv `d3d1b1bc`); for main, run
+`git show main:seed/out/omc` directly. One visible difference: the MCP omc predates #848, so
+`while ... bound 1000000` is `error 8` there (1..999999), while `be8c5130…` and `b4f45121…` compile
+it (observed 2026-11-04 and 2026-11-05, host only). It also still has the #775 empty-text defect:
+`len` of a `text e ""` passed as `view uchar *` returns a stale register value (exit 36 in the
+program recorded under "Empty text" below; 0 with `be8c5130…` and `b4f45121…`).
 
 ### Previous pin `3a163bc5` (2026-10-31, history)
 
@@ -515,20 +514,19 @@ Changes and confirmations against the rules below, each observed with a program:
   `int` were not retested on 2026-10-29. Do not assume they are fixed. Decode signed values
   arithmetically when you have not measured the pair (`examples/wire_le.om`).
 - **`byte` is signed 8-bit** (`i8`, OMEGESE line 109); `char` is not a type (error 3).
-- **Empty text through `view uchar *` (omega-mv #775).** A 2026-10-27 report said `len` was 60 with
-  one other text and 28 with none. A two-text unit on 2026-10-29 returned 0 on both `2c824805` and
-  `62775d2a`, so that report was not reproduced then. **Reproduced 2026-11-04 on the MCP omc
-  `2c824805…` only:** `om2`, `text ta "abc"`, `text te ""`, `text tb "xy"`, `fn f t view uchar * to
-  ulong` / `ret len t`, then `ret int f te` in `main` exits 36 (expected 0), while `ret int f tb`
-  exits 2 and `ret int f part tb 0 0` exits 0. With the guide pin `be8c5130…` the same program exits 0
-  (fixed by the #904 integration `e2662fff`). On the MCP pin pass `part T 0 0` of a non-empty text
-  instead (`examples/empty_text_part.om`).
-- **Empty text through `view uchar *` (omega-mv #775).** Reproduced on 2026-11-04 with omc
-  `2c824805` (MCP `omega_run`): `om2`, `text e ""`, `fn n a view uchar * to ulong` / `ret len a`,
-  `main` `ret int n e` exits 28; adding `text f "0123456789abcdef0123456789abcdef"` makes it exit 60.
-  `ret int n part e 0 0` exits 0. The earlier "not reproduced" note was wrong for `2c824805`. Pass
-  `part e 0 0` (`examples/empty_text_part.om`). synapse-mcp hit it: every empty-text record arrived
-  with len 28-60 and positional arguments were refused as too long.
+- **Empty text through `view uchar *` (omega-mv #775).** The stale `len` depends on layout, so one
+  passing two-text unit proves nothing (a 2026-10-29 two-text unit returned 0 on `2c824805` and
+  `62775d2a`). Reproduced 2026-11-04 on the MCP omc `2c824805…` (`omega_run`), with
+  `fn f t view uchar * to ulong` / `ret len t` under `om2`:
+  - `text ta "abc"`, `text te ""`, `text tb "xy"`, `main` `ret int f te`: exit 36 (expected 0);
+    `ret int f tb` exits 2 and `ret int f part tb 0 0` exits 0.
+  - only `text e ""`, `ret int f e`: exit 28; adding `text f "0123456789abcdef0123456789abcdef"`
+    makes it exit 60; `ret int f part e 0 0` exits 0.
+
+  With the guide pin all three exit 0 (`be8c5130…` 2026-11-04, `b4f45121…` 2026-11-05; fixed by the
+  #904 integration `e2662fff`). On the MCP pin pass `part e 0 0` instead
+  (`examples/empty_text_part.om`). synapse-mcp hit it: every empty-text record arrived with len
+  28-60 and positional arguments were refused as too long.
 - **`and`/`or` are eager everywhere, not only in contracts.** `if and gt n 0 eq get a sub n 1 13`
   traps 3 (exit 103) when `n` is 0, because `get a sub n 1` still runs (`2c824805`, `omega_run`,
   2026-11-04). Guard an index with a nested `if`.
@@ -949,8 +947,10 @@ end
   may use `fopen fclose fstat stat lstat getuid geteuid getgid getegid` on AArch64; every other host
   word, any host word in an OM-1 unit and any other target stay error 9 (gate
   `seed/omc/om2/fnhost/fnhost.cases`; PROPOSED contract `spec/omegese-om3.md` section 1). The
-  omega-bridge binds such a unit only with `tools/native --host` (draft omega-bridge#54). With main's
-  compilers (harness pin `be8c5130…`, omega-mv main `b4f45121…`) these are still error 9.
+  omega-bridge binds such a unit only with `tools/native --host` (omega-bridge#54, merged 2026-11-05
+  as `d1124611`; the bridge side is on main, the compiler side is not). With main's compilers (the
+  harness pin omc `b4f45121…` at omega-mv `d3d1b1bc`, and the previous `be8c5130…`) these are still
+  error 9.
 - Program exit status = `main`'s value mod 256 (0 for void main). `exit v` (v `int`) ends at once.
   A runtime trap exits **100 + code**. Keep your own exit codes below 100, or a result is
   indistinguishable from a trap ([#L404-L407](https://github.com/aien-dev/omega-mv/blob/55f9b0af47de70a3d06357985cf99ae3e45c016f/docs/one_layer/OMEGESE.md#L404-L407), [#L484](https://github.com/aien-dev/omega-mv/blob/55f9b0af47de70a3d06357985cf99ae3e45c016f/docs/one_layer/OMEGESE.md#L484)).
@@ -1282,7 +1282,8 @@ fixed limit (section 4).
   main `57a4135d6` on 2026-10-31: `omc.om` has 495 `^fn ` lines (16,432 lines, sha256 `d4b4b89d…30f6`,
   the same file as at `9920aab14`) and `om4.bin` is still `d0da40e4…19efab`. `omc.om` plus 17 appended
   `fn zqN to ulong` / `ret 0` / `end` functions compiled with exit 0; plus 18 gave
-  `om4: line 16484: error 14`, exit 14. So 17 entries are free. **Decision (Drake, 2026-10-31): stay
+  `om4: line 16484: error 14`, exit 14. So 17 entries were free then; at the current pin
+  `d3d1b1bc` `omc.om` has 510 `^fn ` lines, so 2 are free (section 0). **Decision (Drake, 2026-10-31): stay
   within 512 for now (option 3).** A prototype that moves om4's table to 4096 entries is draft
   [omega-mv#1013](https://github.com/aien-dev/omega-mv/pull/1013) (`646ed1ec`, om4 `bfc1cfd1…`, omc
   bytes unchanged), **parked until after alpha**: do not merge it unless `omc.om` needs more than 512
@@ -1477,10 +1478,9 @@ omega MCP pin `2c824805…`, lack both.
     exception for nine file/identity words in OM-2 units: section 2, omega-mv#1008. Observed
     2026-11-04: `om2` / `export fn f to long` / `r = geteuid` gives `omc: line 3: error 9` with
     omc `be8c5130…` and `b4f45121…`, and compiles with the #1008 omc `c000ec02…` at `2992a68b`.)
-    and every host word is error 9 with an empty output file, which reads like a broken pin.
 - **Owned DMA-window integration: PENDING, not the main compiler or a kernel driver.**
-  Depends on the VFIO words documented by pending
-  [guide #79](https://github.com/aien-dev/omega-harness/pull/79), compiler
+  Depends on the VFIO words described below ("VFIO device words", added by
+  [guide #79](https://github.com/aien-dev/omega-harness/pull/79), merged `d3d6738`; the words stay PENDING), compiler
   [omega-mv#890](https://github.com/aien-dev/omega-mv/pull/890) stacked on #878, exact source
   `397e67040fb74853c6814097fe02ae4e1ebd6f66`, omc sha256
   `bcfa582892afca8f65e551fe56867d918d86e84540c7381be8fa9ef18d0cf0f6`.
@@ -2202,7 +2202,7 @@ are `seed/omc/omc.om` at `9920aab1`.
   traps of section 11b (exit 20, `omc: line 8: error 7`, `omc: line 5: error 12`).
 
 Each carries `.expect` (and `fnv1a32` also `.stdin` `abc` and the 4 expected bytes in `.stdout`) and
-runs in [`examples/gate.sh`](../../examples/gate.sh) with the 99 programs in the repository's
+runs in [`examples/gate.sh`](../../examples/gate.sh) with the 105 programs in the repository's
 `examples/` directory; section 0 records the `e5b32567` rerun of every row below. The portable guide
 for writing a first program is [`skills/writing-omega/SKILL.md`](../writing-omega/SKILL.md).
 
