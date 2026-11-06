@@ -130,6 +130,17 @@ synthetic evidence cannot establish production or economic improvement.
 
 ## 2. Implement in the actual language
 
+**Local Mac model experiment, 2026-11-06 (branches, not merged):**
+[aien-train `70d048c`](https://github.com/aien-dev/aien-train/tree/70d048c0e1e36150d0ad2998fef992c129914551/tools/omegallm-ui)
+adds a temporary C++ llama UI adapter. Its model inference runs in Omega, but
+that does not make the host HTTP/process/socket implementation Omega.
+The documented successor is an Omega macOS HTTP/JSON and process/socket
+runtime; a compiler PR for that successor is absent. Therefore this is
+**incomplete language migration**, not an exception that other work may copy
+and not full harness compliance. The existing scalar Mach-O bridge does not
+establish macOS host-word support. Positive runtime receipts below do not close
+this language gap.
+
 - First-party implementation belongs in `.om`. Existing C, Rust and shell are unfinished migration, not permission to add more foreign code. Never pass off a foreign implementation as generated code, vendor code, glue or an `.om` file.
 - When the language lacks something, build it (Drake's standing rule, 2026-10-26: "If .om doesn't have a feature, you need to make that feature"). Open an omega-mv pull request, coordinated with whoever owns the compiler lane, that carries the word or facility, its error code, gates with a negative control, parity against an independent oracle, and the guide update. Do not invent a word you have not implemented, and do not route around the gap with host code. Host code is a last resort only, recorded with its Omega successor and the omega-mv PR that will replace it. A gap that needs a decision Drake has not made (for example heap or imports, omega-mv #793 and #795) is put to him rather than built around.
 - Seeded Omegese, compiled by `seed/out/omc`, is the forward language. The historical console syntax in `spec/omega-language-v0.md` and the C compiler checks are different things. As of omega-mv main `55f9b0af47de70a3d06357985cf99ae3e45c016f` (2026-10-25), the seeded compiler and its host and device words are on main. Any source saying they exist only on candidate branches is stale.
@@ -645,6 +656,24 @@ fi
 - **omega-bridge#54 (merged 2026-11-05 `d1124611`; observations from 2026-10-31):** `tests/native/v2/run.sh` needs `OMEGA_NATIVE_OMC` (734f0a39…) and `OMEGA_NATIVE_OMC2` = the omega-mv#1008 compiler (3988c31f…); its section 11 runs the `--host` refusals and the C and Rust callers of `tests/native/v2/host/hfile.om`. Observed at `c7f432cd` on AArch64 with zig 0.13.0 and go 1.27.3 on PATH: rc 0, 72 PASS, `NATIVE-V2 PASS (not run: none)`; `tests/native/run.sh`: `NATIVE-CALL PASS (not run: none)`. Negative control: removing the source scan from `fn unit` lets a parenthesised `geteuid` through without `--host`, and the suite catches it. The v1/v2 byte-identity baselines on bridge main were stale (#26's f32/ushort kinds changed every unit's Python output), so `v2/run.sh` failed on main until the baseline fix (omega-bridge #55, merged `fa8581e8`; #54 carried the same fix to `74fcd43`). The x86 suites fail identically on main and on #54 on this host (no x86_64 cross g++, `OMEGA_NATIVE_X86_PYTHON` unset): NOT_RUN, not caused by #54. No CI runs the native suites.
 - MERGED (omega-bridge #27, merged 2026-11-05 as `077d3d22`; the results below were recorded on branch `feat/native-darwin` @ `362c6d0fb857e9068557bc244a7046051e47fb41`): the C file that `src/native.om` generates also builds on macOS arm64 (Mach-O) and refuses to build there with `#error` for any unit whose code makes Linux system calls (host words). Generation stays Linux AArch64 only (main's `tools/native OUTDIR unit.om ...`, pinned omc `734f0a39…6b61`). The macOS check has two steps: `OMEGA_NATIVE_OMC=<seeded omc> sh tests/native/macos/run.sh bundle DIR` on Linux, then `sh DIR/run.sh run DIR` on the Mac, which must print `NATIVE-CALL-MACOS PASS` (exercised once on macOS 26.6.2, Apple M2, clang 17). It covers the C and Python callers, byte identity, no x18, the add->sub mutant and host-word refusal. C++/Rust/Zig/Go, ABI v2 and BTI on macOS are NOT_RUN.
 - Compiler changes need the repository's referee and wrong-word-mutant checks, not just a self-fixpoint. Before running any gate, read its prerequisites, device requirements and whether it writes receipts.
+- Local model verification, 2026-11-06 (unmerged branches):
+  [aienux `e5669dd`](https://github.com/aien-dev/aienux/tree/e5669dd1648e1b733f2547c57a5b1110fb918969/native/omega/allen/LOCAL-MODEL.md)
+  composes Allen's lifecycle with aien-train's model and UEFI I/O. Its opt-in
+  `build-local-model.sh AIEN_TRAIN OUT.EFI` requires compiler SHA-256
+  `3ad9f10f64309e7acf8a725082b28e23a2a4aeb07e98322fb4dc0fcd8fc93194`.
+  Rebuilding produced the tested image SHA-256
+  `be33b905f949d6dab036d3452a248d8fef6bc97695d9de0ca7d173221d136060`.
+  [Receipts](https://github.com/aien-dev/aienux/tree/e5669dd1648e1b733f2547c57a5b1110fb918969/evidence/OMEGA-LOCAL-MODEL/macbook-20261106)
+  record eight greedy tokens matching the Linux reference on an M2 MacBook,
+  invalid-frame refusal, a truncated checkpoint returning 10 without readiness,
+  HTTP streaming and cancellation. It is an x86-64 firmware application in
+  QEMU, with no Linux guest, not the standalone Aienux kernel or native ARM64
+  firmware. One eight-token sample took 110.04 seconds; no speed qualification
+  or small-model capability replacement follows. The Mac host adapter's
+  `tools/omegallm-ui/check.py --port 8099 --output RECEIPT` passed eight HTTP
+  checks and a repeat after VM pause/resume; the same command with port 8098
+  checks the Linux path. These are test-oracle commands, not product Python.
+  Full repository suites and automated browser interaction were not run.
 - For the merged IR/wasm backend above, run `nice -n 19 sh seed/wasm/gate-irwasm.sh`.
   Node v24.21.0 is a read-only wasm validation/execution oracle only; never use Node to generate
   IR or wasm. The production path is `.om -> omc ir -> irwasm.om -> wasm`, with no Node runtime

@@ -44,6 +44,13 @@ cp -R omega-harness/skills/* ~/.agents/skills/   # pick the directory for your a
 
 ## Conversion
 
+The November 6 local Mac model experiment has explicit
+[runtime receipts and an open host-language migration boundary](skills/omega-harness/SKILL.md#2-implement-in-the-actual-language).
+Omega inference inside an Aienux firmware guest does not make the temporary
+C++ browser adapter Omega, and firmware-hosted emulation does not establish
+standalone-kernel or native Apple Silicon support. These are unmerged experiment
+branches; they do not change the compiler pin or supported language.
+
 These skills cover working in Omega itself. Conversion between Omega and other languages belongs to [`omega-bridge`](https://github.com/aien-dev/omega-bridge). It converts a declared, checked subset and refuses to attempt universal conversion. You can run an MCP server in front of it if you want automated conversion, but that wrapper doesn't let it convert anything beyond that subset.
 
 Merged [omega-bridge #32](https://github.com/aien-dev/omega-bridge/pull/32) localizes private
