@@ -219,6 +219,15 @@ synthetic evidence cannot establish production or economic improvement.
   roots. Public float ABI, float arrays, numeric float casts and other float operators
   remain refused; baseline/Python float inputs are unchanged refusals. It neither imports
   arbitrary C/Python nor replaces baseline `191b776e`, `tools/bridge` or `tools/test.sh`.
+  Integer `bitcast` is refused even though omc compiles it: with omc `2c824805…029f`,
+  `tools/bridge-seeded` `23ff7a23…` and omega-bridge `bc11b30`, `ret bitcast ulong x`
+  (`x long`), `bitcast long` of a `ulong` and `bitcast int` of a `uint` each exit 24 with
+  `toc: line 2: error 24` / `unsupported bridge capability` (host only, 2026-11-06,
+  CUDApp#305). In a bridged unit carry a negative `long` as its two's-complement `ulong`
+  (`if lt x 0` then `sub 18446744073709551615 ulong sub neg x 1`, else `ulong x`) and
+  compare against constants such as `18446744073709551615` (-1); `ulong`/`long`
+  conversions stay checked and trap 5 out of range, and `neg` of the `long` minimum traps 1
+  (exit 101 under omc), so that rewrite needs `x` above -2^63.
   The merged converter source `src/toc.om` SHA256 is
   `3a416aea14770bd3fab4880337e89020c10476214d7a3c139d8cd1a8ba1423e6`. The earlier
   tested source `ead98302` had `9116caab9b46e8bea1f1f3dc2752b4f2cdec0d4e266859167e6814085dd4fed3`;
