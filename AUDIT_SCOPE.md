@@ -8,7 +8,7 @@ this document.
 ## What this repository is
 
 Agent skills for working in Omega (the `.om` language of AienOS) and in the AIEN repositories.
-Six skills live under `skills/<name>/SKILL.md` in the Agent Skills layout, and
+Eight skills live under `skills/<name>/SKILL.md` in the Agent Skills layout, and
 `skills/omega-encoding/examples/` holds two runnable `.om` programs. AGENTS.md states that the
 repository is documentation and procedure, not a compiler, a runtime, a gate, or evidence that any
 claim is true. Nothing here ships as executable code; the examples are teaching material compiled
@@ -51,6 +51,10 @@ Cannot check here:
    repository detail beyond what it marks as private, and no private paths.
 6. `README.md` "Install" and "Check the examples yourself", and `AGENTS.md` "Omega pins". These are
    commands an operator copies. They clone public repositories and run a committed binary.
+7. `skills/lean-verify/SKILL.md` "Pins" and "Repair". They tell an agent to add an ssh-stdio MCP
+   entry that runs `lean-lsp-mcp` on the Spark and, when repairing, to `pip install` the pinned set
+   into a project venv. Check that the pins are exact, that no global install or credential is
+   asked for, and that `sorry`/axiom checks cannot be read as proof.
 
 There is no `.github/workflows/` directory in this repository.
 
@@ -64,6 +68,8 @@ There is no `.github/workflows/` directory in this repository.
 - Trusted: the committed compiler `seed/out/omc` in `aien-dev/omega-mv` at the pin recorded in
   `skills/omega-encoding/SKILL.md` section 0, identified by sha256.
 - External: the hosted Wolfram MCP endpoint named in `skills/wolfram-math/SKILL.md`.
+- External: the Lean toolchain, Mathlib and `lean-lsp-mcp` (PyPI) at the pins in
+  `skills/lean-verify/SKILL.md`, fetched once at install time; the server runs without network.
 
 ## Threat model summary
 
@@ -130,6 +136,8 @@ pin before trusting the result.
 - No lockfile, no vendored code, no package dependencies.
 - The examples depend on `aien-dev/omega-mv` (cloned at run time) and a Linux AArch64 host.
 - `skills/wolfram-math/SKILL.md` relies on the hosted Wolfram MCP endpoint for agents' arithmetic.
+- `skills/lean-verify/SKILL.md` relies on Lean `v4.35.0`, Mathlib `v4.35.0` and `lean-lsp-mcp`
+  0.33.0 as a verification oracle; none of them ships in this repository.
 - No GitHub Actions.
 
 ## Evidence

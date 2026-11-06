@@ -8,7 +8,7 @@ Agent skills for working in Omega and the AIEN repositories: the checks that cat
 repeat, written as guidance an agent loads before acting. It is documentation and procedure, not a
 compiler, a runtime, a gate, or evidence that any claim is true.
 
-Seven skills live under `skills/<name>/SKILL.md` in the Agent Skills layout (frontmatter `name` and
+Eight skills live under `skills/<name>/SKILL.md` in the Agent Skills layout (frontmatter `name` and
 `description`, then the body):
 
 | Path | Covers |
@@ -20,6 +20,7 @@ Seven skills live under `skills/<name>/SKILL.md` in the Agent Skills layout (fro
 | `skills/aien-repositories/SKILL.md` | Mission, plan authority, task to repository routing, status discipline, known source drift |
 | `skills/crumb-protocol/SKILL.md` | Directory coordination: crumbs, locks, committed-crumb freshness, `CRUMB-VERIFY` and `crumb-doctor` |
 | `skills/wolfram-math/SKILL.md` | Mandatory Wolfram for every computation, its MCP setup, verification calls and failure handling |
+| `skills/lean-verify/SKILL.md` | Lean 4 + Mathlib proofs of safety invariants over an explicit model, the `lean` MCP setup and pins, `sorry`/axiom checks, the model-to-system link |
 
 `examples/` holds the tested programs: each `NAME.om` with `NAME.expect` (and `NAME.stdout` when it
 prints), one per trap and error code plus the common mistakes. `examples/gate.sh OMC` checks the

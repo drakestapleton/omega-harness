@@ -48,6 +48,12 @@ it carries the rule, the MCP setup that any agent can perform without a human, t
 calls, and the failure handling. A session whose Wolfram tools are not mounted is not math-capable:
 say so and stop rather than estimating.
 
+A claim that a property holds for **every** case of a finite model (core sets disjoint, a disk floor
+kept, one lease holder, a bounded queue) is proved in Lean 4, not argued. Read
+`skills/lean-verify/SKILL.md`: it carries the `lean` MCP setup and pins, the rule that a theorem
+proves the model and must name its link to the running system, and the ban on `sorry` and
+non-standard axioms (`#print axioms`). Wolfram computes values; Lean proves statements about them.
+
 ## NL1R host-only experiment boundaries (2026-10-28)
 
 The training experiment belongs to `aien-dev/aien-train`; independent
