@@ -191,8 +191,10 @@ A trap ends the process with exit status 100 + N. Output already written stays w
   IR mode 1..1000000). Without `bound` the limit is 1000000. One more pass traps 4. Choose N from
   an argument you can write down in a `note`, for example "every pass consumes at least one byte of
   a 65536-byte input".
-- `for i T K` runs i from 0 to K-1. `for i T K bound N` takes the same N as `while` and traps 4
-  when K exceeds N (`for_bound.om`, `trap4_for_bound.om`).
+- `for i T K` runs i from 0 to K-1. A number K is unguarded. Any other K (a name or value) with no
+  `bound` traps 4 (exit 104) after 1000000 passes, as a `while` with no bound. `for i T K bound N`
+  takes the same N as `while`, caps every count and traps 4 when K exceeds N (`for_bound.om`,
+  `trap4_for_bound.om`). The MCP pin (e5b32567) has no `for ... bound` (error 5).
 - `break` and `continue` work in both loops. There is no `else if`: nest an `if` inside `else`.
 - No loop runs forever and recursion is bounded by the stack.
 
