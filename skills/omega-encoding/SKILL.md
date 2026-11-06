@@ -492,6 +492,18 @@ Changes and confirmations against the rules below, each observed with a program:
   `omc: line 0: error 1`; stdout on `/dev/full` gives exit 2 with the line after the last input line
   (`omc: line 5: error 2` for a 4-line unit). A 33rd `export fn` in an OM-2 unit is error 14; exports
   are function mode, so an `export` beside `fn main` is error 9.
+- **CUDApp portable units take only `uchar` and `ulong` views.** CUDApp `om/units.sh` lowers each
+  unit through the bridge converter `toc.om` (pin `69d629df…`, bridge `bc11b30b`). It refuses a
+  `view`/`edit` parameter of `uint`, `ushort` or `f32` with `toc: line N: error 24` and "unsupported
+  bridge capability", although omc `2c824805` compiles the same unit. `uchar` and `ulong` pass.
+  Observed 2026-11-05 with one-line units run through `OMEGA_UNITS=… OMEGA_UNITS_DEST=… sh om/units.sh`.
+  Pass 32- and 16-bit data as a `uchar` view and assemble little-endian words in Omega, as
+  CUDApp `om/gemmex/num.om` does (CUDApp#144). That error 24 comes from the converter, not omc's `bdisp`.
+- **A bool does not convert to a number in function mode either.** `x = ulong eq a 1` and `ret ulong f
+  u` with `fn f … to bool` are `omc: line 3: error 9` at omc `2c824805` (MCP compile, 2026-11-05).
+  `fp_conv` refuses a bool on either side (omc.om lines 3237-3246 at `e5b32567`). The missing
+  documentation and the misleading code are omega-mv [#1041](https://github.com/aien-dev/omega-mv/issues/1041).
+  Write `if c` / `ret 1` / `end` / `ret 0`, or select 1 or 0.
 - **Error 24 needs more than 1 MiB of code inside one loop.** 40 functions of 4,000 checked `add`
   lines each compiled and ran, because each function's branches stay short. One `while` loop with
   270000 copies of `x = add x 1` was refused with `omc: line 270006: error 24` (the loop's `end`);
