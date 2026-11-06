@@ -1275,6 +1275,13 @@ fixed limit (section 4).
   2^63-1 = 9223372036854775807 (Wolfram `2^63-1`). `922337203685477580.7f64` compiles;
   `92233720368547758.08f64` and `9223372036854775807.0f64` are error 8.
 - **Forward calls** are allowed: `main` calling `f` defined after it compiles and exits 7.
+  **Globals and texts are not:** a `global` or `text` named in a function before its definition line
+  is `error 3`. Observed 2026-11-05 with the omega MCP pin omc `2c824805…` (`e5b32567`): `fn f` that
+  does `put g 0 uchar 7`, then `global g uchar 1`, gives `omc: line 2: error 3`; the same unit with the
+  `global` first compiles and exits 7; a `text` written after its first `write` use is also
+  `omc: line 2: error 3`. When a unit is built by concatenating files (a library such as CUDApp
+  `native/nvrm/context.om`, then the code that uses it), each file's globals and texts must sit
+  above their first use in the concatenated order; functions may come in any order.
 - **Hex.** OM-1 rejects `0x10` with error 6; under `om2` the same unit compiles and exits 16.
 - **x86 target.** A first line exactly `target x86linux` emits an x86-64 ELF; with a leading space it
   is error 16.
