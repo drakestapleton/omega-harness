@@ -20,13 +20,13 @@ Project: Spark `~/workspace/lean-verify` (lake, library `LeanVerify`, local git 
 
 The server runs on the Spark over ssh stdio, pinned to cores 0–1 with `nice -n 10`. The four remote search tools (`lean_leansearch`, `lean_loogle`, `lean_leanfinder`, `lean_hammer_premise`) are disabled with `LEAN_MCP_DISABLED_TOOLS`, so `tools/list` returns 18 tools, all local. The full smoke test (below) passed inside `bwrap --unshare-net`, where `curl https://pypi.org` fails, so it needs no network. Search Mathlib with `lean_local_search` (ripgrep) instead.
 
-`mcp.json` entry (Mac `~/.omp/agent/mcp.json`):
+`mcp.json` entry (Mac `~/.omp/agent/mcp.json`). `<spark>` is your ssh alias for the Spark and `<home>` is the absolute home directory of the remote account. ssh does not expand `~` inside `env` arguments, so write the absolute path:
 
 ```json
 "lean": {
   "type": "stdio",
   "command": "ssh",
-  "args": ["-o", "BatchMode=yes", "-o", "ConnectTimeout=8", "spark", "env", "PATH=/home/drakestapleton/.elan/bin:/usr/local/bin:/usr/bin:/bin", "LEAN_PROJECT_PATH=/home/drakestapleton/workspace/lean-verify", "LEAN_LOG_LEVEL=ERROR", "LEAN_MCP_DISABLED_TOOLS=lean_leansearch,lean_loogle,lean_leanfinder,lean_hammer_premise", "taskset", "-c", "0,1", "nice", "-n", "10", "/home/drakestapleton/workspace/lean-verify/.mcp-venv/bin/lean-lsp-mcp", "--transport", "stdio"],
+  "args": ["-o", "BatchMode=yes", "-o", "ConnectTimeout=8", "<spark>", "env", "PATH=<home>/.elan/bin:/usr/local/bin:/usr/bin:/bin", "LEAN_PROJECT_PATH=<home>/workspace/lean-verify", "LEAN_LOG_LEVEL=ERROR", "LEAN_MCP_DISABLED_TOOLS=lean_leansearch,lean_loogle,lean_leanfinder,lean_hammer_premise", "taskset", "-c", "0,1", "nice", "-n", "10", "<home>/workspace/lean-verify/.mcp-venv/bin/lean-lsp-mcp", "--transport", "stdio"],
   "timeout": 300000
 }
 ```
@@ -47,7 +47,7 @@ Wolfram answers *what is the value*; Lean answers *is this statement true for al
 Enabled on the `lean` server (names as `tools/list` returns them; in omp they follow the `mcp__<server>_<tool>` pattern of the other servers, e.g. `mcp__lean_lean_run_code`):
 
 - `lean_run_code` `{code}` — check a self-contained snippet (it needs its own `import`s). The usual entry point. Returns `{success, timed_out, diagnostics[]}`.
-- `lean_verify` `{file_path, theorem_name}` — axiom check plus source scan for one theorem in a project file. `file_path` is absolute (`/home/drakestapleton/workspace/lean-verify/...`). Returns `{axioms, trust, non_standard_axioms, warnings}` with `trust` one of `standard`, `incomplete` (sorry), `native`, `custom`.
+- `lean_verify` `{file_path, theorem_name}` — axiom check plus source scan for one theorem in a project file. `file_path` is absolute (`<home>/workspace/lean-verify/...`). Returns `{axioms, trust, non_standard_axioms, warnings}` with `trust` one of `standard`, `incomplete` (sorry), `native`, `custom`.
 - `lean_diagnostic_messages` — errors/warnings/infos of a project file.
 - `lean_goal`, `lean_term_goal` — proof state at a position.
 - `lean_multi_attempt` — try several tactics at one position.
@@ -133,13 +133,13 @@ Every Lean result must state its **model-to-system link**: which file, config, `
 ## Running outside MCP
 
 ```bash
-ssh spark 'cd ~/workspace/lean-verify && PATH=$HOME/.elan/bin:$PATH taskset -c 0,1 nice -n 10 lake env lean LeanVerify/CoreAssign.lean'
+ssh <spark> 'cd ~/workspace/lean-verify && PATH=$HOME/.elan/bin:$PATH taskset -c 0,1 nice -n 10 lake env lean LeanVerify/CoreAssign.lean'
 ```
 
 Put new proofs under `LeanVerify/` and import them from `LeanVerify.lean` so `lake build` checks them all.
 
 ## Repair
 
-- Server does not start: `ssh spark ~/workspace/lean-verify/.mcp-venv/bin/lean-lsp-mcp --version` must print `lean-lsp-mcp 0.33.0`. Reinstall the pinned set with `python3 -m venv .mcp-venv && .mcp-venv/bin/pip install -r .mcp-venv-freeze.txt` (network needed once).
+- Server does not start: `ssh <spark> ~/workspace/lean-verify/.mcp-venv/bin/lean-lsp-mcp --version` must print `lean-lsp-mcp 0.33.0`. Reinstall the pinned set with `python3 -m venv .mcp-venv && .mcp-venv/bin/pip install -r .mcp-venv-freeze.txt` (network needed once).
 - `unknown module Mathlib...` or `environment does not contain`: wrong or missing import (for example `Finset.card` needs `Mathlib.Data.Finset.Card`), or oleans missing. For the latter run `lake exe cache get` (network, once) then `lake build` in the project, on cores 0–1.
 - Upgrading Lean or Mathlib: change `lean-toolchain` and the mathlib `rev` together to the same `v4.x.y` tag, `lake update`, `lake exe cache get`, `lake build`, rerun the smoke test (initialize, `tools/list`, the three snippets above), and update the pins table.
