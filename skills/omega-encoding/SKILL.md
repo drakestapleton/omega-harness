@@ -19,21 +19,33 @@ The quantity and diagnostic audit is merged through omega-mv #914 at main
 `d94a503f7aae57d09697046405da2e9a5895be6d`. The older candidate observations
 below remain dated history, not claims about the newer integration.
 
-### Current main pin (checked 2026-11-04)
+### Current main pin (checked 2026-11-05)
 
 | Item | Value |
 |---|---|
 | Repository | `github.com/aien-dev/omega-mv`, branch `main` |
-| Commit | `d3d1b1bc7e3b970016a2176435f78c8f0251bad1` (merge commit of [#1015](https://github.com/aien-dev/omega-mv/pull/1015), `target x86efi`, head `19ee7e99`, merged 2026-11-04T13:50:27Z) |
-| Compiler source `seed/omc/omc.om` | 18,056 lines, 510 `^fn ` lines, sha256 `16b4ca40a5bd7796ac08b55d1ceadac1260e52298ed123f45418e77b3221c749` |
-| Compiler `seed/out/omc` | sha256 `b4f45121f6c6d5d8a6ed0f5c4f3934b7cc4bec369bfa89523699bd33928f9b55`, 611,620 bytes (equals `seed/out/omc.sha256`; last `seed/omc/size-history.tsv` row `x86efi-1015`) |
+| Commit | `f4df82394e35893dcf1354dda69a2fe028d94bc1` (merge commit of [#1022](https://github.com/aien-dev/omega-mv/pull/1022), `efi 14` machine identity, head `81c5cb25`, merged 2026-11-05T23:48:11Z) |
+| Compiler source `seed/omc/omc.om` | 18,224 lines, 511 `^fn ` lines, sha256 `0effe37afc4ddd0507151c9f2afa34b3e6774eae7006cbecd8c59f11bc386db7` |
+| Compiler `seed/out/omc` | sha256 `3ad9f10f64309e7acf8a725082b28e23a2a4aeb07e98322fb4dc0fcd8fc93194`, 625,676 bytes (equals `seed/out/omc.sha256`; last `seed/omc/size-history.tsv` row `x86efi-ident-1022`) |
 | Seed loader `seed/rung0/seed0.hex` | sha256 `baaf081fe6055a768485c5d25d7435681ce00b04cfa80b26c48169f78944e14d` (unchanged) |
 
-#1015 is the only merge after `9920aab14` that changes `seed/out/omc`: at `ba5559d9b`, `f9a9a40b5`
-(train r4) and `19b8340db` (train r5) it is still `be8c5130…`. #1015 adds the x86efi backend
-(section below); AArch64 and x86linux output of the 1305 tracked `.om` files is unchanged except the
-4 x86efi test programs (#1015's corpus TSVs). `omc.om` went from 495 to 510 `^fn ` lines, so the om4
-cap (section 8) has 2 free entries at this pin.
+#1022 is the only merge after `d3d1b1bc7` that changes `seed/out/omc.sha256` (`git log
+d3d1b1bc..f4df8239 -- seed/out/omc.sha256`). It adds x86efi OP 14 (machine identity: CPUID brand,
+firmware vendor/revision, SMBIOS copy). `omc.om` went from 510 to 511 `^fn ` lines, so the om4 cap
+(section 8) has 1 free entry at this pin. Still current at main `2a1e6d29` (2026-11-05).
+
+Observed 2026-11-05 on a Linux AArch64 host in a clean detached worktree at main `2a1e6d29`:
+`sh seed/omega-from-seed.sh` printed `RC=0` and left `seed/out/omc` at exactly `3ad9f10f…3194`.
+The example gate result is in the "Rerun at omega-mv `f4df8239`" section.
+
+### Previous pin `d3d1b1bc` (checked 2026-11-04, history)
+
+Commit `d3d1b1bc7e3b970016a2176435f78c8f0251bad1` (merge commit of #1015, `target x86efi`, head
+`19ee7e99`); `omc.om` 18,056 lines, 510 `^fn ` lines, sha256 `16b4ca40…c749`; `seed/out/omc`
+sha256 `b4f45121f6c6d5d8a6ed0f5c4f3934b7cc4bec369bfa89523699bd33928f9b55`, 611,620 bytes.
+#1015 was the only merge after `9920aab14` that changed `seed/out/omc`. It added the x86efi
+backend; AArch64 and x86linux output of the 1305 tracked `.om` files was unchanged except the
+4 x86efi test programs (#1015's corpus TSVs).
 
 Observed 2026-11-04 on a Linux AArch64 host in a clean detached worktree at `d3d1b1bc7`:
 `sh seed/omega-from-seed.sh` exited 0 and left `seed/out/omc` at exactly `b4f45121…9b55`.
@@ -74,7 +86,7 @@ with exit 105. The same `fnv1a32.om` prefixed with `target x86linux` printed `0b
 `abc` with exit 0 under `qemu-x86_64` 8.2.2: EMULATED, not native x86.
 
 The omega MCP tools (`compile`, `run`) use an older pin: omega-mv `e5b32567`, omc `2c824805…029f`.
-Their results do not describe main's omc `b4f45121…` (omega-mv `d3d1b1bc`); for main, run
+Their results do not describe main's omc `3ad9f10f…` (omega-mv `f4df8239`); for main, run
 `git show main:seed/out/omc` directly. One visible difference: the MCP omc predates #848, so
 `while ... bound 1000000` is `error 8` there (1..999999), while `be8c5130…` and `b4f45121…` compile
 it (observed 2026-11-04 and 2026-11-05, host only). It also still has the #775 empty-text defect:
@@ -347,7 +359,18 @@ active pins are unchanged.
 
 Every citation links to that commit: `https://github.com/aien-dev/omega-mv/blob/55f9b0af47de70a3d06357985cf99ae3e45c016f/<path>#L<n>`.
 
-### Rerun at omega-mv `d3d1b1bc` (2026-11-04)
+### Rerun at omega-mv `f4df8239` (2026-11-05)
+
+The example gate pins `f4df82394e35893dcf1354dda69a2fe028d94bc1` (#1022), `seed/out/omc` sha256
+`3ad9f10f64309e7acf8a725082b28e23a2a4aeb07e98322fb4dc0fcd8fc93194`, built from seed at main
+`2a1e6d29`. With only the pin moved and no expectation changed, `bash examples/gate.sh` against that
+binary printed
+`GATE PASS examples=110 pass=110 fail=0 omc=3ad9f10f64309e7acf8a725082b28e23a2a4aeb07e98322fb4dc0fcd8fc93194`
+(exit 0) on 2026-11-05, Linux AArch64. Negative control: the gate pointed at the previous omc
+`b4f45121…9b55` was refused with exit 2 (`GATE FAIL omc sha256 b4f45121…, pinned 3ad9f10f…
+(omega-mv f4df8239…)`). The section below is the previous pin.
+
+### Rerun at omega-mv `d3d1b1bc` (2026-11-04, previous pin)
 
 The example gate pins main `d3d1b1bc7e3b970016a2176435f78c8f0251bad1` (#1015), `seed/out/omc`
 sha256 `b4f45121f6c6d5d8a6ed0f5c4f3934b7cc4bec369bfa89523699bd33928f9b55`. #1015 adds the x86efi
