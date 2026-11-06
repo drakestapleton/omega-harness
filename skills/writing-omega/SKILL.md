@@ -194,7 +194,8 @@ A trap ends the process with exit status 100 + N. Output already written stays w
 - `for i T K` runs i from 0 to K-1. A number K is unguarded. Any other K (a name or value) with no
   `bound` traps 4 (exit 104) after 1000000 passes, as a `while` with no bound. `for i T K bound N`
   takes the same N as `while`, caps every count and traps 4 when K exceeds N (`for_bound.om`,
-  `trap4_for_bound.om`). The MCP pin (e5b32567) has no `for ... bound` (error 5).
+  `trap4_for_bound.om`). The MCP pin (`f4df8239`, omc `3ad9f10f…`, since omega-mcp #6) accepts
+  `for ... bound`; the previous MCP pin `e5b32567` (omc `2c824805…`) refused it with error 5.
 - `break` and `continue` work in both loops. There is no `else if`: nest an `if` inside `else`.
 - No loop runs forever and recursion is bounded by the stack.
 

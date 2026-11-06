@@ -85,13 +85,15 @@ byte-identical to the ones `24caacf4` emits; `abc`, `a` and empty input gave `0b
 with exit 105. The same `fnv1a32.om` prefixed with `target x86linux` printed `0b e9 47 1a` for
 `abc` with exit 0 under `qemu-x86_64` 8.2.2: EMULATED, not native x86.
 
-The omega MCP tools (`compile`, `run`) use an older pin: omega-mv `e5b32567`, omc `2c824805…029f`.
-Their results do not describe main's omc `3ad9f10f…` (omega-mv `f4df8239`); for main, run
-`git show main:seed/out/omc` directly. One visible difference: the MCP omc predates #848, so
-`while ... bound 1000000` is `error 8` there (1..999999), while `be8c5130…` and `b4f45121…` compile
-it (observed 2026-11-04 and 2026-11-05, host only). It also still has the #775 empty-text defect:
-`len` of a `text e ""` passed as `view uchar *` returns a stale register value (exit 36 in the
-program recorded under "Empty text" below; 0 with `be8c5130…` and `b4f45121…`).
+The omega MCP tools (`compile`, `run`, `lookup`) use the guide pin since omega-mcp
+[#6](https://github.com/aien-dev/omega-mcp/pull/6): omega-mv `f4df8239`, omc `3ad9f10f…3194`.
+Before that they used omega-mv `e5b32567`, omc `2c824805…029f` (history): that omc predated #848,
+so `while ... bound 1000000` was `error 8` there (1..999999), and it still had the #775 empty-text
+defect (`len` of a `text e ""` passed as `view uchar *` returned a stale register value, exit 36 in
+the program recorded under "Empty text" below). Both are gone at the MCP pin. A server process
+started before the repin still runs the old binary: check `compiler_sha256` in a `compile` result.
+At this pin `execprog` closes every descriptor at or above 3 (omega-mv #970); omega-mcp #6 moved its
+bwrap control pipes to fds 0..2 for that reason.
 
 ### Previous pin `3a163bc5` (2026-10-31, history)
 
@@ -446,9 +448,10 @@ Two defects recorded at `e5b32567` are fixed in this compiler (the #904 integrat
 `fn continue_x` compiles and the program exits 7 (`examples/defect_keyword_prefix.om`); `bitcast int`
 of `uint 4294967295` compares equal to -1 and `add` 2 returns 1, and `bitcast uint` of `int -1`
 compares equal to 4294967295. At `2c824805` those three programs were error 16, exit 2 and exit 2,
-and `add` 2 trapped 1. `fn continue` is still error 16. The #775 empty-text defect is reproduced at
-`2c824805` (see the bullet below); keep the `part e 0 0` workaround while that omc is the pin. Other
-"observed at e5b32567" lines below are dated history; the example suite still matches them.
+and `add` 2 trapped 1. `fn continue` is still error 16. The #775 empty-text defect was reproduced at
+`2c824805` (see the bullet below); it is fixed at the guide and MCP pin, so `part e 0 0` is only
+needed for an older vendored omc. Other "observed at e5b32567" lines below are dated history; the
+example suite still matches them.
 
 ### Historical rerun at omega-mv `e5b32567` (2026-10-27)
 
@@ -561,7 +564,8 @@ Changes and confirmations against the rules below, each observed with a program:
     makes it exit 60; `ret int f part e 0 0` exits 0.
 
   With the guide pin all three exit 0 (`be8c5130…` 2026-11-04, `b4f45121…` 2026-11-05; fixed by the
-  #904 integration `e2662fff`). On the MCP pin pass `part e 0 0` instead
+  #904 integration `e2662fff`). The MCP pin has carried the fix since omega-mcp #6. On an older
+  vendored omc (anything built before `e2662fff`) pass `part e 0 0` instead
   (`examples/empty_text_part.om`). synapse-mcp hit it: every empty-text record arrived with len
   28-60 and positional arguments were refused as too long.
 - **`and`/`or` are eager everywhere, not only in contracts.** `if and gt n 0 eq get a sub n 1 13`
@@ -1412,7 +1416,7 @@ AArch64 host with main `seed/out/omc` (`omc < file`): `seed/omc/om2/s4/v-bad-pre
 `omc: line 5: error 20` (rc 20); `seed/omc/om2/s4/v-pwrite-text.om` compiles (rc 0) and runs with
 exit 0, writing `ABC\n` to stdout. Host evidence only.
 
-Historical note: up to omc `2c824805…` (omega-mv `e5b32567`, the omega MCP pin) the check sat on
+Historical note: up to omc `2c824805…` (omega-mv `e5b32567`, the omega MCP pin before omega-mcp #6) the check sat on
 the wrong word: `pwrite` from a `text` was error 20 and `pread` into a `text` compiled and returned
 `-EFAULT` at run time. Code written for that pin copied a text into a `new` array before `pwrite`.
 
@@ -1469,7 +1473,7 @@ exit 7; launching `/nonexistent/x` printed `PURE_LAUNCH_REFUSED` and exited 2 (E
 descriptor 3 got EPERM (exit 1) under `execpure`, and EBADF (exit 9) under `execprog` with the parent's
 descriptor 3 open. The omc of `1db941627^` (`0243e4aff`, sha256 `1578b357…`) refuses `execpure` with
 error 3, and its `execprog` child read the inherited descriptor 3 (exit 50). Older pins, including the
-omega MCP pin `2c824805…`, lack both.
+omega MCP pin before omega-mcp #6 (`2c824805…`), lack both; the current MCP pin `3ad9f10f…` has both.
 
 - Types: `fd`, flags, modes, pids are `int`; offsets, counts, capacities `ulong`; file positions and
   intervals `long`; buffers are `uchar` arrays. Every result is `long`.
