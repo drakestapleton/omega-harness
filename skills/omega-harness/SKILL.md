@@ -943,8 +943,8 @@ This section stays pending until branch `ng/ir-m0` (and `ng/ir-ngrun`, `ng/ir-ra
 writes were suspended on 2026-11-07). Exercised at local heads `ee07085384c6a8cc99ce66aa9944e8347602f21a` (`ng/ir-m0`, the
 answer to the signed desk review MERGE_AFTER_FIX at `2f3f3d01`),
 `f73dc66de4502448d47bbd1c0ce8b2cf49bb43da` (`ng/ir-ngrun`),
-`39f04efc1` (`ng/ir-rand`, which fixes the f73dc66d review's P3 items forward) and `ng/opt-licm`
-(see its READY) on base `943d955531b9`, omc `5f90edea…6df`.
+`39f04efc1` (`ng/ir-rand`, which fixes the f73dc66d review's P3 items forward) and `854d81521`
+(`ng/opt-licm`) on base `943d955531b9`, omc `5f90edea…6df`.
 
 - Spec: `seed/ng/IR.md`. One binary form (`OSC1IR` v9, tag `omega.ng.ir.v1`) for CPU and GPU
   kernels; SSA values with block parameters; an ordering token that every check, effect and exit
@@ -982,7 +982,7 @@ answer to the signed desk review MERGE_AFTER_FIX at `2f3f3d01`),
   gate checks ngcheck ACCEPT after opt, ngrun before == after and a fixed point.
 - Gate: `cat seed/ng/sha256.om seed/ng/gate-ir.om | seed/out/omc > gate-ir`, then
   `gate-ir seed/out/omc SCRATCH` from the repository root: `NGIRGATE PASS cases=135` on `ng/ir-m0`,
-  `cases=164` on `ng/ir-ngrun`, `cases=186` on `ng/ir-rand` (R cases: `x-NAME.oir` under ngrun
+  `cases=164` on `ng/ir-ngrun`, `cases=186` on `ng/ir-rand`, `cases=213` on `ng/opt-licm` (39 min on one Spark core, most of it the L kernels) (R cases: `x-NAME.oir` under ngrun
   against `x-NAME.om` compiled by omc, exit/stdout/stderr equal at exact trap boundaries; N cases:
   `n-NAME.oir` under ngrun alone with STEPS 1000000, for semantics Omega cannot state). It
   compares whole output lines (the
