@@ -146,7 +146,7 @@ Every declaration and statement form at the pin (OMEGESE sections 9 to 12 are th
 | structs | `new S v1 v2 ...`, `get p f`, `put p f v` |
 | control | `if` / `else` / `end`, `while COND bound N`, `for i T K`, `break`, `continue`, `ret`, `exit`, `trap N` |
 | conversion | the type words, `bitcast T v` |
-| I/O | `read fd A off n`, `write fd A off n`, `pread` / `pwrite fd A off n pos`, and the 67 host words of section 10 |
+| I/O | `read fd A off n`, `write fd A off n`, `pread` / `pwrite fd A off n pos`, and the 68 host words of section 10 |
 
 - `and`, `or`, `xor` on integers of any width are bitwise, not logical: `and ulong 12 ulong 10` is 8
   ([`examples/int_bits_and.om`](../../examples/int_bits_and.om)). Compare first when you want a bool.
@@ -271,7 +271,7 @@ Examples: [`om2_tour.om`](../../examples/om2_tour.om), [`om2_views.om`](../../ex
   `envread` ([`examples/env_read.om`](../../examples/env_read.om)). Short capacity returns -105.
 - Host words carry the process's own permissions; they are not a sandbox.
 
-The 67 host words at the pin, with their values (OMEGESE section 10 has each one's exact contract).
+The 68 host words at the pin (`execenv` is pending: it needs omc `cfd96b48…`, omega-mv#1074; the MCP pin refuses it with error 3), with their values (OMEGESE section 10 has each one's exact contract).
 `A` and `B` are `uchar` arrays, `off`, `n` and `capacity` are `ulong`, and descriptors, flags, modes
 and ids are `int`. A path is the slice `A off n`; a packed list is a `u16` count, then `u16`-length
 records. Each word is reserved: using it as a name is error 16 at the pin, while an unreserved name
@@ -281,7 +281,7 @@ in the same program compiles.
 |---|---|
 | files | `fopen A off n flags mode`, `fclose fd`, `fsync fd`, `fdsync fd`, `syncfs fd`, `memfd A off n flags`, `fseek fd offset whence`, `ftrunc fd length`, `flock fd op`, `fstat fd A off n`, `getdnts fd A off n` |
 | paths | `chmod A off n mode`, `fchmod fd mode`, `chown A off n uid gid`, `faccess A off n mode`, `truncate A off n length`, `unlink A off n`, `makedir A off n mode`, `rmdir A off n`, `cwd A off capacity`, `chdir A off n`, `fchdir fd`, `readlnk A off n B off capacity`, `stat A off n B off capacity`, `lstat A off n B off capacity`, `renames A off n flags`, `link A off n`, `symlnk A off n`, `umask mask` |
-| processes | `getpid`, `getppid`, `getuid`, `geteuid`, `getgid`, `getegid`, `setsid`, `getpgid pid`, `getsid pid`, `setpgid pid pgid`, `fork`, `killpid pid signal`, `waitpid pid A off n options`, `pipefds A off n flags`, `dupfd fd target flags`, `execprog A off n` |
+| processes | `getpid`, `getppid`, `getuid`, `geteuid`, `getgid`, `getegid`, `setsid`, `getpgid pid`, `getsid pid`, `setpgid pid pgid`, `fork`, `killpid pid signal`, `waitpid pid A off n options`, `pipefds A off n flags`, `dupfd fd target flags`, `execprog A off n`, `execenv A off n B off m` |
 | arguments, environment, randomness | `argcnt`, `argread index A off capacity`, `envcnt`, `envread index A off capacity`, `random A off n flags` |
 | time | `monons`, `realns`, `sleepns interval` |
 | sockets | `socknew domain kind protocol`, `bind fd A off n`, `connect fd A off n`, `listen fd backlog`, `accept fd flags`, `sockname fd A off n`, `sockopt fd level option A off n`, `recv fd A off n flags`, `send fd A off n flags`, `sendmsg fd A off n flags`, `shutdown fd how`, `waitio fd events interval`, `pollfds A off n interval`, `peercred fd A off capacity` |

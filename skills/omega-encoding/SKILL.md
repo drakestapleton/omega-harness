@@ -1458,6 +1458,15 @@ the `target x86linux` build gives the same PASS line with exit 0 under `qemu-x86
 and `peername = int 1` as a one-line unit is `omc: line 1: error 16`. This supersedes the pending
 candidate notes of harness draft #108 (candidate omc `4ef67f18`/`6a2916cd`).
 
+**`execenv` (pending [omega-mv#1074](https://github.com/aien-dev/omega-mv/pull/1074), omc `cfd96b48…`;
+the MCP pin refuses it with error 3).** `r = execenv A off n B off m` (keyword 233) is `execprog A off n`
+with a private environment: the child's environment is exactly packet B, packed like argv (u16 count
+1..64, nonempty u16-length `NAME=VALUE` records, 2..4096 bytes, no zero byte, no trailing bytes). Both
+packets are checked (trap 3, exit 103) before descriptors 3 and up close; it returns only on failure,
+with a negative errno; function mode is error 9 and a contract is error 30; AArch64 and x86linux.
+`examples/execenv.om` re-executes `/proc/self/exe` with the one record `GREETING=hi` while the parent
+runs with `FOO=bar`; the child prints only `GREETING=hi` (gate `GATE PASS examples=111` at `cfd96b48`).
+
 **`execpure` and descriptor closing in `execprog`** (merged in
 [omega-mv#970](https://github.com/aien-dev/omega-mv/pull/970) as `1db941627`; in the current pin
 `d3d1b1bc` / omc `b4f45121`; observed below with the then pin `91c83438` / omc `2aec185d`). `execpure A off n` is host word 198
