@@ -936,11 +936,12 @@ rerun at that head.
 - `make test-checker2-owner-receipt` fails with UNTRUSTED_CHECKER on #885 because checker2's identity
   changed. Drake's YubiKey re-sign is needed (BLOCKED_OPERATOR).
 
-### ΩIR, Omega NG's intermediate form (PENDING omega-mv branch `ng/ir-m0`)
+### ΩIR, Omega NG's intermediate form (PENDING omega-mv branches `ng/ir-m0`, `ng/ir-ngrun`)
 
-This section stays pending until branch `ng/ir-m0` merges on omega-mv (Hive NG lane ng-ir, milestone
-M0; not yet a PR because GitHub writes were suspended on 2026-11-07). Exercised at local head
-`ee62fb6a7d58ed6b5978bb181aa8487101c31053` on base `943d955531b9`, omc `5f90edea…6df`.
+This section stays pending until branch `ng/ir-m0` (and `ng/ir-ngrun`, stacked on it) merges on
+omega-mv (Hive NG lane ng-ir; not yet PRs because GitHub writes were suspended on 2026-11-07).
+Exercised at local heads `6d3f0c1cb5a7e70555aa9ac8071caa78046a755c` (`ng/ir-m0`) and
+`47a9840006c7507d8becd497aaca612fc8290ac2` (`ng/ir-ngrun`) on base `943d955531b9`, omc `5f90edea…6df`.
 
 - Spec: `seed/ng/IR.md`. One binary form (`OSC1IR` v9, tag `omega.ng.ir.v1`) for CPU and GPU
   kernels; SSA values with block parameters; an ordering token that every check, effect and exit
@@ -950,9 +951,15 @@ M0; not yet a PR because GitHub writes were suspended on 2026-11-07). Exercised 
 - `seed/ng/ngcheck.om` is the validator: `ACCEPT <sha256> fns= blocks= ops=` or
   `ngcheck: CLASS at OFFSET`, exit 10..30 (IR.md s11). `ngas`/`ngdis` (`ngtxt.om` + `ngas.om`/
   `ngdis.om`) convert the one canonical text form (IR.md s10) and binary.
+- `seed/ng/ngrun.om` (branch `ng/ir-ngrun`) is the reference interpreter of IR.md s7:
+  `cat seed/ng/src/ir.om seed/ng/ngrun.om | seed/out/omc > ngrun`, then `ngrun FILE.ir`. Exit status
+  = the entry's result, a failing check exits 100 + code, unsupported ops (vectors, tiles, kernels,
+  fma, fmath, f16/bf16/fp8) exit 125 with one stderr line. Diff a back end's output against it (D9).
 - Gate: `cat seed/ng/sha256.om seed/ng/gate-ir.om | seed/out/omc > gate-ir`, then
-  `gate-ir seed/out/omc SCRATCH` from the repository root: `NGIRGATE PASS cases=100` with three
-  gate negative controls and an ngcheck mutant killed by 5 cases (HOST_TESTED on a fresh clone,
+  `gate-ir seed/out/omc SCRATCH` from the repository root: `NGIRGATE PASS cases=100` on `ng/ir-m0`,
+  `cases=128` on `ng/ir-ngrun` (R cases: `x-NAME.oir` under ngrun against `x-NAME.om` compiled by
+  omc, exit/stdout/stderr equal at exact trap boundaries), with three gate negative controls, an
+  ngcheck mutant killed by 5 cases and an ngrun mutant killed by 1 (HOST_TESTED on fresh clones,
   core 1, 2026-11-07; CI NOT_RUN).
 - The `ng` units are om2 (`at` is reserved; error 16) and are built only by
   `seed/ng/ngbuild.om` from the sha256-pinned list `seed/ng/ng.units`.
