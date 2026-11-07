@@ -976,6 +976,40 @@ signed desk review MERGE_AFTER_FIX at `2f3f3d01`) and `f73dc66de4502448d47bbd1c0
 - The `ng` units are om2 (`at` is reserved; error 16) and are built only by
   `seed/ng/ngbuild.om` from the sha256-pinned list `seed/ng/ng.units`.
 
+### ng AArch64 back end (PENDING omega-mv branch `ng/a64-m1`, stacked on `ng/ir-m0`)
+
+This section stays pending until branch `ng/a64-m1` merges on omega-mv (Hive NG lane ng-a64; not
+yet a PR because GitHub writes were suspended on 2026-11-07). Exercised at local head
+`8a3680b06a9dd8a458f2b436579cb894ecbd66bf` on ng-ir `ee070853`, base `943d955531b9`, omc `5f90edea…6df`.
+
+- Unit `seed/ng/src/a64.om` (third row of `seed/ng/ng.units`); design `seed/ng/a64/DESIGN.md`.
+  `ng` reads a first line naming the mode: `@ng a64` compiles ΩIR to an AArch64 Linux ELF in omc's
+  memory map (save pairs, D13 default), `@ng a64 split` the same with single saves, `@ng a64-enc`
+  encodes an instruction case list. `main.om` asks `a6_mode` about the mode line (read through
+  `ng_mlb`: an earlier unit cannot name a later unit's global, error 3) before its unknown-mode exit,
+  reads the payload from offset 0, then calls `a6_run`. Refusals: the ΩIR reader's class (10..30),
+  5 `unsupported`.
+- Slice: integer ops, compares, select, conversions, control flow, calls (at most 8 arguments),
+  checks 70..82; memory on a REF to an ARRAY of bool or integers (load, store, alloca zero-filled
+  per invocation, gaddr, len; globals at omc's addresses; frames below 16 MiB) and the host words
+  read and write; liveness, linear scan over x0..x14 / x19..x27 with spills, frame with the x28
+  stack-floor check (trap 6), 64-byte aligned function entries, and the E loop shape (a self call
+  whose result is added and returned becomes an accumulator loop). Not yet: SLICE values, STRUCT
+  and VEC access, atomics, other host words, floats, kernels. Stack depth is not semantic: trap 6 is
+  compared only when both compilers trap. Two OmegaFast bench kernels (bcopy, sort), lowered by hand
+  per IR.md s13, compile and match omc and Wolfram. ΩIR call arguments must equal the parameter
+  types (IR.md row 64), so passing an `edit` array to a `view` parameter has no ΩIR form yet.
+- Omega in fixture references: a global cannot be passed as an argument (error 19), a comparison
+  cannot be a conversion's operand (`long eq a b` is error 9: use `if`), `gt` is a keyword (error 16
+  as a global name). A narrow conversion re-extends from its source type, so a test of load
+  extension must compare the loaded value at its own type.
+- Gates, from the repository root: `seed/out/omc < seed/ng/a64/gate.om > gate; echo SCRATCH | ./gate`
+  (encoder vs GNU objdump, `cases 204 match 204`, wrong-bit mutant) and
+  `seed/out/omc < seed/ng/a64/rgate.om > rgate; echo SCRATCH | ./rgate` (13 fixtures including bcopy
+  and sort: ngcheck accepts, both save forms and omc agree with Wolfram-computed statuses or trap
+  codes and print byte-identical stdout; 15 allocator, alignment, E and memory mutants caught)
+  (HOST_TESTED on a fresh clone, core 1, 2026-11-07; CI NOT_RUN).
+
 ## 4. Effects and authority
 
 - A proposed program or effect description does not authorize running it. Confirm capability and privilege at the execution boundary. Model confidence and semantic identity grant no authority.
