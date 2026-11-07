@@ -1325,11 +1325,12 @@ Capacities are 65535 bytes, 4095 lines, 16383 tokens, 63-byte tokens and 128 fun
 - **X1:** host words appear only in a function preceded by `note p10 effect`.
 - **P1:** a function preceded by `note p10 pure` has no `put` and calls only pure functions.
 - **C1:** `requires`, `ensures` and `invariant` need `om2`. `om2 release` is refused.
+- **Assignments:** omc accepts `name [=] value`, so B2, B3 and E1 share one classifier that recognises both spellings. A line assigns when its second token is `=`, or when its first token is not a statement keyword, a unit function or a host word. omc refuses names that shadow a function (error 10) or a host word (error 16). So `nd sub nd 1`, `depth ulong 0`, `b new T N` and `r f 2` are checked like their `=` forms. The canonical B2 guard must still be written `NAME = add depth 1`.
 
 `bounds` mode skips E1 and X1. `sh seed/profile/check.sh` runs these checks:
 
-- the 48 fixture, capacity and stop rows;
-- one killed `profile.om` mutant per rule, plus two more for the B2 guard structure;
+- the 53 fixture, capacity and stop rows;
+- one killed `profile.om` mutant per rule, plus three more for B2 (guard structure and `=`-less assignment);
 - the profile of the `seed/authority` unit (`action`, `store`, `lock`, `dispatch`);
 - the authority gates, including `dispatch-fault-gate`;
 - negative controls with the pre-fix modules.
@@ -1352,7 +1353,7 @@ What the profile does not do:
 - It makes no whole-kernel claim.
 
 Example: `examples/p10_profile.om` passes both `omc` and the profile. On 2026-11-07, at omega-mv
-#1063 heads `7ae0a1df` (profile sha256 `98c95aff…e613`) and `795f5d0d` (`f4d730cb…1671`), its mutants were refused:
+#1063 heads `7ae0a1df` (profile sha256 `98c95aff…e613`), `795f5d0d` (`f4d730cb…1671`) and `e6974c5d` (`2d19340a…f5f7`), its mutants were refused:
 
 | Mutant | Output |
 |---|---|
