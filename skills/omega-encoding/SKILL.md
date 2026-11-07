@@ -1316,10 +1316,11 @@ Capacities are 65535 bytes, 4095 lines, 16383 tokens, 63-byte tokens and 128 fun
 
 - **B1:** a `while` has `bound N` with N ≤ 8192. A `for` count is a literal, a `const`, `len X`, or carries `bound`.
 - **B2:** recursion is allowed only in qualified form. Every function on a cycle takes `depth` first, never assigns it and has no `new`.
-  - An in-cycle call passes `depth`, or a name guarded by `NAME = add depth 1` / `if gt NAME LIM` (LIM ≤ 64) / `ret`, `exit` or `trap`.
+  - An in-cycle call passes `depth`, or a name guarded by `NAME = add depth 1` / `if gt NAME LIM` (LIM ≤ 64) / an optional call to a unit function / `ret`, `exit` or `trap` / `end`.
+  - The stop must close the guard's then-block. An `else` or any other block line inside the guard is refused.
+  - The assignment and the call must sit in the same block instance. No line between them may leave that block or start its `else` arm; equal nesting depth alone is not enough.
   - An entry from outside the cycle passes a literal or `const` ≤ 64.
   - The omc/DRA-311 leaf removal then runs over the remaining edges.
-- **B3:** each `global` and each `new` is ≤ 65536 elements. The global bytes, and the `new` bytes per function and in total, are each ≤ 65536.
 - **E1:** an assigned call or host result is read before it is reassigned or the function returns. The exemption is `note p10 allow E1 <reason>` on the line before.
 - **X1:** host words appear only in a function preceded by `note p10 effect`.
 - **P1:** a function preceded by `note p10 pure` has no `put` and calls only pure functions.
@@ -1327,8 +1328,8 @@ Capacities are 65535 bytes, 4095 lines, 16383 tokens, 63-byte tokens and 128 fun
 
 `bounds` mode skips E1 and X1. `sh seed/profile/check.sh` runs these checks:
 
-- the 44 fixture, capacity and stop rows;
-- one killed `profile.om` mutant per rule;
+- the 48 fixture, capacity and stop rows;
+- one killed `profile.om` mutant per rule, plus two more for the B2 guard structure;
 - the profile of the `seed/authority` unit (`action`, `store`, `lock`, `dispatch`);
 - the authority gates, including `dispatch-fault-gate`;
 - negative controls with the pre-fix modules.
@@ -1351,7 +1352,7 @@ What the profile does not do:
 - It makes no whole-kernel claim.
 
 Example: `examples/p10_profile.om` passes both `omc` and the profile. On 2026-11-07, at omega-mv
-`#1063` head, its mutants were refused:
+#1063 heads `7ae0a1df` (profile sha256 `98c95aff…e613`) and `795f5d0d` (`f4d730cb…1671`), its mutants were refused:
 
 | Mutant | Output |
 |---|---|
