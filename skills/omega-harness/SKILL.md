@@ -976,7 +976,7 @@ signed desk review MERGE_AFTER_FIX at `2f3f3d01`) and `f73dc66de4502448d47bbd1c0
 - The `ng` units are om2 (`at` is reserved; error 16) and are built only by
   `seed/ng/ngbuild.om` from the sha256-pinned list `seed/ng/ng.units`.
 
-### ng AArch64 back end (PENDING omega-mv branches `ng/a64-m1`, `ng/a64-m2`, `ng/slice-m1`, stacked on ng-ir)
+### ng AArch64 back end (PENDING omega-mv branches `ng/a64-m1`, `ng/a64-m2`, `ng/slice-m1`, `ng/a64-rand`, stacked on ng-ir)
 
 This section stays pending until the branches merge on omega-mv (Hive NG lane ng-a64; not yet PRs
 because GitHub writes were suspended on 2026-11-07). `ng/a64-m1` (head `8a3680b06a9d`, on ng-ir
@@ -1034,24 +1034,57 @@ Base `943d955531b9`, omc `5f90edea…6df`.
   as a global name). A narrow conversion re-extends from its source type, so a test of load
   extension must compare the loaded value at its own type.
 - Gates, from the repository root: `seed/out/omc < seed/ng/a64/gate.om > gate; echo SCRATCH | ./gate`
-  (encoder vs GNU objdump, `cases 204 match 204`, wrong-bit mutant) and
-  `seed/out/omc < seed/ng/a64/rgate.om > rgate; echo SCRATCH | ./rgate`: 13 mkir fixtures including
-  bcopy and sort (ngcheck accepts, both save forms and omc agree with Wolfram-computed statuses or
+  (encoder vs GNU objdump, `cases 213 match 213`, wrong-bit mutant; then the refusal list, below) and
+  `seed/out/omc < seed/ng/a64/rgate.om > rgate; echo SCRATCH | ./rgate`: 14 mkir fixtures including
+  bcopy, sort and lv (ngcheck accepts, both save forms and omc agree with Wolfram-computed statuses or
   trap codes and print byte-identical stdout), then 75 ΩIR text fixtures (ng-ir's `x-*` run pairs but
   x-float, and `seed/ng/a64/tests/oir/`: every check op with its trap code on narrow and 64-bit types,
   stack arguments, globals, loads and stores, block-parameter loops, the E loop, slices, fill, monons,
   realns, the bench kernels) assembled by ngas, accepted by ngcheck, where both save forms must give ngrun's
-  exit status, stdout and stderr; 24 mutants caught, among them a wrong trap code, two stack-argument,
-  three slice, two clock and a fill mutant (`ng/a64-m2` HOST_TESTED on a fresh clone, core 1,
-  2026-11-07, with negative controls: a wrong expectation, a no-op mutant, a wrong omc stdout, ngrun
-  exiting 99 + code, ngrun writing shifted bytes; CI NOT_RUN). A mutant's replacement text must be
+  exit status, stdout and stderr; 25 mutants caught, among them a wrong trap code, two stack-argument,
+  three slice, two clock, a fill and the x15 mutant (`ng/a64-m2` `2d2ce8f9` HOST_TESTED on a fresh
+  clone, core 1, 2026-11-07, with negative controls: a wrong expectation, a no-op mutant, tsum without
+  its mask, the refusal check disabled; the earlier head `a5f1a82f` also failed a wrong omc stdout,
+  ngrun exiting 99 + code and ngrun writing shifted bytes; CI NOT_RUN). A mutant's replacement text must be
   exactly as long as the text it replaces (rgate patches the source in place; otherwise
-  `cannot run step 8`). On `ng/slice-m1` rgate adds the front phase: front cases ok 23/23, front
-  refused ok 2/2, front control differs 1 (HOST_TESTED on a fresh clone of `02742a8c`, core 1,
-  2026-11-07; CI NOT_RUN). Its controls each fail the gate: the fib39 control made fib40 (control
+  `cannot run step 8`). From `ng/a64-m2` `2d2ce8f9` an omc build that fails prints `cannot run step 9
+  status R source PATH build.err LINE`: R 127 with `(empty)` means omc never ran (exec or descriptor
+  failure), 265 means rgate killed it after 30 s (a loaded machine), any other R is omc's exit status
+  with its message; a file that cannot be opened is `cannot run step 1` or `2` with its path. On
+  `ng/slice-m1` rgate adds the front phase: front cases ok 23/23, front
+  refused ok 2/2, front control differs 1 (HOST_TESTED on fresh clones of `02742a8c` and, with the
+  review fixes and step diagnostics merged, `f59641f6`, core 1, 2026-11-07; CI NOT_RUN). Its
+  controls each fail the gate: the fib39 control made fib40 (control
   differs 0), no timing-line exception (16/23: the seven kernels that print elapsed time) and
   ng-front's for-latch mutant in `front.om` with `ng.units` re-pinned (16/23: same exit status,
   different checksum stdout). The front phase catches front-end miscompiles too, not only a64 ones.
+- Random differential (D9, rgate step 7, committed on `ng/a64-rand` = `ng/slice-m1` + ng-ir's
+  `ng/ir-rand` `165c2be5` merged unchanged, head `d6a8306a`): ng-ir's `ngrand SEED` writes a ΩIR unit
+  valid by construction; for seeds 1..1000 ngcheck must accept it and both a64 forms must give ngrun's
+  exit status, stdout and stderr. A refusal by a64 fails the seed, because a refused unit is never
+  compared. Count wrong results and refusals separately when hunting: before the fix the 1000 seeds
+  gave 0 wrong and 147 refused, all `rotl`/`rotr` on u8 or u16 (IR.md rows 22/23 allow every unsigned
+  width). a64 now rotates u8 and u16 on a copy repeated across 32 bits (ORR with itself shifted by the
+  width, RORV W). `ngrand shrink SEED STATUS OUT CMD` reduces a failing seed to its smallest unit;
+  the shrunk seed 12 is kept as fixture `r-s12`. Fresh clones, core 1, 2026-11-07: `d6a8306a`
+  (mutants 26/26) and `d2b4d3db` (the review fixes and step diagnostics merged; mutants 27/27): ngrun
+  fixtures 77/77, random seeds 1000/1000, random control differs 1 (ngrun's seed 1 against the ELF of
+  seed 2), NGIRGATE PASS cases=166; refusing u8 rotates again drops the random phase to 853/1000
+  (HOST_TESTED; CI NOT_RUN).
+- Review fixes of `ng/a64-m1` (verdict MERGE_AFTER_FIX on `8a3680b0`; branch `ng/a64-m1-fix`
+  `5720a78a`, merged into `ng/a64-m2`, `ng/slice-m1` and `ng/a64-rand`, not rebased). The encoder
+  refuses in-field values that DDI 0487 reserves (exit 5, `a64: reserved operand value N`): shift
+  amounts, UBFM/SBFM immr/imms and EXTR lsb of 32 or more and MOVZ/MOVN hw 2..3 on 32-bit forms, ROR
+  on ADD/SUB shifted register, any shift on multiply, two-source and float forms. A field that is too
+  small is never masked (`immediate out of range`). `gate.om` runs each line of
+  `seed/ng/a64/tests/enc-refuse.cases` alone (exit 5, no word, exact stderr: 23/23) and a masking
+  mutant must fail some of them. mkir lowers main's `int` with `chk.conv` (trap 5) as IR.md s13 does,
+  so a fixture whose result does not fit i32 must reduce it first (tsum: `& 255`, 32). Fixture `lv`
+  keeps 20 values live across checked ops with no call, so an allocator handing out x15 (the checked
+  ops' scratch) fails (89, not 165); that mutant is rgate's 16th on `ng/a64-m1-fix`, 25th on
+  `ng/a64-m2` and `ng/slice-m1`, 27th on `ng/a64-rand`. Widening the spill scan to x15 is an equivalent
+  mutant (identical ELFs), documented, not gated. HOST_TESTED on a fresh clone of `5720a78a` with
+  seven negative controls, core 1, 2026-11-07; CI NOT_RUN.
 
 ## 4. Effects and authority
 
