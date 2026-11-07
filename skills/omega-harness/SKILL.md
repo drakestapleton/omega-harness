@@ -21,6 +21,22 @@ Companion skills in this package:
 - `omega-communication`: status labels, reports, handoffs and corrections.
 - `aien-repositories`: what AIEN builds and which repository owns a task.
 
+## First-party mission orchestration: omega-mission (DRA-459)
+
+Factory Droid was retired by Drake on 2026-11-07. omega-mission (Radicle
+`rad:z6HYc7ot5JZD8FSfvU77pWdMUdru`, main `16218733bb47648b4478f28af1eb7894b5debec5`)
+implements plan/check/step/verify/status/resume in seeded Omega, pinned to
+omega-mv 6fbc6cbe4bfa4092608e2b5f06d2e8f537893992 and omc SHA256
+cfd96b48b0460ab5557853d6856f9c741b96ac8d0d624e06198defb4cbfa0d8a.
+It admits bounded mission slices and records evidence; it does not execute workers
+or authenticate receipts. Released-owner handoff replays the journal without crumbs.
+Tiers stop at lease; publishing/merging never become worker permissions.
+Queen retains assignment/lease authority; RadPublish alone merges after independent
+exact-head review. Live omagent/node/sched dispatch and GPU operation are NOT_RUN.
+Status: IMPLEMENTED, HOST_TESTED (independent exact-head MERGE reviews of 896be22a
+and 16218733; suite cases=147, mutants_caught=5). Not an installed production authority.
+Use the repository README for build/install/host-test commands and evidence limits.
+
 ## Development method: Human-Directed Agentic Engineering
 
 Use Human-Directed Agentic Engineering (HDAE) to describe the development workflow. Humans define the goal, architecture, constraints, acceptance criteria and stopping points. Agents implement, execute checks, diagnose failures and revise inside that boundary. Return architectural decisions, acceptance and release decisions to human review; an agent or advisor cannot enlarge its own authority.
