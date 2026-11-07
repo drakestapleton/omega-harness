@@ -936,6 +936,27 @@ rerun at that head.
 - `make test-checker2-owner-receipt` fails with UNTRUSTED_CHECKER on #885 because checker2's identity
   changed. Drake's YubiKey re-sign is needed (BLOCKED_OPERATOR).
 
+### ΩIR, Omega NG's intermediate form (PENDING omega-mv branch `ng/ir-m0`)
+
+This section stays pending until branch `ng/ir-m0` merges on omega-mv (Hive NG lane ng-ir, milestone
+M0; not yet a PR because GitHub writes were suspended on 2026-11-07). Exercised at local head
+`ee62fb6a7d58ed6b5978bb181aa8487101c31053` on base `943d955531b9`, omc `5f90edea…6df`.
+
+- Spec: `seed/ng/IR.md`. One binary form (`OSC1IR` v9, tag `omega.ng.ir.v1`) for CPU and GPU
+  kernels; SSA values with block parameters; an ordering token that every check, effect and exit
+  consumes; checks (`chk.*`) are the only ops that trap; every memory access is covered by a
+  dominating `chk.bounds`/`chk.slice` or a fact. A unit is a program with exactly one export of no
+  parameters and result i32 (D11, refusal ENTRY exit 30).
+- `seed/ng/ngcheck.om` is the validator: `ACCEPT <sha256> fns= blocks= ops=` or
+  `ngcheck: CLASS at OFFSET`, exit 10..30 (IR.md s11). `ngas`/`ngdis` (`ngtxt.om` + `ngas.om`/
+  `ngdis.om`) convert the one canonical text form (IR.md s10) and binary.
+- Gate: `cat seed/ng/sha256.om seed/ng/gate-ir.om | seed/out/omc > gate-ir`, then
+  `gate-ir seed/out/omc SCRATCH` from the repository root: `NGIRGATE PASS cases=100` with three
+  gate negative controls and an ngcheck mutant killed by 5 cases (HOST_TESTED on a fresh clone,
+  core 1, 2026-11-07; CI NOT_RUN).
+- The `ng` units are om2 (`at` is reserved; error 16) and are built only by
+  `seed/ng/ngbuild.om` from the sha256-pinned list `seed/ng/ng.units`.
+
 ## 4. Effects and authority
 
 - A proposed program or effect description does not authorize running it. Confirm capability and privilege at the execution boundary. Model confidence and semantic identity grant no authority.
