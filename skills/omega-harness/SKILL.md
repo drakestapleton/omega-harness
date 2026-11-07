@@ -936,14 +936,15 @@ rerun at that head.
 - `make test-checker2-owner-receipt` fails with UNTRUSTED_CHECKER on #885 because checker2's identity
   changed. Drake's YubiKey re-sign is needed (BLOCKED_OPERATOR).
 
-### ΩIR, Omega NG's intermediate form (PENDING omega-mv branches `ng/ir-m0`, `ng/ir-ngrun`, `ng/ir-rand`)
+### ΩIR, Omega NG's intermediate form (PENDING omega-mv branches `ng/ir-m0`, `ng/ir-ngrun`, `ng/ir-rand`, `ng/opt-licm`)
 
-This section stays pending until branch `ng/ir-m0` (and `ng/ir-ngrun`, then `ng/ir-rand`, stacked on
-it) merges on omega-mv (Hive NG lane ng-ir; not yet PRs because GitHub writes were suspended on
-2026-11-07). Exercised at local heads `ee07085384c6a8cc99ce66aa9944e8347602f21a` (`ng/ir-m0`, the
+This section stays pending until branch `ng/ir-m0` (and `ng/ir-ngrun`, `ng/ir-rand`, then
+`ng/opt-licm`, stacked on it) merges on omega-mv (Hive NG lane ng-ir; not yet PRs because GitHub
+writes were suspended on 2026-11-07). Exercised at local heads `ee07085384c6a8cc99ce66aa9944e8347602f21a` (`ng/ir-m0`, the
 answer to the signed desk review MERGE_AFTER_FIX at `2f3f3d01`),
-`f73dc66de4502448d47bbd1c0ce8b2cf49bb43da` (`ng/ir-ngrun`) and
-`165c2be54b9d452781ed974c3638c919f7ca7359` (`ng/ir-rand`) on base `943d955531b9`, omc `5f90edea…6df`.
+`f73dc66de4502448d47bbd1c0ce8b2cf49bb43da` (`ng/ir-ngrun`),
+`39f04efc1` (`ng/ir-rand`, which fixes the f73dc66d review's P3 items forward) and `ng/opt-licm`
+(see its READY) on base `943d955531b9`, omc `5f90edea…6df`.
 
 - Spec: `seed/ng/IR.md`. One binary form (`OSC1IR` v9, tag `omega.ng.ir.v1`) for CPU and GPU
   kernels; SSA values with block parameters; an ordering token that every check, effect and exit
@@ -960,9 +961,12 @@ answer to the signed desk review MERGE_AFTER_FIX at `2f3f3d01`),
 - `ng` reads its mode line (`@ng ir-copy`) apart from the payload; the payload starts at `i_in`
   offset 0, and refusals print `ng: refused class C at OFFSET` (offset in the payload).
 - `seed/ng/ngrun.om` (branch `ng/ir-ngrun`) is the reference interpreter of IR.md s7:
-  `cat seed/ng/src/ir.om seed/ng/ngrun.om | seed/out/omc > ngrun`, then `ngrun FILE.ir`. Exit status
+  `cat seed/ng/src/ir.om seed/ng/ngrun.om | seed/out/omc > ngrun`, then `ngrun FILE.ir [STEPS]`. Exit status
   = the entry's result, a failing check exits 100 + code, unsupported ops (vectors, tiles, kernels,
-  fma, fmath, f16/bf16/fp8) exit 125 with one stderr line. Diff a back end's output against it (D9).
+  fma, fmath, f16/bf16/fp8) exit 125 with one stderr line. On `ng/ir-rand` its own limits never use
+  100..114: STEPS executed ops (default 2^36) end with `ngrun: step limit at OFF` and exit 124, an
+  element outside its REF/SLICE object with `ngrun: access outside storage at OFF` and exit 126. Its
+  exit status means something only for a unit ngcheck accepts. Diff a back end's output against it (D9).
   It reads through `src/ir.om`, as `ng` does, so a fault in that shared reader shows only in the gate's
   run pairs (ngrun against omc on the same program in Omega), not in a back-end diff against ngrun.
 - `seed/ng/ngrand.om` (branch `ng/ir-rand`) writes random units ngcheck accepts by construction (the
@@ -971,18 +975,26 @@ answer to the signed desk review MERGE_AFTER_FIX at `2f3f3d01`),
   `ngrand shrink SEED STATUS OUT CMD [ARG...]` minimizes a unit while `CMD ARG... OUT` exits STATUS
   (OUT.tape replays it with `ngrand tape FILE`). No floats in v1. On random units ngrun has no second
   oracle (several ops ngrand emits have no run pair), so a back end's mismatch judges both sides.
+- `seed/ng/src/opt.om` (branch `ng/opt-licm`, unit between ir and main in `ng.units`) is the
+  optimizer: `@ng opt` rewrites a unit (preheaders, bounds-check elimination to `fact.inbounds`
+  origin 1, LICM of class P ops, loop rotation; IR.md s15.1) and `@ng opt-count` prints
+  `opt fns= loops= inloop=A->B bce= hoisted= merged= rotated= preheaders=`. No speed claim: the
+  gate checks ngcheck ACCEPT after opt, ngrun before == after and a fixed point.
 - Gate: `cat seed/ng/sha256.om seed/ng/gate-ir.om | seed/out/omc > gate-ir`, then
   `gate-ir seed/out/omc SCRATCH` from the repository root: `NGIRGATE PASS cases=135` on `ng/ir-m0`,
-  `cases=164` on `ng/ir-ngrun`, `cases=166` on `ng/ir-rand` (R cases: `x-NAME.oir` under ngrun
-  against `x-NAME.om` compiled by omc, exit/stdout/stderr equal at exact trap boundaries). It
+  `cases=164` on `ng/ir-ngrun`, `cases=186` on `ng/ir-rand` (R cases: `x-NAME.oir` under ngrun
+  against `x-NAME.om` compiled by omc, exit/stdout/stderr equal at exact trap boundaries; N cases:
+  `n-NAME.oir` under ngrun alone with STEPS 1000000, for semantics Omega cannot state). It
   compares whole output lines (the
   ACCEPT witness with counts from the fixture text; each tool's exact refusal line, empty stdout),
   runs `ng ir-copy` on every unit, generates inputs at the capacities, checks that ngbuild refuses a
-  wrong pin, and counts a mutant kill only when its named check fails: ngcheck typing (5), witness
-  prefix (11 on m0, 24 on ngrun, 125 on rand), class name (105), ngrun fuel (1), ngrand token edge
-  (87 of 100 seeds refused TOKEN). On `ng/ir-rand` it also runs ngrand seeds 1..1000 (whole ACCEPT
-  line, `ngas(ngdis(b)) == b`, ngrun ends cleanly) and one shrink. HOST_TESTED on fresh clones,
-  core 1, 2026-11-07; CI NOT_RUN.
+  wrong pin, and counts a mutant kill only when its named check fails and its pattern occurs exactly
+  once: ngcheck typing, witness prefix, class name, nine ngrun mutants (fuel, rem MIN/-1, u64
+  chk.add/chk.mul, chk.shl low side, conv low bound, chk.bounds e = 0, narrow neg, depth cap),
+  ngrand token edge, and on `ng/opt-licm` four opt mutants (load hoisted, check hoisted, merge
+  ignoring imm, BCE one past its proof). From `ng/ir-rand` it also runs ngrand seeds 1..1000 (whole
+  ACCEPT line, `ngas(ngdis(b)) == b`, ngrun ends cleanly) and one shrink; `ng/opt-licm` adds O/L
+  fixtures (L: long kernels, tens of minutes). HOST_TESTED on fresh clones, core 1, 2026-11-07; CI NOT_RUN.
 - The `ng` units are om2 (`at` is reserved; error 16) and are built only by
   `seed/ng/ngbuild.om` from the sha256-pinned list `seed/ng/ng.units`.
 
