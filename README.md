@@ -35,9 +35,6 @@ Radicle is the canonical home (2026-11-07). The `aien-dev` GitHub organization i
 `github.com/aien-dev/...` links below are historical citations of the commits they name, not live
 destinations.
 
-```sh
-```
-
 | Agent | Skill directory |
 |---|---|
 | oh-my-pi (`omp`) | `~/.omp/agent/skills/` or a project's `.omp/skills/` |

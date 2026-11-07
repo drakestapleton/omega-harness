@@ -106,7 +106,8 @@ There is no test suite. The only executable check is the example recipe from `RE
 "Check the examples yourself" (Linux AArch64 only), NOT_RUN while writing this document:
 
 ```sh
-git clone https://github.com/aien-dev/omega-mv.git omega-src
+git clone rad://z6do9WDBhuSnvopDkgFdFr1yWA62 omega-src
+git -C omega-src checkout f4df82394e35893dcf1354dda69a2fe028d94bc1
 sha256sum omega-src/seed/out/omc
 omega-src/seed/out/omc < skills/omega-encoding/examples/fnv1a32.om > fnv 2> fnv.err
 chmod +x fnv
@@ -118,14 +119,14 @@ od -An -tx1 fnv.out
 Expected, per `README.md` and `skills/omega-encoding/SKILL.md` section 13: compile exit 0 with empty
 stderr, and output bytes `0b e9 47 1a` for input `abc`. Section 13 also lists the recorded results
 for other inputs, the 65536-byte refusal (exit 2), `trap_narrow.om` (run exit 105) and the negative
-controls. The clone above takes the current omega-mv `main`, so compare the printed sha256 with the
-pin before trusting the result.
+controls. The clone above checks out the harness pin `f4df8239`; compare the printed sha256 with
+`3ad9f10f…3194` before trusting the result.
 
 ## Known limitations and NOT_RUN
 
 - The recorded example results are host-only (2026-10-25, compiler `734f0a39...6b61`).
-- The README recipe clones omega-mv `main` rather than checking out the pinned commit; results
-  only match the record when the compiler digest matches.
+- The README recipe checks out the pinned commit from the Radicle omega-mv repository; results only
+  match the record when the compiler digest matches.
 - Each skill names the omega-mv commit it was checked against; README says skills list known
   disagreements and that historical sections keep their dated pins. A skill is unverified for a
   tree whose hashes differ (AGENTS.md).
@@ -134,7 +135,8 @@ pin before trusting the result.
 ## Dependencies and provenance
 
 - No lockfile, no vendored code, no package dependencies.
-- The examples depend on `aien-dev/omega-mv` (cloned at run time) and a Linux AArch64 host.
+- The examples depend on omega-mv (cloned at run time from Radicle `rad:z6do9WDBhuSnvopDkgFdFr1yWA62`;
+  the `aien-dev` GitHub organization is frozen since 2026-11-07) and a Linux AArch64 host.
 - `skills/wolfram-math/SKILL.md` relies on the hosted Wolfram MCP endpoint for agents' arithmetic.
 - `skills/lean-verify/SKILL.md` relies on Lean `v4.35.0`, Mathlib `v4.35.0` and `lean-lsp-mcp`
   0.33.0 as a verification oracle; none of them ships in this repository.

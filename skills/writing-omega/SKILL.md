@@ -25,7 +25,7 @@ decides; this guide records the known disagreements.
 ## 1. Compile and run
 
 ```sh
-git clone https://github.com/aien-dev/omega-mv && cd omega-mv
+git clone rad://z6do9WDBhuSnvopDkgFdFr1yWA62 omega-mv && cd omega-mv
 git checkout f4df82394e35893dcf1354dda69a2fe028d94bc1
 sha256sum seed/out/omc      # must print the pinned hash
 sh seed/omega-from-seed.sh  # optional: rebuild omc from the 408-byte loader
