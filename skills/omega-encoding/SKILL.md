@@ -1327,7 +1327,11 @@ Capacities are 65535 bytes, 4095 lines, 16383 tokens, 63-byte tokens and 128 fun
 - **C1:** `requires`, `ensures` and `invariant` need `om2`. `om2 release` is refused.
 - **Assignments:** omc accepts `name [=] value`, so B2, B3 and E1 share one classifier that recognises both spellings. A line assigns when its second token is `=`, or when its first token is not a statement keyword, a unit function or a host word. omc refuses names that shadow a function (error 10) or a host word (error 16). So `nd sub nd 1`, `depth ulong 0`, `b new T N` and `r f 2` are checked like their `=` forms. The canonical B2 guard must still be written `NAME = add depth 1`.
 
-`bounds` mode skips E1 and X1. `sh seed/profile/check.sh` runs these checks:
+`bounds` mode skips E1 and X1. The seeded driver `seed/profile/check.om` (it replaced `check.sh` at
+#1063 head `b27482f4`; build it with the pinned compiler and run it from the omega-mv root:
+`mkdir -p build/seed && seed/out/omc < seed/profile/check.om > build/seed/profile-check && chmod +x build/seed/profile-check && build/seed/profile-check`)
+runs these checks and prints `PROFILE CHECK PASS` (exit 0), `PROFILE CHECK FAIL failed=N` (exit 1)
+or `NOT_RUN …` (exit 3, wrong or missing omc):
 
 - the 53 fixture, capacity and stop rows;
 - one killed `profile.om` mutant per rule, plus three more for B2 (guard structure and `=`-less assignment);
@@ -1335,7 +1339,7 @@ Capacities are 65535 bytes, 4095 lines, 16383 tokens, 63-byte tokens and 128 fun
 - the authority gates, including `dispatch-fault-gate`;
 - negative controls with the pre-fix modules.
 
-The `om-profile-arm64` workflow runs `check.sh` weekly and on PRs. The fixes that this profile forced add the following codes:
+The `om-profile-arm64` workflow builds and runs `check.om` weekly and on PRs. The fixes that this profile forced add the following codes:
 
 | Code | Where | Meaning |
 |---|---|---|
@@ -1353,7 +1357,7 @@ What the profile does not do:
 - It makes no whole-kernel claim.
 
 Example: `examples/p10_profile.om` passes both `omc` and the profile. On 2026-11-07, at omega-mv
-#1063 heads `7ae0a1df` (profile sha256 `98c95aff…e613`), `795f5d0d` (`f4d730cb…1671`) and `e6974c5d` (`2d19340a…f5f7`), its mutants were refused:
+#1063 heads `7ae0a1df` (profile sha256 `98c95aff…e613`), `795f5d0d` (`f4d730cb…1671`), `e6974c5d` (`2d19340a…f5f7`) and `b27482f4` (`2d19340a…f5f7`, `PROFILE-PASS` on the example), its mutants were refused:
 
 | Mutant | Output |
 |---|---|
@@ -1365,6 +1369,7 @@ Its output, 285, was checked with Wolfram: `Sum[k^2,{k,0,9}] -> 285`.
 Rerun 2026-11-07 on Linux AArch64 with this example added: `bash examples/gate.sh` against omc
 `3ad9f10f…3194` (omega-mv `f4df8239`, the pin of `gate.sh`) printed `GATE PASS examples=111 pass=111
 fail=0`, exit 0. The profile runs used omega-mv `943d9555` omc `5f90edea…f6df` (`OMC_PIN` at that main).
+At `b27482f4` the same gate printed the same line, and `build/seed/profile-check` printed `PROFILE CHECK PASS`, exit 0.
 
 ### Compiler limits checked at main `bf54b19fa` (2026-10-29; rechecked at `91c83438d` on 2026-10-31)
 
