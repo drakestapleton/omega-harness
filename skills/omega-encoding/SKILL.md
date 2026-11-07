@@ -1496,19 +1496,22 @@ omega MCP pin before omega-mcp #6 (`2c824805…`), lack both; the current MCP pi
   checks that the omc binary issues no others, and emits a seccomp filter for `bwrap --seccomp`
   (`effects src|elf|verify|bpf|table`, `seed/effects/README.md`). It works at syscall granularity
   only and gives no filesystem isolation. **Its own qualification fails at current main:** observed
-  2026-11-04 at main `d3d1b1bc` (omc `b4f45121…`) and at `19b8340d` (omc `be8c5130…`),
-  `sh seed/effects/check.sh` printed `SEMANTIC EFFECTS FAIL failed=3 checks=49`, exit 1: the closure
-  check found the host-coded keywords of `seed/omc/genkw.awk` and the effects table different (the
-  table lacks `execpure`, added by #970, and lists `peercred`, `pollfds` and `sendmsg`, which the
-  closure list does not have), `execprog`'s ELF issues syscall 436 beyond its table row 221, and
-  `seed/host/tests/memcheck.om`, `process.om` and `peername.om` fail `verify`. Until that check
-  passes again, an `effects` manifest is not evidence that a unit's syscall set is complete.
-  PENDING fix, not merged: [omega-mv #1023](https://github.com/aien-dev/omega-mv/pull/1023) (head
-  `eb7b3c60`, open) makes the closure read every keyword list of `genkw.awk` by content, adds rows
-  `peername net 205`, `execprog proc 221 436` and an `execpure` row, and lets a table row hold any
-  number of syscalls (a pool replacing the fixed two slots `ws1`/`ws2`). Observed 2026-11-04 at
-  that head (its `seed/out/omc` `b4f45121…`): `sh seed/effects/check.sh` printed
-  `SEMANTIC EFFECTS PASS checks=50`, exit 0, with the tool mutants still killed.
+  2026-11-07 at Radicle omega-mv main `da8b7e66` (omc `cfd96b48…`), `sh seed/effects/check.sh`
+  (with no `OMC` set in the environment; the script uses `$OMC` when set and returns NOT_RUN exit 3
+  for any compiler but the `OMC_PIN` of `om/units.sh`) printed `SEMANTIC EFFECTS FAIL failed=2
+  checks=50`, exit 1: the closure check found keywords 227-232 of `seed/omc/genkw.awk` (`fma`,
+  `vfioctl`, `vfiomap`, `vfiomapw`, `eventfd`, `vfioirq`) missing from the effects table, and
+  `seed/host/tests/eventfd.om`, `vfioirq.om` (`undeclared=19,29`), `irqnovfio.om` and `vfio.om`
+  (`undeclared=29`) fail `verify`. Until that check passes on main, an `effects` manifest is not
+  evidence that a unit's syscall set is complete. The earlier closure fix,
+  [omega-mv #1023](https://github.com/aien-dev/omega-mv/pull/1023), is merged (`31afb0e3`).
+  PENDING fix, not merged: omega-mv branch `seed/effects-keyword-closure` (`27f20002`, on
+  `da8b7e66`, local review bundle) adds rows `eventfd fd 19`, `vfioctl device 29`,
+  `vfioirq device 29`, `vfiomap device 222` and `vfiomapw device 222`, and treats `fma` like
+  `cpufence`/`cpurelax` (no syscall, so no row; the no-syscall probe compiles an `fma` and requires
+  only exit). Observed at that head: `SEMANTIC EFFECTS PASS checks=50`, exit 0
+  (`closure: 89 host keywords == table`), tool mutants still killed; dropping the `vfioirq` row
+  fails closure naming `vfioirq`. A new host word needs its effects row in the same change.
 - Evidence for any host claim: compiler sha256, source sha256, output binary sha256, exact command,
   exit status, and the observed bytes. A program that ignores a negative result is not evidence.
 - Measured 2026-10-25 while building a disk image with the seed compiler `seed/out/omc` sha256
