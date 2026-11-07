@@ -34,7 +34,16 @@ Tiers stop at lease; publishing/merging never become worker permissions.
 Queen retains assignment/lease authority; RadPublish alone merges after independent
 exact-head review. Live omagent/node/sched dispatch and GPU operation are NOT_RUN.
 Status: IMPLEMENTED, HOST_TESTED (independent exact-head MERGE reviews of 896be22a
-and 16218733; suite cases=147, mutants_caught=5). Not an installed production authority.
+and 16218733; suite cases=147, mutants_caught=5). Installed on spark at 896be22a
+(`~/.local/opt/omega-mission/896be22a`, behind `~/.local/bin/mission`) as a host tool,
+but it is not an authority: it plans and refuses, and does not dispatch workers or
+authenticate receipts. Not hardware-qualified.
+Outside runtime: Python 3.12.3 runs `tests/referee.py` only, as the ORACLE in tests
+(independent hashlib chain check, fresh-process observations, source mutants). It is
+never on the production path. Omega replacement, PROPOSED and not built: a
+seeded-Omega referee whose chain oracle is a SHA-256 unit written separately from
+the mission's own. The candidate is omega-mv `om/tls/sha2.om`, which has not yet
+been linked or run against the mission.
 Use the repository README for build/install/host-test commands and evidence limits.
 
 ## Development method: Human-Directed Agentic Engineering
