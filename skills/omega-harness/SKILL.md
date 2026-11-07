@@ -994,7 +994,8 @@ answer to the signed desk review MERGE_AFTER_FIX at `2f3f3d01`),
   ngrand token edge, and on `ng/opt-licm` four opt mutants (load hoisted, check hoisted, merge
   ignoring imm, BCE one past its proof). From `ng/ir-rand` it also runs ngrand seeds 1..1000 (whole
   ACCEPT line, `ngas(ngdis(b)) == b`, ngrun ends cleanly) and one shrink; `ng/opt-licm` adds O/L
-  fixtures (L: long kernels, tens of minutes). HOST_TESTED on fresh clones, core 1, 2026-11-07; CI NOT_RUN.
+  fixtures (L: long kernels, tens of minutes). HOST_TESTED on fresh clones, 2026-11-07: m0, ngrun and the
+  first ir-rand head on core 1, ir-rand `39f04efc` on core 10, opt-licm `854d8152` on core 11; CI NOT_RUN.
 - The `ng` units are om2 (`at` is reserved; error 16) and are built only by
   `seed/ng/ngbuild.om` from the sha256-pinned list `seed/ng/ng.units`.
 
