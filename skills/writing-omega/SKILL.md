@@ -385,6 +385,7 @@ Each row is a program in `examples/` with its observed refusal.
 | `free a` | nothing: no heap | error 9 | `mistake_free.om` |
 | `len = ...` | another name | error 16 | `mistake_reserved_name.om` |
 | `neg = ...` or `text neg "a"` | another name: `neg` is the negation word | error 16 | `mistake_neg_name.om` |
+| `fresh = ...` in an `om2` unit (also `out`, `seal`, `open`) | another name; these four are reserved only in OM-2 mode, so a small test without `om2` compiles and hides it. `view` and `edit` are error 16 in both modes; `layout` as a name is error 16 in neither: plain mode compiles it, OM-2 mode gives error 29 | error 16 | `mistake_om2_word_name.om`, `om2_word_plain.om` |
 | a bare call `f 1` with a result | `v = f 1` | error 7 | `mistake_value_stmt.om` |
 | a 7th parameter | a struct or an array | error 9 | `mistake_seven_params.om` |
 | 2 `view T *` plus 3 scalars (7 slots) | a sized view, a struct, or fewer scalars | error 9 | `mistake_om2_param_slots.om` |
