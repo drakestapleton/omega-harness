@@ -47,7 +47,7 @@ When `omega-encoding` sections 2-11 change, rebuild the pack with `coder/build-c
 ## What these skills must not do
 
 - Claim more than the evidence: a compile is not a run, a host run is not hardware qualification, a
-  merged PR is not a deployment.
+  merged patch is not a deployment.
 - Present a model explanation, a recalled memory or a stale skill as execution evidence.
 - Invent Omega syntax or compiler limits. Check the keyword table and the compiler at the pin.
 - Carry credentials, private machine addresses, home paths, SSH usernames or operator-only
@@ -66,7 +66,7 @@ new commit and date. Older measurements stay as dated history.
 Re-check, read only, in a fresh clone:
 
 ```sh
-git clone --depth 1 https://github.com/aien-dev/omega-mv.git omega-src
+git clone rad://z6do9WDBhuSnvopDkgFdFr1yWA62 omega-src
 git -C omega-src rev-parse HEAD
 sha256sum omega-src/seed/omc/omc.om omega-src/seed/out/omc
 ```
@@ -89,8 +89,16 @@ There is no build and no test suite: the deliverables are Markdown and two examp
 ## Reporting
 
 Follow `skills/omega-communication/SKILL.md`. Separate proposed, implemented, exercised, verified,
-merged and deployed. A PR description leads with the evidence: the commands, the observed output, the
-negative control, and what was not run.
+merged and deployed. A patch's READY hand-off leads with the evidence: the commands, the observed
+output, the negative control, and what was not run.
+
+## Contributing
+
+This repository lives on Radicle: `git clone rad://z39gvwWsnkRZsAConQLjaKiNVLHfW`. The `aien-dev`
+GitHub organization is frozen (2026-11-07); never push, open a PR or open an issue there, and treat its
+links as historical citations. Contribute through Radicle patches: hand the desk a READY file (repo,
+base, head, bundle, gate logs, negative control); the Radicle publishing lane opens the patch and the
+desk merges after a signed review of the exact head. Lanes never push to Radicle themselves.
 
 Keep the attribution in `README.md` and `LICENSE` intact. Contributions follow the shared AIEN agent
 rules at https://www.aienos.com/agents/RULES.md.

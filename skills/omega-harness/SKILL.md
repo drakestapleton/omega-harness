@@ -1030,7 +1030,7 @@ Before you finish, check whether your change touched any of these, and update th
 | Conversion, encoder or bridge behavior, or what it supports | the conversion note in `omega-harness` section 2, and the README |
 | Status vocabulary, receipts, report or handoff conventions, wire formats | `omega-communication` |
 | Repository purpose, ownership, names, archive state, plan authority, merge or Alpha policy, a resolved or new contradiction | `aien-repositories` |
-| Any aien-dev repository's purpose, status or links, or a new repository | that repository's entry in [aien-dev/sovereign-intelligence](https://github.com/aien-dev/sovereign-intelligence) `index/curated.yml` (layer, evidence, one-line purpose), in the same piece of work |
+| Any project repository's purpose, status or links, or a new repository | that repository's entry in the sovereign-intelligence Radicle repository (`rad:z2JJz4RDfZZxKGBLn6UhmW5p9VJQj`) `index/curated.yml` (layer, evidence, one-line purpose), in the same piece of work |
 | A new source of hardware facts, a new use of an NVIDIA SDK tool, or stored NVIDIA-tool output | that repository's `PROVENANCE.md`, and section 4 here if the rule changed |
 | These skills, their install method or their layout | the README and the affected skill |
 
@@ -1038,8 +1038,8 @@ How to do it:
 
 1. Edit the guide in the same piece of work as the change. Give the new source commit and date, and remove any rule the change made untrue; do not just add a contradicting one.
 2. If an example or expected output changed, rerun it against the new pin and record what you observed. Never copy a predicted result into the guide.
-3. Open a pull request on `aien-dev/omega-harness` with the evidence, and link it to the change that caused it. If that change is not merged yet, open the guide PR as a draft and say it is pending until the change lands.
-4. If you are not allowed to change the guide, or you are unsure, open an issue on `aien-dev/omega-harness` describing exactly what is now stale, and say so in your report. Silence is not an option.
+3. Hand the change in as a Radicle patch on omega-harness (`rad:z39gvwWsnkRZsAConQLjaKiNVLHfW`) with the evidence, linked to the change that caused it: write a READY file (repo, base, head, bundle, gate logs, negative control) and the Radicle publishing lane opens the patch; the desk merges after a signed review of the exact head. Lanes never push to Radicle or GitHub, and the `aien-dev` GitHub org is frozen, so never open a GitHub PR or issue there. If the causing change is not merged yet, say in the READY file that the guide patch is pending until it lands.
+4. If you are not allowed to change the guide, or you are unsure, give the desk a note describing exactly what is now stale (the publishing lane can file it as a Radicle issue), and say so in your report. Silence is not an option.
 5. Your final report must say one of two things: which guides you updated, or that no guide was affected and why.
 
 ## Sources
