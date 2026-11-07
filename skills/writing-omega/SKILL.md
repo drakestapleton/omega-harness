@@ -22,6 +22,23 @@ For compiler internals, register rules, wire formats and the reasons behind each
 The language reference is normative. Where this guide and OMEGESE disagree, the compiler at the pin
 decides; this guide records the known disagreements.
 
+The pin above is not the only compiler in use. Drake's pure-Omega directive of 2026-11-07 and the
+omega MCP server (`compiler_sha256` in a `compile` result, checked 2026-11-07) both use omega-mv
+`e5b32567`, omc sha256 `2c82480596bbdc50cda9626866209ef662d5834f278f839ff4ce0250c495029f`. Loop
+bounds differ between the two pins:
+
+| Program | omc `2c824805` (e5b32567, directive and MCP) | omc `3ad9f10f` (f4df8239) |
+|---|---|---|
+| `while C bound 999999` | compiles | compiles |
+| `while C bound 1000000`, `2000000`, `9223372036854775807` | error 8 | compiles |
+| `while C bound 0` | error 8 | error 8 |
+| `for i ulong 3 bound 10` (any `for ... bound`) | error 5 | compiles |
+| `while` with no bound, 1000001 passes | trap 4 (exit 104) | trap 4 (exit 104) |
+
+Same on both: a global array of 16777216 elements compiles and 16777217 is error 23; a `for` count of
+another type needs a cast (`for i ulong e` with `e = int 4` is error 7, `for i ulong ulong e` runs).
+At `e5b32567`, write `while C bound N` with N at most 999999 and no `for ... bound`.
+
 ## 1. Compile and run
 
 ```sh
@@ -103,7 +120,7 @@ Every declaration and statement form at the pin (OMEGESE sections 9 to 12 are th
 | `put A i v`, `put p f v` | function body | store into an array element or a field |
 | `f v1 v2 ...` | function body | a call to a `void` function |
 | `if C` ... `else` ... `end` | function body | `else` is optional; no `else if` |
-| `while C bound N` ... `end` | function body | N 1..9223372036854775807 (IR mode 1..1000000) |
+| `while C bound N` ... `end` | function body | N 1..9223372036854775807 (IR mode 1..1000000); at `e5b32567` N 1..999999 |
 | `for i T K` ... `end` | function body | `unroll` after K in OM-2, K 1..64 |
 | `break`, `continue` | inside a loop | |
 | `ret`, `ret v` | function body | `ret v` in a function with a result |
@@ -188,14 +205,16 @@ A trap ends the process with exit status 100 + N. Output already written stays w
 ## 6. Loops and bounds
 
 - `while COND bound N` runs the body at most N times, N 1..9223372036854775807 (error 8 outside;
-  IR mode 1..1000000). Without `bound` the limit is 1000000. One more pass traps 4. Choose N from
+  IR mode 1..1000000). At `e5b32567` (directive and MCP pin) N is 1..999999 and `bound 1000000`
+  is error 8. Without `bound` the limit is 1000000. One more pass traps 4. Choose N from
   an argument you can write down in a `note`, for example "every pass consumes at least one byte of
   a 65536-byte input".
 - `for i T K` runs i from 0 to K-1. A number K is unguarded. Any other K (a name or value) with no
   `bound` traps 4 (exit 104) after 1000000 passes, as a `while` with no bound. `for i T K bound N`
   takes the same N as `while`, caps every count and traps 4 when K exceeds N (`for_bound.om`,
-  `trap4_for_bound.om`). The MCP pin (`f4df8239`, omc `3ad9f10f…`, since omega-mcp #6) accepts
-  `for ... bound`; the previous MCP pin `e5b32567` (omc `2c824805…`) refused it with error 5.
+  `trap4_for_bound.om`). At `e5b32567` (omc `2c824805…`, the directive pin and the MCP pin as of
+  2026-11-07) `for ... bound` is error 5; omega-mcp #6 moved the MCP source to `f4df8239`, but the
+  running server still reports `2c824805`, so check `compiler_sha256` before relying on it.
 - `break` and `continue` work in both loops. There is no `else if`: nest an `if` inside `else`.
 - No loop runs forever and recursion is bounded by the stack.
 
@@ -301,7 +320,7 @@ with its exact stderr line in the matching `.expect`, except 24, which needs a g
 | 5 | words left after a complete statement | `err05_extra_words` | count each word's values; there is no infix |
 | 6 | malformed number | `err06_bad_number` | decimal digits; hex only in OM-2, lowercase |
 | 7 | type mismatch | `err07_type_mismatch` | convert with a type word: `add int 1 int u` |
-| 8 | number out of range | `err08_out_of_range` | a literal that fits its type; a bound 1..9223372036854775807 (IR mode 1..1000000); a trap code 1..14 |
+| 8 | number out of range | `err08_out_of_range` | a literal that fits its type; a bound 1..9223372036854775807 (IR mode 1..1000000; 1..999999 at `e5b32567`); a trap code 1..14 |
 | 9 | a word in a place where it is not allowed | `err09_disallowed` | move it: `new` only in a function's outermost block, `struct` before the first `fn` |
 | 10 | duplicate name | `err10_duplicate` | choose a name that is not visible, not a function, not a struct |
 | 11 | a number with nothing to give it a type | `err11_ambiguous` | `x = uint 5` |
@@ -360,7 +379,7 @@ Each row is a program in `examples/` with its observed refusal.
 | `return x` | `ret x` | error 18 (silent assignment) | `mistake_return.om` |
 | `else if c` | `else`, then a nested `if c` | error 5 | `mistake_else_if.om` |
 | `fn main argc int to int` | `argcnt`, `argread` | error 9 | `mistake_main_args.om` |
-| `while c bound 9223372036854775808` (or `bound 0`) | a bound 1..9223372036854775807 | error 8 | `mistake_bound_range.om` |
+| `while c bound 9223372036854775808` (or `bound 0`; at `e5b32567` also `bound 1000000`) | a bound 1..9223372036854775807 (1..999999 at `e5b32567`) | error 8 | `mistake_bound_range.om` |
 | `ir` unit with `while c bound 1000001` | an IR bound 1..1000000 | error 8 | `mistake_ir_bound.om` |
 | `a = new uchar n 0` | a literal or `const` length | error 16 | `mistake_new_var_len.om` |
 | `free a` | nothing: no heap | error 9 | `mistake_free.om` |
