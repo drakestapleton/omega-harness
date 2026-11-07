@@ -1296,6 +1296,74 @@ the bound ranges below are those of the pin `3a163bc5`, and the cited lines are 
 - No loop runs forever and recursion is bounded by the 8 MiB stack. A long-running service needs an
   explicit epoch/restart design, not a bigger bound.
 
+### Critical source profile `seed/profile` (pending omega-mv #1063, DRA-419; not on main)
+
+`seed/profile/profile.om` is a seeded-Omega, token-level checker that adapts Holzmann's Power of Ten to
+`.om` units. It is stricter than `omc`, which compiles every B1/B2/B3 refusal fixture. Run it from the
+omega-mv root, because it reads host words from `seed/effects/effects.om`:
+`profile [bounds] [SOURCE ...]`. The sources are concatenated, and stdin is used when no source is
+given. It prints one token:
+
+| Exit | Output | Meaning |
+|---|---|---|
+| 0 | `PROFILE-PASS` | the unit passes |
+| 1 | `PROFILE-REFUSED:<rule>:<line>` | a rule was violated |
+| 2 | | usage error |
+| 3 | `PROFILE-INVALID` | the unit exceeds a capacity |
+| 4 | | I/O error |
+
+Capacities are 65535 bytes, 4095 lines, 16383 tokens, 63-byte tokens and 128 functions. The rules:
+
+- **B1:** a `while` has `bound N` with N ≤ 8192. A `for` count is a literal, a `const`, `len X`, or carries `bound`.
+- **B2:** recursion is allowed only in qualified form. Every function on a cycle takes `depth` first, never assigns it and has no `new`.
+  - An in-cycle call passes `depth`, or a name guarded by `NAME = add depth 1` / `if gt NAME LIM` (LIM ≤ 64) / `ret`, `exit` or `trap`.
+  - An entry from outside the cycle passes a literal or `const` ≤ 64.
+  - The omc/DRA-311 leaf removal then runs over the remaining edges.
+- **B3:** each `global` and each `new` is ≤ 65536 elements. The global bytes, and the `new` bytes per function and in total, are each ≤ 65536.
+- **E1:** an assigned call or host result is read before it is reassigned or the function returns. The exemption is `note p10 allow E1 <reason>` on the line before.
+- **X1:** host words appear only in a function preceded by `note p10 effect`.
+- **P1:** a function preceded by `note p10 pure` has no `put` and calls only pure functions.
+- **C1:** `requires`, `ensures` and `invariant` need `om2`. `om2 release` is refused.
+
+`bounds` mode skips E1 and X1. `sh seed/profile/check.sh` runs these checks:
+
+- the 44 fixture, capacity and stop rows;
+- one killed `profile.om` mutant per rule;
+- the profile of the `seed/authority` unit (`action`, `store`, `lock`, `dispatch`);
+- the authority gates, including `dispatch-fault-gate`;
+- negative controls with the pre-fix modules.
+
+The `om-profile-arm64` workflow runs `check.sh` weekly and on PRs. The fixes that this profile forced add the following codes:
+
+| Code | Where | Meaning |
+|---|---|---|
+| 43 | `lacq` | more than 1000 tries requested |
+| 40 | `ltry` | the owner pid could not be read: `lerr` is 32 (open), 33 (close) or 34 (short read). Before the fix, a live pid 32 was misread as an error. |
+| 76 | `dispatch` | reconcile refused |
+| 77 | `dispatch` | post-effect record write failed |
+| 78 | `dispatch` | release failed |
+| 79 | `dispatch` | `actlost` failed after a generation change |
+
+What the profile does not do:
+
+- It is not path-sensitive and not a typechecker.
+- It does not check callees outside the unit.
+- It makes no whole-kernel claim.
+
+Example: `examples/p10_profile.om` passes both `omc` and the profile. On 2026-11-07, at omega-mv
+`#1063` head, its mutants were refused:
+
+| Mutant | Output |
+|---|---|
+| bound removed | `PROFILE-REFUSED:B1:15` |
+| effect note removed | `PROFILE-REFUSED:X1:23` |
+| result overwritten | `PROFILE-REFUSED:E1:34` |
+
+Its output, 285, was checked with Wolfram: `Sum[k^2,{k,0,9}] -> 285`.
+Rerun 2026-11-07 on Linux AArch64 with this example added: `bash examples/gate.sh` against omc
+`3ad9f10f…3194` (omega-mv `f4df8239`, the pin of `gate.sh`) printed `GATE PASS examples=111 pass=111
+fail=0`, exit 0. The profile runs used omega-mv `943d9555` omc `5f90edea…f6df` (`OMC_PIN` at that main).
+
 ### Compiler limits checked at main `bf54b19fa` (2026-10-29; rechecked at `91c83438d` on 2026-10-31)
 
 Checked with main's `seed/out/omc` (sha256 `62775d2a391cfef7cde64e387655caa9809a267093112910ec76bfa568f3712b`)
@@ -2250,7 +2318,7 @@ are `seed/omc/omc.om` at `9920aab1`.
   traps of section 11b (exit 20, `omc: line 8: error 7`, `omc: line 5: error 12`).
 
 Each carries `.expect` (and `fnv1a32` also `.stdin` `abc` and the 4 expected bytes in `.stdout`) and
-runs in [`examples/gate.sh`](../../examples/gate.sh) with the 105 programs in the repository's
+runs in [`examples/gate.sh`](../../examples/gate.sh) with the 106 programs in the repository's
 `examples/` directory; section 0 records the `e5b32567` rerun of every row below. The portable guide
 for writing a first program is [`skills/writing-omega/SKILL.md`](../writing-omega/SKILL.md).
 
