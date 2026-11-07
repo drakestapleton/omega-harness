@@ -976,11 +976,13 @@ signed desk review MERGE_AFTER_FIX at `2f3f3d01`) and `f73dc66de4502448d47bbd1c0
 - The `ng` units are om2 (`at` is reserved; error 16) and are built only by
   `seed/ng/ngbuild.om` from the sha256-pinned list `seed/ng/ng.units`.
 
-### ng AArch64 back end (PENDING omega-mv branch `ng/a64-m1`, stacked on `ng/ir-m0`)
+### ng AArch64 back end (PENDING omega-mv branches `ng/a64-m1`, `ng/a64-m2`, stacked on ng-ir)
 
-This section stays pending until branch `ng/a64-m1` merges on omega-mv (Hive NG lane ng-a64; not
-yet a PR because GitHub writes were suspended on 2026-11-07). Exercised at local head
-`8a3680b06a9dd8a458f2b436579cb894ecbd66bf` on ng-ir `ee070853`, base `943d955531b9`, omc `5f90edea…6df`.
+This section stays pending until the branches merge on omega-mv (Hive NG lane ng-a64; not yet PRs
+because GitHub writes were suspended on 2026-11-07). `ng/a64-m1` (head `8a3680b06a9d`, on ng-ir
+`ee070853`) is the reviewed-next snapshot; `ng/a64-m2` replays its commits on ng-ir's `ng/ir-ngrun`
+(`f73dc66d`, which adds the reference interpreter ngrun) and adds stack arguments, SLICE values and
+the ngrun differential. Base `943d955531b9`, omc `5f90edea…6df`.
 
 - Unit `seed/ng/src/a64.om` (third row of `seed/ng/ng.units`); design `seed/ng/a64/DESIGN.md`.
   `ng` reads a first line naming the mode: `@ng a64` compiles ΩIR to an AArch64 Linux ELF in omc's
@@ -989,26 +991,43 @@ yet a PR because GitHub writes were suspended on 2026-11-07). Exercised at local
   `ng_mlb`: an earlier unit cannot name a later unit's global, error 3) before its unknown-mode exit,
   reads the payload from offset 0, then calls `a6_run`. Refusals: the ΩIR reader's class (10..30),
   5 `unsupported`.
-- Slice: integer ops, compares, select, conversions, control flow, calls (at most 8 arguments),
-  checks 70..82; memory on a REF to an ARRAY of bool or integers (load, store, alloca zero-filled
-  per invocation, gaddr, len; globals at omc's addresses; frames below 16 MiB) and the host words
-  read and write; liveness, linear scan over x0..x14 / x19..x27 with spills, frame with the x28
-  stack-floor check (trap 6), 64-byte aligned function entries, and the E loop shape (a self call
-  whose result is added and returned becomes an accumulator loop). Not yet: SLICE values, STRUCT
-  and VEC access, atomics, other host words, floats, kernels. Stack depth is not semantic: trap 6 is
-  compared only when both compilers trap. Two OmegaFast bench kernels (bcopy, sort), lowered by hand
-  per IR.md s13, compile and match omc and Wolfram. ΩIR call arguments must equal the parameter
-  types (IR.md row 64), so passing an `edit` array to a `view` parameter has no ΩIR form yet.
+- Slice: integer ops, compares, select, conversions, control flow, calls with any number of
+  arguments (IR.md's 64; past the eighth machine argument they go to the caller's outgoing slots
+  `[sp, 8j]`, read by the callee at `[sp + frame + 8j]`), checks 70..82 with their exact trap codes;
+  memory on a REF to an ARRAY or a SLICE of bool or integers (load, store, alloca zero-filled per
+  invocation, gaddr, len, slice; globals at omc's addresses; frames below 16 MiB); a SLICE value is
+  two allocated wires, address and count, moved together through block arguments and passed as two
+  machine arguments; host words read, write, cpufence (DSB SY) and cpurelax (YIELD); liveness,
+  linear scan over x0..x14 / x19..x27 with spills, frame with the x28 stack-floor check (trap 6),
+  64-byte aligned function entries, and the E loop shape (a self call whose result is added and
+  returned becomes an accumulator loop). Not yet: STRUCT and VEC access, fill, atomics, SLICE results
+  of calls and select, other host words, floats, kernels. Stack depth is not semantic: trap 6 is
+  compared only when both compilers trap. OmegaFast bench kernels lowered by hand per IR.md s13:
+  bcopy and sort match omc and Wolfram at full size; fib, bcopy, sort and ChaCha20 (with SLICE
+  parameters, scaled) match ngrun as ΩIR text, and the ChaCha20 text also matches omc on
+  `om/tls/chacha.om`. SHA-256 and X25519 use only covered ops and wait for ng-front's ΩIR. ΩIR call
+  arguments must equal the parameter types (IR.md row 64), so passing an `edit` array or slice to a
+  `view` parameter has no ΩIR form yet.
+- ΩIR text (ngas) for fixtures: `slice` is a reader (`%s = slice TYPE tok r off n`); `alloca`
+  returns a token and the REF (`%t %r = alloca TYPE tok`); blocks appear in label order; `cbr` passes
+  no block arguments (an exit block reads the loop header's parameters); a load or store is covered
+  only by a `chk.bounds` on the same index value; class-1 (data) globals are read-only.
 - Omega in fixture references: a global cannot be passed as an argument (error 19), a comparison
   cannot be a conversion's operand (`long eq a b` is error 9: use `if`), `gt` is a keyword (error 16
   as a global name). A narrow conversion re-extends from its source type, so a test of load
   extension must compare the loaded value at its own type.
 - Gates, from the repository root: `seed/out/omc < seed/ng/a64/gate.om > gate; echo SCRATCH | ./gate`
   (encoder vs GNU objdump, `cases 204 match 204`, wrong-bit mutant) and
-  `seed/out/omc < seed/ng/a64/rgate.om > rgate; echo SCRATCH | ./rgate` (13 fixtures including bcopy
-  and sort: ngcheck accepts, both save forms and omc agree with Wolfram-computed statuses or trap
-  codes and print byte-identical stdout; 15 allocator, alignment, E and memory mutants caught)
-  (HOST_TESTED on a fresh clone, core 1, 2026-11-07; CI NOT_RUN).
+  `seed/out/omc < seed/ng/a64/rgate.om > rgate; echo SCRATCH | ./rgate`: 13 mkir fixtures including
+  bcopy and sort (ngcheck accepts, both save forms and omc agree with Wolfram-computed statuses or
+  trap codes and print byte-identical stdout), then 71 ΩIR text fixtures (ng-ir's `x-*` run pairs but
+  x-float, and `seed/ng/a64/tests/oir/`: every check op with its trap code on narrow and 64-bit types,
+  stack arguments, globals, loads and stores, block-parameter loops, the E loop, slices, the bench
+  kernels) assembled by ngas, accepted by ngcheck, where both save forms must give ngrun's exit
+  status, stdout and stderr; 21 mutants caught, among them a wrong trap code, two stack-argument and
+  three slice mutants (`ng/a64-m2` HOST_TESTED on a fresh clone, core 1, 2026-11-07, with negative
+  controls: a wrong expectation, a no-op mutant, a wrong omc stdout, ngrun exiting 99 + code, ngrun
+  writing shifted bytes; CI NOT_RUN).
 
 ## 4. Effects and authority
 
