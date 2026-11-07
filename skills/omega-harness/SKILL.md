@@ -997,7 +997,7 @@ the ngrun differential. Base `943d955531b9`, omc `5f90edea…6df`.
   memory on a REF to an ARRAY or a SLICE of bool or integers (load, store, alloca zero-filled per
   invocation, gaddr, len, slice, fill; globals at omc's addresses; frames below 16 MiB); a SLICE value
   is two allocated wires, address and count, moved together through block arguments and passed as
-  two machine arguments; host words read, write, monons (omc's clock_gettime sequence and traps),
+  two machine arguments; host words read, write, monons and realns (omc's clock_gettime sequence and traps),
   cpufence (DSB SY) and cpurelax (YIELD); liveness, linear scan over x0..x14 / x19..x27 with spills,
   frame with the x28 stack-floor check (trap 6), 64-byte aligned function entries, and the E loop
   shape (a self call whose result is added and returned becomes an accumulator loop). Not yet:
@@ -1024,12 +1024,12 @@ the ngrun differential. Base `943d955531b9`, omc `5f90edea…6df`.
   (encoder vs GNU objdump, `cases 204 match 204`, wrong-bit mutant) and
   `seed/out/omc < seed/ng/a64/rgate.om > rgate; echo SCRATCH | ./rgate`: 13 mkir fixtures including
   bcopy and sort (ngcheck accepts, both save forms and omc agree with Wolfram-computed statuses or
-  trap codes and print byte-identical stdout), then 74 ΩIR text fixtures (ng-ir's `x-*` run pairs but
+  trap codes and print byte-identical stdout), then 75 ΩIR text fixtures (ng-ir's `x-*` run pairs but
   x-float, and `seed/ng/a64/tests/oir/`: every check op with its trap code on narrow and 64-bit types,
   stack arguments, globals, loads and stores, block-parameter loops, the E loop, slices, fill, monons,
-  the bench kernels) assembled by ngas, accepted by ngcheck, where both save forms must give ngrun's
-  exit status, stdout and stderr; 23 mutants caught, among them a wrong trap code, two stack-argument,
-  three slice, a monons and a fill mutant (`ng/a64-m2` HOST_TESTED on a fresh clone, core 1,
+  realns, the bench kernels) assembled by ngas, accepted by ngcheck, where both save forms must give ngrun's
+  exit status, stdout and stderr; 24 mutants caught, among them a wrong trap code, two stack-argument,
+  three slice, two clock and a fill mutant (`ng/a64-m2` HOST_TESTED on a fresh clone, core 1,
   2026-11-07, with negative controls: a wrong expectation, a no-op mutant, a wrong omc stdout, ngrun
   exiting 99 + code, ngrun writing shifted bytes; CI NOT_RUN). A mutant's replacement text must be
   exactly as long as the text it replaces (rgate patches the source in place; otherwise
