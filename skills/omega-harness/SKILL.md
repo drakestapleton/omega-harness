@@ -976,15 +976,24 @@ signed desk review MERGE_AFTER_FIX at `2f3f3d01`) and `f73dc66de4502448d47bbd1c0
 - The `ng` units are om2 (`at` is reserved; error 16) and are built only by
   `seed/ng/ngbuild.om` from the sha256-pinned list `seed/ng/ng.units`.
 
-### ng AArch64 back end (PENDING omega-mv branches `ng/a64-m1`, `ng/a64-m2`, stacked on ng-ir)
+### ng AArch64 back end (PENDING omega-mv branches `ng/a64-m1`, `ng/a64-m2`, `ng/slice-m1`, stacked on ng-ir)
 
 This section stays pending until the branches merge on omega-mv (Hive NG lane ng-a64; not yet PRs
 because GitHub writes were suspended on 2026-11-07). `ng/a64-m1` (head `8a3680b06a9d`, on ng-ir
-`ee070853`) is the reviewed-next snapshot; `ng/a64-m2` replays its commits on ng-ir's `ng/ir-ngrun`
-(`f73dc66d`, which adds the reference interpreter ngrun) and adds stack arguments, SLICE values and
-the ngrun differential. Base `943d955531b9`, omc `5f90edea…6df`.
+`ee070853`) is the reviewed-next snapshot; `ng/a64-m2` (head `a5f1a82f`) replays its commits on
+ng-ir's `ng/ir-ngrun` (`f73dc66d`, which adds the reference interpreter ngrun) and adds stack
+arguments, SLICE values and the ngrun differential. `ng/slice-m1` (merge `02742a8c`) is the Hive NG
+M1 integration branch: `ng/a64-m2` merged with ng-front's `ng/front-m3` (`536bbc83`, unchanged; the
+merge itself changes only `ng.units` and `main.om` outside `seed/ng/a64`), so `ng.units` lists ir,
+front, a64, main and one `ng` binary carries the front end and the back end.
+Base `943d955531b9`, omc `5f90edea…6df`.
 
-- Unit `seed/ng/src/a64.om` (third row of `seed/ng/ng.units`); design `seed/ng/a64/DESIGN.md`.
+- Unit `seed/ng/src/a64.om` (third row of `seed/ng/ng.units` on `ng/a64-m2`, after `front.om` on
+  `ng/slice-m1`); design `seed/ng/a64/DESIGN.md`. Every unit of `ng.units` belongs in an `ng` build:
+  `main.om` calls `a6_mode`, so ir + front + main alone is omc error 3. Gates therefore build ng from
+  the list (`ngbuild build`, or ng-front's `units:seed/ng/ng.units` source segment), never from a
+  hand-written set of units. A file under another lane's directory is that lane's to change, even on
+  an integration branch.
   `ng` reads a first line naming the mode: `@ng a64` compiles ΩIR to an AArch64 Linux ELF in omc's
   memory map (save pairs, D13 default), `@ng a64 split` the same with single saves, `@ng a64-enc`
   encodes an instruction case list. `main.om` asks `a6_mode` about the mode line (read through
@@ -1003,12 +1012,16 @@ the ngrun differential. Base `943d955531b9`, omc `5f90edea…6df`.
   shape (a self call whose result is added and returned becomes an accumulator loop). Not yet:
   STRUCT and VEC access, atomics, SLICE results of calls and select, other host words, floats,
   kernels. Stack depth is not semantic: trap 6 is compared only when both compilers trap.
-- Front to back: ng-front's `@ng front-ir` (omega-mv `ng/front-m3` 3353ad67) feeds `@ng a64`
-  directly (ΩIR binary is the interface; both branches carry ir.om 8c819b18). For the 14 integer
-  `x-*` pairs and the nine integer bench kernels (arith, branch, leafcall, fib38, fib40, isort, sieve,
-  sort, matmul, full size) both save forms give omc's exit status and stdout (2026-11-07, not yet a
-  committed gate: the two lanes are on different branches). Float programs (x-float, linear) are
-  refused. Also by hand: bcopy and sort match omc and Wolfram at full size in the mkir set; fib,
+- Front to back (rgate step 6, committed on `ng/slice-m1`): for 23 Omega sources (ng-ir's 14
+  integer `x-*` run pairs and ng-front's nine integer bench kernels arith, branch, leafcall, fib38,
+  fib40, isort, sieve, sort, matmul at full size) `ng` mode `@ng front-ir` must exit 0, ngcheck must
+  accept its ΩIR, and `@ng a64` and `@ng a64 split` must both give omc's exit status, stdout byte for
+  byte and stderr byte for byte, except that a one-line decimal stderr from omc (OMC-EFF-2: the
+  kernel's elapsed nanoseconds, new every run) needs a one-line decimal stderr from ng. Float programs
+  (x-float, linear: f64, Hive NG M4) must pass front-ir and ngcheck and be refused by a64 (exit 5);
+  they are counted as refused, never as compared. Negative control: fib40's ng path against omc's
+  build of `seed/ng/a64/tests/front/fib39.om` must be sound and differ in stdout, or the gate fails.
+  Also by hand: bcopy and sort match omc and Wolfram at full size in the mkir set; fib,
   bcopy, sort and ChaCha20 (SLICE parameters, scaled) match ngrun as ΩIR text, ChaCha20 also omc on
   `om/tls/chacha.om`. ΩIR call arguments must equal the parameter types (IR.md row 64), so passing an
   `edit` array or slice to a `view` parameter has no ΩIR form yet.
@@ -1033,7 +1046,12 @@ the ngrun differential. Base `943d955531b9`, omc `5f90edea…6df`.
   2026-11-07, with negative controls: a wrong expectation, a no-op mutant, a wrong omc stdout, ngrun
   exiting 99 + code, ngrun writing shifted bytes; CI NOT_RUN). A mutant's replacement text must be
   exactly as long as the text it replaces (rgate patches the source in place; otherwise
-  `cannot run step 8`).
+  `cannot run step 8`). On `ng/slice-m1` rgate adds the front phase: front cases ok 23/23, front
+  refused ok 2/2, front control differs 1 (HOST_TESTED on a fresh clone of `02742a8c`, core 1,
+  2026-11-07; CI NOT_RUN). Its controls each fail the gate: the fib39 control made fib40 (control
+  differs 0), no timing-line exception (16/23: the seven kernels that print elapsed time) and
+  ng-front's for-latch mutant in `front.om` with `ng.units` re-pinned (16/23: same exit status,
+  different checksum stdout). The front phase catches front-end miscompiles too, not only a64 ones.
 
 ## 4. Effects and authority
 
