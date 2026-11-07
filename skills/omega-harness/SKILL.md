@@ -995,19 +995,23 @@ the ngrun differential. Base `943d955531b9`, omc `5f90edea…6df`.
   arguments (IR.md's 64; past the eighth machine argument they go to the caller's outgoing slots
   `[sp, 8j]`, read by the callee at `[sp + frame + 8j]`), checks 70..82 with their exact trap codes;
   memory on a REF to an ARRAY or a SLICE of bool or integers (load, store, alloca zero-filled per
-  invocation, gaddr, len, slice; globals at omc's addresses; frames below 16 MiB); a SLICE value is
-  two allocated wires, address and count, moved together through block arguments and passed as two
-  machine arguments; host words read, write, cpufence (DSB SY) and cpurelax (YIELD); liveness,
-  linear scan over x0..x14 / x19..x27 with spills, frame with the x28 stack-floor check (trap 6),
-  64-byte aligned function entries, and the E loop shape (a self call whose result is added and
-  returned becomes an accumulator loop). Not yet: STRUCT and VEC access, fill, atomics, SLICE results
-  of calls and select, other host words, floats, kernels. Stack depth is not semantic: trap 6 is
-  compared only when both compilers trap. OmegaFast bench kernels lowered by hand per IR.md s13:
-  bcopy and sort match omc and Wolfram at full size; fib, bcopy, sort and ChaCha20 (with SLICE
-  parameters, scaled) match ngrun as ΩIR text, and the ChaCha20 text also matches omc on
-  `om/tls/chacha.om`. SHA-256 and X25519 use only covered ops and wait for ng-front's ΩIR. ΩIR call
-  arguments must equal the parameter types (IR.md row 64), so passing an `edit` array or slice to a
-  `view` parameter has no ΩIR form yet.
+  invocation, gaddr, len, slice, fill; globals at omc's addresses; frames below 16 MiB); a SLICE value
+  is two allocated wires, address and count, moved together through block arguments and passed as
+  two machine arguments; host words read, write, monons (omc's clock_gettime sequence and traps),
+  cpufence (DSB SY) and cpurelax (YIELD); liveness, linear scan over x0..x14 / x19..x27 with spills,
+  frame with the x28 stack-floor check (trap 6), 64-byte aligned function entries, and the E loop
+  shape (a self call whose result is added and returned becomes an accumulator loop). Not yet:
+  STRUCT and VEC access, atomics, SLICE results of calls and select, other host words, floats,
+  kernels. Stack depth is not semantic: trap 6 is compared only when both compilers trap.
+- Front to back: ng-front's `@ng front-ir` (omega-mv `ng/front-m3` 3353ad67) feeds `@ng a64`
+  directly (ΩIR binary is the interface; both branches carry ir.om 8c819b18). For the 14 integer
+  `x-*` pairs and the nine integer bench kernels (arith, branch, leafcall, fib38, fib40, isort, sieve,
+  sort, matmul, full size) both save forms give omc's exit status and stdout (2026-11-07, not yet a
+  committed gate: the two lanes are on different branches). Float programs (x-float, linear) are
+  refused. Also by hand: bcopy and sort match omc and Wolfram at full size in the mkir set; fib,
+  bcopy, sort and ChaCha20 (SLICE parameters, scaled) match ngrun as ΩIR text, ChaCha20 also omc on
+  `om/tls/chacha.om`. ΩIR call arguments must equal the parameter types (IR.md row 64), so passing an
+  `edit` array or slice to a `view` parameter has no ΩIR form yet.
 - ΩIR text (ngas) for fixtures: `slice` is a reader (`%s = slice TYPE tok r off n`); `alloca`
   returns a token and the REF (`%t %r = alloca TYPE tok`); blocks appear in label order; `cbr` passes
   no block arguments (an exit block reads the loop header's parameters); a load or store is covered
@@ -1020,14 +1024,16 @@ the ngrun differential. Base `943d955531b9`, omc `5f90edea…6df`.
   (encoder vs GNU objdump, `cases 204 match 204`, wrong-bit mutant) and
   `seed/out/omc < seed/ng/a64/rgate.om > rgate; echo SCRATCH | ./rgate`: 13 mkir fixtures including
   bcopy and sort (ngcheck accepts, both save forms and omc agree with Wolfram-computed statuses or
-  trap codes and print byte-identical stdout), then 71 ΩIR text fixtures (ng-ir's `x-*` run pairs but
+  trap codes and print byte-identical stdout), then 74 ΩIR text fixtures (ng-ir's `x-*` run pairs but
   x-float, and `seed/ng/a64/tests/oir/`: every check op with its trap code on narrow and 64-bit types,
-  stack arguments, globals, loads and stores, block-parameter loops, the E loop, slices, the bench
-  kernels) assembled by ngas, accepted by ngcheck, where both save forms must give ngrun's exit
-  status, stdout and stderr; 21 mutants caught, among them a wrong trap code, two stack-argument and
-  three slice mutants (`ng/a64-m2` HOST_TESTED on a fresh clone, core 1, 2026-11-07, with negative
-  controls: a wrong expectation, a no-op mutant, a wrong omc stdout, ngrun exiting 99 + code, ngrun
-  writing shifted bytes; CI NOT_RUN).
+  stack arguments, globals, loads and stores, block-parameter loops, the E loop, slices, fill, monons,
+  the bench kernels) assembled by ngas, accepted by ngcheck, where both save forms must give ngrun's
+  exit status, stdout and stderr; 23 mutants caught, among them a wrong trap code, two stack-argument,
+  three slice, a monons and a fill mutant (`ng/a64-m2` HOST_TESTED on a fresh clone, core 1,
+  2026-11-07, with negative controls: a wrong expectation, a no-op mutant, a wrong omc stdout, ngrun
+  exiting 99 + code, ngrun writing shifted bytes; CI NOT_RUN). A mutant's replacement text must be
+  exactly as long as the text it replaces (rgate patches the source in place; otherwise
+  `cannot run step 8`).
 
 ## 4. Effects and authority
 
