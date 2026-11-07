@@ -940,8 +940,8 @@ rerun at that head.
 
 This section stays pending until branch `ng/ir-m0` (and `ng/ir-ngrun`, stacked on it) merges on
 omega-mv (Hive NG lane ng-ir; not yet PRs because GitHub writes were suspended on 2026-11-07).
-Exercised at local heads `6d3f0c1cb5a7e70555aa9ac8071caa78046a755c` (`ng/ir-m0`) and
-`47a9840006c7507d8becd497aaca612fc8290ac2` (`ng/ir-ngrun`) on base `943d955531b9`, omc `5f90edea…6df`.
+Exercised at local heads `2f3f3d01cb3b1b620b5448e7dee9caf0ef4feac5` (`ng/ir-m0`) and
+`b6e3f197f3ac21f480eb36760100715fb29163fb` (`ng/ir-ngrun`) on base `943d955531b9`, omc `5f90edea…6df`.
 
 - Spec: `seed/ng/IR.md`. One binary form (`OSC1IR` v9, tag `omega.ng.ir.v1`) for CPU and GPU
   kernels; SSA values with block parameters; an ordering token that every check, effect and exit
@@ -955,6 +955,8 @@ Exercised at local heads `6d3f0c1cb5a7e70555aa9ac8071caa78046a755c` (`ng/ir-m0`)
   `cat seed/ng/src/ir.om seed/ng/ngrun.om | seed/out/omc > ngrun`, then `ngrun FILE.ir`. Exit status
   = the entry's result, a failing check exits 100 + code, unsupported ops (vectors, tiles, kernels,
   fma, fmath, f16/bf16/fp8) exit 125 with one stderr line. Diff a back end's output against it (D9).
+  It reads through `src/ir.om`, as `ng` does, so a fault in that shared reader shows only in the gate's
+  run pairs (ngrun against omc on the same program in Omega), not in a back-end diff against ngrun.
 - Gate: `cat seed/ng/sha256.om seed/ng/gate-ir.om | seed/out/omc > gate-ir`, then
   `gate-ir seed/out/omc SCRATCH` from the repository root: `NGIRGATE PASS cases=100` on `ng/ir-m0`,
   `cases=128` on `ng/ir-ngrun` (R cases: `x-NAME.oir` under ngrun against `x-NAME.om` compiled by
