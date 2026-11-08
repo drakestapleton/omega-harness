@@ -55,3 +55,9 @@ The reference solutions are held out: they are not in this repository, the conte
 session directory; `tasks.json` records only their sha256. They were checked with the pinned gate
 (27/27 PASS, with a negative control that failed as it should). Keep `coder/eval/` out of any
 training corpus built from this repository, or the eval stops measuring anything.
+
+## Experimental coding swarm pilot
+
+[swarm-pilot/README.md](swarm-pilot/README.md) records an isolated comparative
+pilot foundation and its remaining qualification work. It is not a replacement
+for the Omega-only session above or a completed swarm evaluation.
