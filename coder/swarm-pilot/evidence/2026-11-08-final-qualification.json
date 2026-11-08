@@ -1,0 +1,74 @@
+{
+  "source_commit": "cb880ccd973eb55ba905b0fd1df1e036cdf6742f",
+  "code_sha256": "d3fb980eb3fab45e8999edc02582a39448565f64c991fe4c82e135822c32bc56",
+  "software_checks": 34,
+  "live_boundaries": {
+    "checks": {
+      "conductor_write_refused": true,
+      "judge_not_visible_during_generation": true,
+      "credential_store_not_visible": true,
+      "offline_command_network": true,
+      "timed_out_command_stopped": true,
+      "claimed_write_works": true,
+      "unclaimed_write_refused": true
+    },
+    "passed": true,
+    "source_sha256": "d90fd8322c9da5485a1530d8576124d02ed321ac878cd3bc63a45b88468b3338"
+  },
+  "judge_controls": [
+    {
+      "task": "bug",
+      "passed": true
+    },
+    {
+      "task": "feature",
+      "passed": true
+    },
+    {
+      "task": "omega",
+      "passed": true
+    },
+    {
+      "task": "parallel",
+      "passed": true
+    },
+    {
+      "task": "conflict",
+      "passed": true
+    },
+    {
+      "task": "recovery",
+      "passed": true
+    }
+  ],
+  "process_recovery": {
+    "abrupt_exit_before_commit": true,
+    "atomic_rollback": true,
+    "recovered_integration": true,
+    "idempotent_integration": true,
+    "original_snapshot_unchanged": true,
+    "cancellation_persistent": true
+  },
+  "recovery_control_sha256": "9c88bb16fe3be57da8ad2e0a1ffb4c91904f3f9acfeba9c0e67dbfcd02d45190",
+  "real_sdk_smoke": {
+    "id": "release-smoke-cb880cc",
+    "task": "smoke",
+    "repeat": 1,
+    "arm": "deepagents",
+    "accepted": true,
+    "gates_passed": true,
+    "seconds": 24.070388555526733,
+    "cost": null,
+    "tokens": 3529,
+    "reserved_tokens": 0,
+    "judge_exit_code": 0,
+    "error": null,
+    "image": "python@sha256:5e2bdb1b0d542d5039cffb8181c65930093949194a65c365dfb1b0fe13a4fa5b",
+    "qualification_sha256": "a1dae292bf7514f5301f213376a7e1d44de9d191229866a11ce5f112b0f9fae7",
+    "judge_sha256": "9e545fda6155e9c313c7062569fe030465936889aa7530ccdad02f8e7c90ee04",
+    "source_sha256": "57eb6a9a27aa0cfbdf982859a30627464681570d963297508a4977514fa9527f",
+    "model": "openai-codex/gpt-5.6-sol",
+    "config_sha256": "f350559713b78b534388408e1e2c70596f30ae244e3433d7db1e8b190a4050bd",
+    "tree_sha256": "e12b98b5230973431d93a14bed8bf0fcb72d06f4271a9c41ec21122d00af4c91"
+  }
+}
