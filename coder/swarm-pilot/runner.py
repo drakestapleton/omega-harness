@@ -10,6 +10,7 @@ import tempfile
 import shlex
 import fcntl
 import threading
+import shutil
 import time
 from gateway import Gateway
 from runtime import Session,Refused,snapshot,write_json
@@ -18,6 +19,17 @@ from sandbox import Sandbox
 HERE=Path(__file__).resolve().parent
 
 def digest(value): return hashlib.sha256(json.dumps(value,sort_keys=True).encode()).hexdigest()
+
+def export_patch(before,after,output):
+    """Portable binary-capable patch, derived without trusting worker Git metadata."""
+    with tempfile.TemporaryDirectory(prefix='pilot-patch-') as directory:
+        temp=Path(directory)
+        shutil.copytree(before,temp/'a');shutil.copytree(after,temp/'b')
+        with Path(output).open('wb') as f:
+            result=subprocess.run(['git','-c','color.ui=never','diff','--no-index','--binary','--no-prefix',
+                '--no-ext-diff','--no-textconv','--','a','b'],cwd=temp,stdout=f,
+                stderr=subprocess.PIPE,timeout=30)
+        if result.returncode not in (0,1):raise Refused('patch export failed')
 
 class Runner:
     def __init__(self,session,config):
@@ -164,6 +176,7 @@ def _run(config,root,source):
     except Exception as e:error=type(e).__name__
     finally:runner.close()
     state=session.status()
+    export_patch(source,session.current,root/'patch.diff')
     # Never trust candidate-reported checks. The judge is outside all agent trees.
     judged=None
     if error is None and not state['cancelled'] and not state['reserved']:

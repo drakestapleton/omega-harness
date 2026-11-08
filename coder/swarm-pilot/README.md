@@ -8,7 +8,8 @@ It is experimental tooling, outside AIEN's native runtime. Atlas, Cortex and
 ## What runs
 
 Each trial has one read-only conductor and at most three active workers. Workers
-receive exclusive paths in separate repository snapshots and cannot delegate.
+receive exclusive paths in separate repository snapshots and cannot delegate. These are exported workspaces,
+not linked Git worktrees; in-worker Git/PR lifecycles are not part of this pilot.
 `repo_command` executes offline Docker commands; only claimed paths are writable.
 The controller independently inventories changed files before integrating them.
 Command output is capped at 16000 bytes; excess output is refused before it can
@@ -91,8 +92,8 @@ unseen general benchmark. The repository already publishes their specifications;
 the agent workspaces receive only frozen source, task instructions and a public
 Omega syntax reference. Existing `coder/eval` held-out tasks are not consumed.
 
-Two repetitions across three arms produce 36 trials. Every run retains a patch
-artifact as a complete independently hashed workspace, raw provider trace, SDK
+Two repetitions across three arms produce 36 trials. Every run retains a portable binary-capable `patch.diff` and a complete
+independently hashed workspace, raw provider trace, SDK
 logs, durable events, actual usage and an independent judge verdict. The parallel
 case also requires multiple integrated workers. Judge scripts mount only after
 agent execution ends, in a separate offline container. This is ordinary isolated

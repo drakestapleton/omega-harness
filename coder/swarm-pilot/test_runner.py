@@ -54,3 +54,17 @@ class RunnerTests(unittest.TestCase):
                 sandbox.return_value.execute.side_effect=subprocess.TimeoutExpired('docker',15)
                 with self.assertRaises(Refused):r.tool({'owner':'conductor','name':'execute','arguments':{'command':'true'}})
             self.assertTrue(r.s.status()['cancelled'])
+
+    def test_exported_patch_applies_to_original_snapshot(self):
+        import subprocess,shutil
+        from runner import export_patch
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp);before=root/'before';after=root/'after';before.mkdir();after.mkdir()
+            (before/'file.txt').write_text('old\n');(after/'file.txt').write_text('new\n')
+            (after/'added.txt').write_text('added\n')
+            patchfile=root/'patch.diff';export_patch(before,after,patchfile)
+            target=root/'target';shutil.copytree(before,target)
+            subprocess.run(['git','-C',str(target),'apply',str(patchfile)],check=True,capture_output=True)
+            self.assertEqual((target/'file.txt').read_text(),'new\n')
+            self.assertEqual((target/'added.txt').read_text(),'added\n')
+            self.assertNotIn(str(root),patchfile.read_text())
