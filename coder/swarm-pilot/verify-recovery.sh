@@ -4,7 +4,7 @@ set -eu
 export PYTHONPATH="$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)${PYTHONPATH:+:$PYTHONPATH}"
 case "$1" in /*) task_output="$1" ;; *) task_output="$(pwd)/$1" ;; esac
 cd "$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)"
-python3 - "$task_output" <<'PY' 
+python3 - "$task_output" <<'PY'
 import json,os,pathlib,subprocess,sys
 from runtime import Session,Refused,write_json
 root=pathlib.Path(sys.argv[1]);root.mkdir(mode=0o700)
