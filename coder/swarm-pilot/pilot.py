@@ -41,6 +41,21 @@ def select(rows):
     ids = [r['id'] for r in rows]
     if len(rows) != 36 or len(set(ids)) != 36:
         return dict(winner='baseline', reason='incomplete or duplicate evidence')
+    if not all('task' in r and 'repeat' in r for r in rows):
+        return dict(winner='baseline',reason='missing task/repetition evidence')
+    if rows:
+        tasks={r.get('task') for r in rows}
+        expected={(t,n,a) for t in tasks for n in (1,2) for a in ARMS}
+        actual={(r.get('task'),r.get('repeat'),r.get('arm')) for r in rows}
+        if len(tasks)!=6 or actual!=expected:
+            return dict(winner='baseline',reason='task/repetition pairs do not match')
+    for key in ('model','image','qualification_sha256','judge_sha256'):
+        values={r.get(key) for r in rows}
+        if len(values)!=1 or not next(iter(values)):
+            return dict(winner='baseline',reason='missing or mixed '+key)
+    for task in tasks:
+        if len({r.get('source_sha256') for r in rows if r['task']==task})!=1 or any(not r.get('source_sha256') for r in rows if r['task']==task):
+            return dict(winner='baseline',reason='missing or mixed task source')
     for arm in ARMS:
         group = [r for r in rows if r['arm'] == arm]
         if len(group) != 12:

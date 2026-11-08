@@ -44,7 +44,7 @@ class PilotTests(unittest.TestCase):
         rows = []
         for arm, accepted in [('baseline', 8), ('deepagents', 10), ('openhands', 7)]:
             for i in range(12):
-                rows.append(dict(arm=arm, id=f'{arm}-{i}', accepted=i < accepted,
+                rows.append(dict(model='frozen',image='pinned',qualification_sha256='qualified',judge_sha256='judge',source_sha256='source',arm=arm, task=f'task-{i//2}', repeat=i%2+1, id=f'{arm}-{i}', accepted=i < accepted,
                     gates_passed=arm != 'deepagents', cost=1, seconds=5))
         self.assertEqual(select(rows)['winner'], 'baseline')
 
@@ -52,7 +52,7 @@ class PilotTests(unittest.TestCase):
         rows = []
         for arm, accepted in [('baseline', 8), ('deepagents', 10), ('openhands', 7)]:
             for i in range(12):
-                rows.append(dict(arm=arm, id=f'{arm}-{i}', accepted=i < accepted,
+                rows.append(dict(model='frozen',image='pinned',qualification_sha256='qualified',judge_sha256='judge',source_sha256='source',arm=arm, task=f'task-{i//2}', repeat=i%2+1, id=f'{arm}-{i}', accepted=i < accepted,
                     gates_passed=True, cost=None, seconds=5))
         self.assertEqual(select(rows)['winner'], 'deepagents')
         self.assertEqual(select(rows[:-1])['winner'], 'baseline')
