@@ -16,7 +16,7 @@ from suite import freeze
 HERE=Path(__file__).resolve().parent
 
 def code_hash():
-    return hashlib.sha256(b''.join(p.name.encode()+p.read_bytes() for p in sorted(HERE.glob('*.py')))).hexdigest()
+    return hashlib.sha256(b''.join(p.name.encode()+p.read_bytes() for p in sorted(p for p in HERE.iterdir() if p.suffix in ('.py','.ts')))).hexdigest()
 
 
 def campaign(toolchain,repository,output):

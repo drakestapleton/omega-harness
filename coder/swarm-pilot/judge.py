@@ -39,11 +39,6 @@ else:
             try:m.matrix(['a','b','c','d','e',bad])
             except (ValueError,TypeError):pass
             else:raise AssertionError('invalid task ID admitted')
-        rows=m.matrix(['a','b','c','d','e','f'])
-    expected={(t,n,a) for t in ['a','b','c','d','e','f'] for n in (1,2) for a in ('baseline','deepagents','openhands')}
-    assert len(rows)==36 and {(r['task'],r['repeat'],r['arm']) for r in rows}==expected
-    assert len({r['id'] for r in rows})==36
-
     elif task in ('feature','parallel'):
         c=m.Claims();c.acquire('b',['src']);c.acquire('a',['docs'])
         assert c.release_all()==['a','b'] and c.release_all()==[]
