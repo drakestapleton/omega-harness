@@ -10,7 +10,7 @@ isolated SDKs and offline command tools, atomic integration, conservative budget
 admission, cancellation/recovery, separate pinned dependency trees, frozen tasks,
 independent acceptance, raw private receipts and a conservative selection/audit.
 
-Final qualification: 34 software checks, seven real Docker boundaries, six judge
+Final qualification: 35 software checks, seven real Docker boundaries, six judge
 positive/negative pairs and a real abrupt-process-exit recovery control pass.
 Source review is advisory. Host evidence is not GPU or production qualification.
 

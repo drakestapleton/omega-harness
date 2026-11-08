@@ -44,7 +44,8 @@
       "failure_kind": "budget_admission_refused",
       "gateway_refusal_reasons": [
         "token budget exhausted"
-      ]
+      ],
+      "patch_sha256": "3c9c8e19738302a61fe64673e367f766f3754c08a8cdd84817f6a5b77545d4fc"
     },
     {
       "id": "recovery-1-deepagents",
@@ -70,7 +71,8 @@
       "failure_kind": "budget_admission_refused",
       "gateway_refusal_reasons": [
         "token budget exhausted"
-      ]
+      ],
+      "patch_sha256": "efa58e0128557d3c499a6f0e02c86b78738c1a5303128c13ae8d8e0504601cd4"
     },
     {
       "id": "conflict-2-deepagents",
@@ -94,7 +96,8 @@
       "tree_sha256": "042bf8ba313920b18ea64e345d739e2d662341d64dee31a1ebcb7654fdfd4fc7",
       "refusal_reason": null,
       "failure_kind": "accepted",
-      "gateway_refusal_reasons": []
+      "gateway_refusal_reasons": [],
+      "patch_sha256": "1e5f358273ee4ee1e7dc622093cdfb722f591ef3613cb964cc7632c2f048144d"
     },
     {
       "id": "feature-2-openhands",
@@ -122,7 +125,8 @@
         "token budget exhausted",
         "SDK process failed; inspect private run logs",
         "token budget exhausted"
-      ]
+      ],
+      "patch_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     {
       "id": "feature-2-baseline",
@@ -146,7 +150,8 @@
       "tree_sha256": "5815a6cfc0893b78a6ef8e41f5e2b06f1c6f98107eea96a035b1e072dffd3030",
       "refusal_reason": null,
       "failure_kind": "accepted",
-      "gateway_refusal_reasons": []
+      "gateway_refusal_reasons": [],
+      "patch_sha256": "88d46d18d6b6fd27e6b5d3f70d9235829baf1912195f8e526a9855b8ad7431e4"
     },
     {
       "id": "feature-1-deepagents",
@@ -172,7 +177,8 @@
       "failure_kind": "budget_admission_refused",
       "gateway_refusal_reasons": [
         "token budget exhausted"
-      ]
+      ],
+      "patch_sha256": "88d46d18d6b6fd27e6b5d3f70d9235829baf1912195f8e526a9855b8ad7431e4"
     },
     {
       "id": "feature-2-deepagents",
@@ -198,7 +204,8 @@
       "failure_kind": "budget_admission_refused",
       "gateway_refusal_reasons": [
         "token budget exhausted"
-      ]
+      ],
+      "patch_sha256": "fada9a301473b4adc9ee44006fbc1f197ee8ef7c812be7eb3e4a211ba90cf09b"
     },
     {
       "id": "omega-1-deepagents",
@@ -222,7 +229,8 @@
       "tree_sha256": "3f676d88a89f336b86e2669493a15db6f07c6d54c747c6bb3f27a4141f6db335",
       "refusal_reason": null,
       "failure_kind": "accepted",
-      "gateway_refusal_reasons": []
+      "gateway_refusal_reasons": [],
+      "patch_sha256": "43a0817183f07b8c95f235b8ecd6477a32ff3323326842ef3849522ab488b343"
     },
     {
       "id": "feature-1-baseline",
@@ -248,7 +256,8 @@
       "failure_kind": "budget_admission_refused",
       "gateway_refusal_reasons": [
         "token budget exhausted"
-      ]
+      ],
+      "patch_sha256": "55068fc6210d0d3149efd3c7bfd479ea2b4daddc22573cde60c4e77195ca2eb2"
     },
     {
       "id": "omega-2-deepagents",
@@ -272,7 +281,8 @@
       "tree_sha256": "e90ac4f2741c0199cd8ef7d8bf3a6f4480dae00d4972bca92690133a12855c68",
       "refusal_reason": null,
       "failure_kind": "accepted",
-      "gateway_refusal_reasons": []
+      "gateway_refusal_reasons": [],
+      "patch_sha256": "cddec5c04efc2ee2448fdc26bef6875fb5b6c0b2084743db549a820f6d886449"
     },
     {
       "id": "bug-1-deepagents",
@@ -298,7 +308,8 @@
       "failure_kind": "budget_admission_refused",
       "gateway_refusal_reasons": [
         "token budget exhausted"
-      ]
+      ],
+      "patch_sha256": "e614c76a4910f25fafb1430180bd465722fcb0d5860c91a6312550f03dfef077"
     },
     {
       "id": "bug-1-openhands",
@@ -326,7 +337,8 @@
         "token budget exhausted",
         "SDK process failed; inspect private run logs",
         "token budget exhausted"
-      ]
+      ],
+      "patch_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     {
       "id": "conflict-1-baseline",
@@ -352,7 +364,8 @@
       "failure_kind": "budget_admission_refused",
       "gateway_refusal_reasons": [
         "token budget exhausted"
-      ]
+      ],
+      "patch_sha256": "32184cd77223265f6cbc3edcfde32fba180aede0540defe4676ec677c0ee5dd4"
     },
     {
       "id": "conflict-2-openhands",
@@ -380,7 +393,8 @@
         "token budget exhausted",
         "SDK process failed; inspect private run logs",
         "token budget exhausted"
-      ]
+      ],
+      "patch_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     {
       "id": "bug-2-openhands",
@@ -408,7 +422,8 @@
         "token budget exhausted",
         "SDK process failed; inspect private run logs",
         "token budget exhausted"
-      ]
+      ],
+      "patch_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     {
       "id": "parallel-2-deepagents",
@@ -435,7 +450,8 @@
       "gateway_refusal_reasons": [
         "token budget exhausted",
         "SDK process failed; inspect private run logs"
-      ]
+      ],
+      "patch_sha256": "c14bd9261d4422a8c9dc4f96c8527abeb9a098233aaf017dae82dd76fc8b3326"
     },
     {
       "id": "recovery-2-openhands",
@@ -463,7 +479,8 @@
         "token budget exhausted",
         "SDK process failed; inspect private run logs",
         "token budget exhausted"
-      ]
+      ],
+      "patch_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     {
       "id": "parallel-1-baseline",
@@ -491,7 +508,8 @@
         "token budget exhausted",
         "SDK process failed; inspect private run logs",
         "token budget exhausted"
-      ]
+      ],
+      "patch_sha256": "fada9a301473b4adc9ee44006fbc1f197ee8ef7c812be7eb3e4a211ba90cf09b"
     },
     {
       "id": "omega-1-openhands",
@@ -519,7 +537,8 @@
         "token budget exhausted",
         "SDK process failed; inspect private run logs",
         "token budget exhausted"
-      ]
+      ],
+      "patch_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     {
       "id": "omega-2-openhands",
@@ -547,7 +566,8 @@
         "token budget exhausted",
         "SDK process failed; inspect private run logs",
         "token budget exhausted"
-      ]
+      ],
+      "patch_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     {
       "id": "conflict-1-deepagents",
@@ -573,7 +593,8 @@
       "failure_kind": "budget_admission_refused",
       "gateway_refusal_reasons": [
         "token budget exhausted"
-      ]
+      ],
+      "patch_sha256": "3817eda2a2f281c113e8c74aee633a012845b05d84258b8de783bb1488238b6d"
     },
     {
       "id": "parallel-1-openhands",
@@ -603,7 +624,8 @@
         "token budget exhausted",
         "SDK process failed; inspect private run logs",
         "token budget exhausted"
-      ]
+      ],
+      "patch_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     {
       "id": "bug-2-deepagents",
@@ -629,7 +651,8 @@
       "failure_kind": "budget_admission_refused",
       "gateway_refusal_reasons": [
         "token budget exhausted"
-      ]
+      ],
+      "patch_sha256": "e0eb10c509a9f41efc0ae6ca676b4cce5b747b873c9a4ceebaa4aedc8924f9b6"
     },
     {
       "id": "parallel-2-baseline",
@@ -658,7 +681,8 @@
         "SDK process failed; inspect private run logs",
         "worker ID reused for a different request",
         "token budget exhausted"
-      ]
+      ],
+      "patch_sha256": "88d46d18d6b6fd27e6b5d3f70d9235829baf1912195f8e526a9855b8ad7431e4"
     },
     {
       "id": "feature-1-openhands",
@@ -686,7 +710,8 @@
         "token budget exhausted",
         "SDK process failed; inspect private run logs",
         "token budget exhausted"
-      ]
+      ],
+      "patch_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     {
       "id": "conflict-2-baseline",
@@ -715,7 +740,8 @@
         "SDK process failed; inspect private run logs",
         "worker ID reused for a different request",
         "token budget exhausted"
-      ]
+      ],
+      "patch_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     {
       "id": "recovery-1-openhands",
@@ -743,7 +769,8 @@
         "token budget exhausted",
         "SDK process failed; inspect private run logs",
         "token budget exhausted"
-      ]
+      ],
+      "patch_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     {
       "id": "parallel-1-deepagents",
@@ -770,7 +797,8 @@
       "gateway_refusal_reasons": [
         "token budget exhausted",
         "SDK process failed; inspect private run logs"
-      ]
+      ],
+      "patch_sha256": "88d46d18d6b6fd27e6b5d3f70d9235829baf1912195f8e526a9855b8ad7431e4"
     },
     {
       "id": "bug-1-baseline",
@@ -796,7 +824,8 @@
       "failure_kind": "budget_admission_refused",
       "gateway_refusal_reasons": [
         "token budget exhausted"
-      ]
+      ],
+      "patch_sha256": "8e309673e8274eed4fb067161a768ac22d66088bc7ac49c637b39aa15884c767"
     },
     {
       "id": "omega-1-baseline",
@@ -820,7 +849,8 @@
       "tree_sha256": "e90ac4f2741c0199cd8ef7d8bf3a6f4480dae00d4972bca92690133a12855c68",
       "refusal_reason": null,
       "failure_kind": "accepted",
-      "gateway_refusal_reasons": []
+      "gateway_refusal_reasons": [],
+      "patch_sha256": "cddec5c04efc2ee2448fdc26bef6875fb5b6c0b2084743db549a820f6d886449"
     },
     {
       "id": "recovery-2-deepagents",
@@ -847,7 +877,8 @@
       "gateway_refusal_reasons": [
         "token budget exhausted",
         "SDK process failed; inspect private run logs"
-      ]
+      ],
+      "patch_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     {
       "id": "parallel-2-openhands",
@@ -877,7 +908,8 @@
         "token budget exhausted",
         "SDK process failed; inspect private run logs",
         "token budget exhausted"
-      ]
+      ],
+      "patch_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     {
       "id": "recovery-2-baseline",
@@ -903,7 +935,8 @@
       "failure_kind": "budget_admission_refused",
       "gateway_refusal_reasons": [
         "token budget exhausted"
-      ]
+      ],
+      "patch_sha256": "9e0459e4532c5dfc80c28d7232af8778d3ff42b2bc83bb38178e76ea6b424b8c"
     },
     {
       "id": "omega-2-baseline",
@@ -932,7 +965,8 @@
         "SDK process failed; inspect private run logs",
         "worker ID reused for a different request",
         "token budget exhausted"
-      ]
+      ],
+      "patch_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     {
       "id": "conflict-1-openhands",
@@ -960,7 +994,8 @@
         "token budget exhausted",
         "SDK process failed; inspect private run logs",
         "token budget exhausted"
-      ]
+      ],
+      "patch_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     {
       "id": "recovery-1-baseline",
@@ -986,7 +1021,8 @@
       "failure_kind": "budget_admission_refused",
       "gateway_refusal_reasons": [
         "token budget exhausted"
-      ]
+      ],
+      "patch_sha256": "8c2b03e8c2f577557d73e42d4fe243402b66146fb73174ed4bda566277d88832"
     }
   ],
   "qualification": {

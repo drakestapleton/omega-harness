@@ -1,7 +1,7 @@
 {
-  "source_commit": "cb880ccd973eb55ba905b0fd1df1e036cdf6742f",
-  "code_sha256": "d3fb980eb3fab45e8999edc02582a39448565f64c991fe4c82e135822c32bc56",
-  "software_checks": 34,
+  "source_commit": "8ad1ba6df6daa4867ca47632951a39c69dcd795d",
+  "code_sha256": "0a38e2a2eaf261b956370e432a1bba9a54619ee88a0e777d46d4d908919ef099",
+  "software_checks": 35,
   "live_boundaries": {
     "checks": {
       "conductor_write_refused": true,
@@ -13,7 +13,7 @@
       "unclaimed_write_refused": true
     },
     "passed": true,
-    "source_sha256": "d90fd8322c9da5485a1530d8576124d02ed321ac878cd3bc63a45b88468b3338"
+    "source_sha256": "762f197c13a7bc37244687f231cbbf375489c32491d4750253a35fbd2ea419f0"
   },
   "judge_controls": [
     {
@@ -50,6 +50,7 @@
     "cancellation_persistent": true
   },
   "recovery_control_sha256": "9c88bb16fe3be57da8ad2e0a1ffb4c91904f3f9acfeba9c0e67dbfcd02d45190",
+  "sdk_interaction_source_commit": "cb880ccd973eb55ba905b0fd1df1e036cdf6742f",
   "real_sdk_smoke": {
     "id": "release-smoke-cb880cc",
     "task": "smoke",
@@ -70,5 +71,7 @@
     "model": "openai-codex/gpt-5.6-sol",
     "config_sha256": "f350559713b78b534388408e1e2c70596f30ae244e3433d7db1e8b190a4050bd",
     "tree_sha256": "e12b98b5230973431d93a14bed8bf0fcb72d06f4271a9c41ec21122d00af4c91"
-  }
+  },
+  "portable_patch_apply_test_passed": true,
+  "exported_trial_patches": 36
 }
