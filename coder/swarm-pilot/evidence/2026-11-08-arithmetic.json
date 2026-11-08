@@ -1,0 +1,33 @@
+{
+  "method": "WolframLanguageEvaluator",
+  "query": "data=<|\"baseline\" -> {{0,26096,63.67261862754822},{1,23285,36.907251596450806},{0,23662,40.6696457862854},{0,24719,43.26404809951782},{0,24826,38.30976676940918},{0,25136,30.757111310958862},{0,26134,69.0713438987732},{0,25949,53.217729330062866},{1,20207,33.17686057090759},{0,25801,55.799922943115234},{0,24549,37.240476846694946},{0,26321,68.73276257514954}},\"deepagents\" -> {{0,17012,70.83207511901855},{1,18440,60.29341220855713},{0,18389,52.89306282997131},{0,16789,46.96008253097534},{1,10176,35.355825424194336},{1,6190,32.91969919204712},{0,17886,55.82362365722656},{0,16053,39.339882373809814},{0,17963,67.90323567390442},{0,16761,67.1927981376648},{0,17373,48.68803834915161},{0,9575,51.31468462944031}},\"openhands\" -> {{0,18974,26.223806142807007},{0,19417,31.83185076713562},{0,19354,30.2143132686615},{0,19217,29.583195447921753},{0,19896,38.85233211517334},{0,21547,30.04243016242981},{0,21402,28.709967851638794},{0,23540,37.102256059646606},{0,19127,27.466328620910645},{0,19731,34.83427619934082},{0,23457,35.34184908866882},{0,19508,31.326399087905884}}|>; summary=Map[Function[rows,<|\"runs\"->Length[rows],\"accepted\"->Total[rows[[All,1]]],\"providerTokens\"->Total[rows[[All,2]]],\"elapsedSecondsAllOutcomes\"->Total[rows[[All,3]]]|>],data]; ExportString[<|\"summary\"->summary,\"plannedRunsVerified\"->(Total[Length/@Values[data]]==6*2*3),\"budgetAdmissionRefusals\"->Total[{1,1,0,1,0,1,1,0,1,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,1,1,1,1,1,1}],\"independentJudgesRun\"->Total[{0,0,1,0,1,0,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0}],\"completionThresholdMet\"->AssociationMap[(summary[#][\"accepted\"]>=summary[\"baseline\"][\"accepted\"]+2)&,{\"deepagents\",\"openhands\"}]|>,\"JSON\"]",
+  "result": {
+    "summary": {
+      "baseline": {
+        "runs": 12,
+        "accepted": 2,
+        "providerTokens": 296685,
+        "elapsedSecondsAllOutcomes": 570.8195383548737
+      },
+      "deepagents": {
+        "runs": 12,
+        "accepted": 3,
+        "providerTokens": 182607,
+        "elapsedSecondsAllOutcomes": 629.5164201259613
+      },
+      "openhands": {
+        "runs": 12,
+        "accepted": 0,
+        "providerTokens": 245170,
+        "elapsedSecondsAllOutcomes": 381.5290048122406
+      }
+    },
+    "plannedRunsVerified": true,
+    "budgetAdmissionRefusals": 31,
+    "independentJudgesRun": 5,
+    "completionThresholdMet": {
+      "deepagents": false,
+      "openhands": false
+    }
+  }
+}

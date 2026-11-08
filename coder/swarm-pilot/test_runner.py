@@ -41,3 +41,16 @@ class RunnerTests(unittest.TestCase):
             self.assertIn(str(HERE/'adapters.py'),argv)
             self.assertNotIn(str(HERE/'judge.py'),argv)
             self.assertNotIn(str(HERE/'controls.py'),argv)
+
+    def test_sandbox_lifecycle_error_cancels_authority(self):
+        import subprocess
+        from unittest.mock import patch
+        from runtime import Refused
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp);(root/'src').mkdir()
+            r=Runner.__new__(Runner);r.s=Session.create(root/'run',root/'src')
+            r.config={'image':'pinned'};r.label='test'
+            with patch('runner.Sandbox') as sandbox:
+                sandbox.return_value.execute.side_effect=subprocess.TimeoutExpired('docker',15)
+                with self.assertRaises(Refused):r.tool({'owner':'conductor','name':'execute','arguments':{'command':'true'}})
+            self.assertTrue(r.s.status()['cancelled'])

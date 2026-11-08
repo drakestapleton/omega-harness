@@ -46,7 +46,11 @@ class Runner:
             tree=self.s.current if owner=='conductor' else self.s.root/'workers'/owner
             writable=[] if owner=='conductor' else state['workers'][owner]['paths']
             remaining=max(1,min(120,state['deadline']-time.time()))
-            result=Sandbox(tree,self.config['image'],writable=writable,label=self.label,compiler=self.config.get("compiler")).execute(args['command'],remaining)
+            try:
+                result=Sandbox(tree,self.config['image'],writable=writable,label=self.label,compiler=self.config.get("compiler")).execute(args['command'],remaining)
+            except Exception as e:
+                self.s.cancel()
+                raise Refused('sandbox lifecycle failed; session cancelled') from e
             with self.s.transaction('tool_result') as s:
                 s['last_tool']={'owner':owner,'exit_code':result['exit_code']}
             return result

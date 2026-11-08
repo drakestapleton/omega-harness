@@ -4,6 +4,7 @@ import hashlib
 import json
 from pathlib import Path
 import tempfile
+import shlex
 from sandbox import Sandbox
 from runtime import write_json
 
@@ -14,7 +15,7 @@ def run(config,output):
         checks={
             'conductor_write_refused':ro.execute('echo bad > /work/owned.txt')['exit_code']!=0,
             'judge_not_visible_during_generation':ro.execute('test ! -e /judge.py')['exit_code']==0,
-            'credential_store_not_visible':ro.execute('test ! -e /home/drakestapleton/.omp/agent/agent.db')['exit_code']==0,
+            'credential_store_not_visible':ro.execute('test ! -e '+shlex.quote(str(Path.home()/'.omp'/'agent'/'agent.db')))['exit_code']==0,
             'offline_command_network':ro.execute("python -c 'import socket; s=socket.socket(); s.settimeout(1); s.connect((\"1.1.1.1\",443))'")['exit_code']!=0,
             'timed_out_command_stopped':ro.execute('sleep 20',seconds=1)['exit_code']==124,
         }

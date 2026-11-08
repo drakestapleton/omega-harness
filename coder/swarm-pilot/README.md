@@ -11,6 +11,8 @@ Each trial has one read-only conductor and at most three active workers. Workers
 receive exclusive paths in separate repository snapshots and cannot delegate.
 `repo_command` executes offline Docker commands; only claimed paths are writable.
 The controller independently inventories changed files before integrating them.
+Command output is capped at 16000 bytes; excess output is refused before it can
+be buffered unboundedly. Unconfirmed cleanup cancels further execution authority.
 It does not trust the candidate's Git index, check claims or final prose.
 
 SQLite transactions persist ownership, requests, token reservations, cancellation,
@@ -112,3 +114,10 @@ hosted model weight revisions are not exposed by this interface.
 Keep raw evidence private in the campaign directory (mode 0700). Publish only
 reviewed aggregate results and hashes. LangSmith or Langfuse integration and
 Atlas/Cortex execution-cell integration are separate follow-on decisions.
+
+## Completed pilot
+
+[The 8 November report](evidence/2026-11-08-report.md) records the audited outcomes
+and the decision to retain OMP. The post-campaign output hardening is qualified
+separately from the frozen trial implementation. For the real process-exit
+control, run `sh coder/swarm-pilot/verify-recovery.sh /path/to/new-recovery-check`.
