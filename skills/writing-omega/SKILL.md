@@ -22,12 +22,14 @@ For compiler internals, register rules, wire formats and the reasons behind each
 The language reference is normative. Where this guide and OMEGESE disagree, the compiler at the pin
 decides; this guide records the known disagreements.
 
-The pin above is not the only compiler in use. Drake's pure-Omega directive of 2026-11-07 and the
-omega MCP server (`compiler_sha256` in a `compile` result, checked 2026-11-07) both use omega-mv
-`e5b32567`, omc sha256 `2c82480596bbdc50cda9626866209ef662d5834f278f839ff4ce0250c495029f`. Loop
-bounds differ between the two pins:
+The pin above is not the only compiler in use. The running omega MCP server
+(`compiler_sha256` in a `compile` result, checked 2026-11-07) uses omega-mv
+`e5b32567`, omc sha256 `2c82480596bbdc50cda9626866209ef662d5834f278f839ff4ce0250c495029f`.
+Drake's pure-Omega directive of 2026-11-07 does not name that compiler. It says to compile with
+the owning repository's pinned seeded omc. Loop bounds differ between the running MCP compiler
+and the pin above:
 
-| Program | omc `2c824805` (e5b32567, directive and MCP) | omc `3ad9f10f` (f4df8239) |
+| Program | omc `2c824805` (e5b32567, running MCP) | omc `3ad9f10f` (f4df8239) |
 |---|---|---|
 | `while C bound 999999` | compiles | compiles |
 | `while C bound 1000000`, `2000000`, `9223372036854775807` | error 8 | compiles |
@@ -205,14 +207,14 @@ A trap ends the process with exit status 100 + N. Output already written stays w
 ## 6. Loops and bounds
 
 - `while COND bound N` runs the body at most N times, N 1..9223372036854775807 (error 8 outside;
-  IR mode 1..1000000). At `e5b32567` (directive and MCP pin) N is 1..999999 and `bound 1000000`
+  IR mode 1..1000000). At `e5b32567` (the running MCP compiler) N is 1..999999 and `bound 1000000`
   is error 8. Without `bound` the limit is 1000000. One more pass traps 4. Choose N from
   an argument you can write down in a `note`, for example "every pass consumes at least one byte of
   a 65536-byte input".
 - `for i T K` runs i from 0 to K-1. A number K is unguarded. Any other K (a name or value) with no
   `bound` traps 4 (exit 104) after 1000000 passes, as a `while` with no bound. `for i T K bound N`
   takes the same N as `while`, caps every count and traps 4 when K exceeds N (`for_bound.om`,
-  `trap4_for_bound.om`). At `e5b32567` (omc `2c824805…`, the directive pin and the MCP pin as of
+  `trap4_for_bound.om`). At `e5b32567` (omc `2c824805…`, the running MCP compiler as of
   2026-11-07) `for ... bound` is error 5; omega-mcp #6 moved the MCP source to `f4df8239`, but the
   running server still reports `2c824805`, so check `compiler_sha256` before relying on it.
 - `break` and `continue` work in both loops. There is no `else if`: nest an `if` inside `else`.
@@ -433,6 +435,6 @@ arithmetic expectations are in [`examples/WOLFRAM.md`](../../examples/WOLFRAM.md
 - I/O: `stdin_count`, `echo_args`, `env_read`, `tmp_files`.
 - Traps: `trap1_overflow` .. `trap7_shift`, `trap_code`.
 - OM-2 and contracts: `om2_tour`, `om2_views`, `om2_hex_rotr`, `om2_part_trap`, `om2_param_slots`,
-  `contracts_ok`, `contract_requires`, `contract_ensures`, `contract_invariant`, `contract_release`.
+  `om2_word_plain`, `contracts_ok`, `contract_requires`, `contract_ensures`, `contract_invariant`, `contract_release`.
 - Regression guards: `empty_text_part`, `defect_keyword_prefix`.
 - Refusals: `err01_input` .. `err30_contract`, `mistake_*`.
