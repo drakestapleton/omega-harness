@@ -106,7 +106,7 @@ These host experiments do not qualify device execution or deployment.
 
 ## Check the examples yourself
 
-The examples run on Linux AArch64 hosts only. [`examples/`](examples/) holds 107 programs, each
+The examples run on Linux AArch64 hosts only. [`examples/`](examples/) holds 114 programs, each
 `NAME.om` with `NAME.expect` (and `NAME.stdout` when it prints): every trap, one refusal per error
 code, the common mistakes and the known defects. `examples/gate.sh` refuses any compiler but the
 pinned one, then compiles and runs every program here and in `skills/*/examples/`:
@@ -119,7 +119,7 @@ examples/gate.sh omega-src/seed/out/omc
 ```
 
 It prints `PASS name` or `FAIL name: reason` per program and ends with
-`GATE PASS examples=112 pass=112 fail=0 omc=3ad9f10f...` (exit 0), `GATE FAIL ...` (exit 1), or a hash
+`GATE PASS examples=119 pass=119 fail=0 omc=3ad9f10f...` (exit 0), `GATE FAIL ...` (exit 1), or a hash
 refusal (exit 2), for example `GATE FAIL omc sha256 b4f45121..., pinned 3ad9f10f... (omega-mv f4df8239...)`
 for the previous pin's compiler. The `omega-encoding` skill (section 0 and section 13) records the observed results
 and the negative controls; [`examples/WOLFRAM.md`](examples/WOLFRAM.md) records the Wolfram checks of

@@ -22,12 +22,11 @@ For compiler internals, register rules, wire formats and the reasons behind each
 The language reference is normative. Where this guide and OMEGESE disagree, the compiler at the pin
 decides; this guide records the known disagreements.
 
-The pin above is not the only compiler in use. The running omega MCP server
-(`compiler_sha256` in a `compile` result, checked 2026-11-07) uses omega-mv
-`e5b32567`, omc sha256 `2c82480596bbdc50cda9626866209ef662d5834f278f839ff4ce0250c495029f`.
-Drake's pure-Omega directive of 2026-11-07 does not name that compiler. It says to compile with
-the owning repository's pinned seeded omc. Loop bounds differ between the running MCP compiler
-and the pin above:
+A second compiler is in use beside this pin: the omega MCP server compiles with omega-mv `e5b32567`
+(omc sha256 `2c82480596bbdc50cda9626866209ef662d5834f278f839ff4ce0250c495029f`, the `compiler_sha256`
+of its `compile` result, checked 2026-11-07). New first-party code is compiled with the pinned omc of
+the repository that owns it (Drake's pure-Omega directive, 2026-11-07), which may be either one. The
+two compilers accept different loop bounds:
 
 | Program | omc `2c824805` (e5b32567, running MCP) | omc `3ad9f10f` (f4df8239) |
 |---|---|---|
@@ -387,7 +386,7 @@ Each row is a program in `examples/` with its observed refusal.
 | `free a` | nothing: no heap | error 9 | `mistake_free.om` |
 | `len = ...` | another name | error 16 | `mistake_reserved_name.om` |
 | `neg = ...` or `text neg "a"` | another name: `neg` is the negation word | error 16 | `mistake_neg_name.om` |
-| `fresh = ...` in an `om2` unit (also `out`, `seal`, `open`) | another name; these four are reserved only in OM-2 mode, so a small test without `om2` compiles and hides it. `view` and `edit` are error 16 in both modes; `layout` as a name is error 16 in neither: plain mode compiles it, OM-2 mode gives error 29 | error 16 | `mistake_om2_word_name.om`, `om2_word_plain.om` |
+| `fresh = ...` in an `om2` unit (also `out`, `seal`, `open`) | another name; these four are reserved only in OM-2 mode, so a small test without `om2` compiles and hides it. `view` and `edit` are error 16 in both modes. `layout` is not error 16 at all: plain mode compiles it and OM-2 mode refuses it with error 29 | error 16 | `mistake_om2_word_name.om`, `mistake_om2_word_out.om`, `mistake_om2_word_seal.om`, `mistake_om2_word_open.om`, `mistake_word_view.om`, `mistake_word_edit.om`, `mistake_om2_word_layout.om`, `om2_word_plain.om`, `layout_word_plain.om` |
 | a bare call `f 1` with a result | `v = f 1` | error 7 | `mistake_value_stmt.om` |
 | a 7th parameter | a struct or an array | error 9 | `mistake_seven_params.om` |
 | 2 `view T *` plus 3 scalars (7 slots) | a sized view, a struct, or fewer scalars | error 9 | `mistake_om2_param_slots.om` |
@@ -435,6 +434,7 @@ arithmetic expectations are in [`examples/WOLFRAM.md`](../../examples/WOLFRAM.md
 - I/O: `stdin_count`, `echo_args`, `env_read`, `tmp_files`.
 - Traps: `trap1_overflow` .. `trap7_shift`, `trap_code`.
 - OM-2 and contracts: `om2_tour`, `om2_views`, `om2_hex_rotr`, `om2_part_trap`, `om2_param_slots`,
-  `om2_word_plain`, `contracts_ok`, `contract_requires`, `contract_ensures`, `contract_invariant`, `contract_release`.
+  `om2_word_plain`, `layout_word_plain`, `contracts_ok`, `contract_requires`, `contract_ensures`,
+  `contract_invariant`, `contract_release`.
 - Regression guards: `empty_text_part`, `defect_keyword_prefix`.
 - Refusals: `err01_input` .. `err30_contract`, `mistake_*`.
