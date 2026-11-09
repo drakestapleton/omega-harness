@@ -16,8 +16,8 @@
 # Exit 0 only when every example passes; 1 on any failure; 2 on a usage or pin error.
 set -u
 
-PIN_REV=f4df82394e35893dcf1354dda69a2fe028d94bc1
-PIN_SHA=3ad9f10f64309e7acf8a725082b28e23a2a4aeb07e98322fb4dc0fcd8fc93194
+PIN_REV=7d9ed10fd7b7fc33d8bfc39435f3eea80ee55dea
+PIN_SHA=cfd96b48b0460ab5557853d6856f9c741b96ac8d0d624e06198defb4cbfa0d8a
 
 if [ "$#" -ne 1 ]; then
     echo "usage: $0 /path/to/omc   (omega-mv $PIN_REV seed/out/omc)" >&2
