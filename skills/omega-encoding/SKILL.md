@@ -2256,8 +2256,9 @@ are `seed/omc/omc.om` at `9920aab1`.
   traps of section 11b (exit 20, `omc: line 8: error 7`, `omc: line 5: error 12`).
 
 Each carries `.expect` (and `fnv1a32` also `.stdin` `abc` and the 4 expected bytes in `.stdout`) and
-runs in [`examples/gate.sh`](../../examples/gate.sh) with the 114 programs in the repository's
-`examples/` directory; section 0 records the `e5b32567` rerun of every row below. The portable guide
+runs in [`examples/gate.sh`](../../examples/gate.sh) with the 115 programs in the repository's
+`examples/` directory. The gate runs only under the section 0 compiler (`f4df8239`); the observations
+below keep their own dates and compiler hashes. The portable guide
 for writing a first program is [`skills/writing-omega/SKILL.md`](../writing-omega/SKILL.md).
 
 Observed on 2026-10-25, Linux AArch64 host only, compiler sha256 `734f0a39...6b61`:

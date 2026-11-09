@@ -95,7 +95,8 @@ end
 - A function may call a function defined later in the unit, and program-mode functions may recurse.
 - Top-level lines are `note`, `fn`, `text`, `global`, `const`, `struct`, and in OM-2 units
   `layout`, `abstract`, `holds` and `export fn`. `struct` and `layout` lines come before the first
-  `fn` (error 9 after it). A `const` is visible only after its line.
+  `fn`: a `struct` after it is error 9, a `layout` after it is error 29. A `const` is visible only
+  after its line.
 
 Every declaration and statement form at the pin (OMEGESE sections 9 to 12 are the full rules):
 
@@ -342,7 +343,7 @@ with its exact stderr line in the matching `.expect`, except 24, which needs a g
 | 26 | never emitted at the pin | none | none |
 | 27 | OM-2 `fresh` element read before it is written | `err27_fresh` | `put` every element before the `get` |
 | 28 | OM-2 `seal` outside the constructor | `err28_seal` | `seal` only as the whole body of `fn NAMEmk ... to NAME` |
-| 29 | OM-2 `layout` field past the size or overlapping | `err29_layout` | keep every field inside SIZE and apart |
+| 29 | OM-2 `layout` refused: a field past the size or overlapping another, a SIZE outside 1..4096, or a `layout` line after the first `fn` | `err29_layout`, `mistake_om2_layout_late` | keep every field inside SIZE and apart; put every `layout` above the first `fn` |
 | 30 | OM-2 contract clause not allowed | `err30_contract` | integer words on parameters only (and `result` in `ensures`); no calls, floats or host words |
 
 How the emitted set was established at the pin: in `seed/omc/omc.om`, `fn fail` (line 324) writes
@@ -386,7 +387,8 @@ Each row is a program in `examples/` with its observed refusal.
 | `free a` | nothing: no heap | error 9 | `mistake_free.om` |
 | `len = ...` | another name | error 16 | `mistake_reserved_name.om` |
 | `neg = ...` or `text neg "a"` | another name: `neg` is the negation word | error 16 | `mistake_neg_name.om` |
-| `fresh = ...` in an `om2` unit (also `out`, `seal`, `open`) | another name; these four are reserved only in OM-2 mode, so a small test without `om2` compiles and hides it. `view` and `edit` are error 16 in both modes. `layout` is not error 16 at all: plain mode compiles it and OM-2 mode refuses it with error 29 | error 16 | `mistake_om2_word_name.om`, `mistake_om2_word_out.om`, `mistake_om2_word_seal.om`, `mistake_om2_word_open.om`, `mistake_word_view.om`, `mistake_word_edit.om`, `mistake_om2_word_layout.om`, `om2_word_plain.om`, `layout_word_plain.om` |
+| `fresh = ...` in an `om2` unit (also `out`, `seal`, `open`) | another name; these four are reserved only in OM-2 mode, so a small test without `om2` compiles and hides it. `view` and `edit` are error 16 in both modes. `layout` is not error 16 at all: plain mode compiles it, and in OM-2 mode a line that starts with `layout` is read as a layout declaration, which inside a function sits after the first `fn` and so is error 29 | error 16 | `mistake_om2_word_name.om`, `mistake_om2_word_out.om`, `mistake_om2_word_seal.om`, `mistake_om2_word_open.om`, `mistake_word_view.om`, `mistake_word_edit.om`, `mistake_om2_word_layout.om`, `om2_word_plain.om`, `layout_word_plain.om` |
+| `layout NAME SIZE` block written below `main` or another `fn` | move the block above the first `fn` (a `struct` there is error 9 instead) | error 29 on the `layout` line | `mistake_om2_layout_late.om` |
 | a bare call `f 1` with a result | `v = f 1` | error 7 | `mistake_value_stmt.om` |
 | a 7th parameter | a struct or an array | error 9 | `mistake_seven_params.om` |
 | 2 `view T *` plus 3 scalars (7 slots) | a sized view, a struct, or fewer scalars | error 9 | `mistake_om2_param_slots.om` |
