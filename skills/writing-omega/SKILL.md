@@ -343,7 +343,7 @@ with its exact stderr line in the matching `.expect`, except 24, which needs a g
 | 26 | never emitted at the pin | none | none |
 | 27 | OM-2 `fresh` element read before it is written | `err27_fresh` | `put` every element before the `get` |
 | 28 | OM-2 `seal` outside the constructor | `err28_seal` | `seal` only as the whole body of `fn NAMEmk ... to NAME` |
-| 29 | OM-2 `layout` refused: a field past the size or overlapping another, a SIZE outside 1..4096, or a `layout` line after the first `fn` | `err29_layout`, `mistake_om2_layout_late` | keep every field inside SIZE and apart; put every `layout` above the first `fn` |
+| 29 | OM-2 `layout` refused (omc.om `s_layout`, `ly_num`, `ly_field`, `ly_mark`): a `layout` line after the first `fn`; a SIZE outside 1..4096; a field COUNT outside 1..4096 (a written 0 included); a field that starts or ends past SIZE; two fields sharing a byte. A SIZE, COUNT or OFF written as 2^64 or more is error 8 instead | `err29_layout`, `mistake_om2_layout_late`, `mistake_om2_layout_zero_count` | put every `layout` above the first `fn`; SIZE 1..4096; leave COUNT out for one element or give 1..4096; keep every field inside SIZE and apart |
 | 30 | OM-2 contract clause not allowed | `err30_contract` | integer words on parameters only (and `result` in `ensures`); no calls, floats or host words |
 
 How the emitted set was established at the pin: in `seed/omc/omc.om`, `fn fail` (line 324) writes
@@ -389,6 +389,7 @@ Each row is a program in `examples/` with its observed refusal.
 | `neg = ...` or `text neg "a"` | another name: `neg` is the negation word | error 16 | `mistake_neg_name.om` |
 | `fresh = ...` in an `om2` unit (also `out`, `seal`, `open`) | another name; these four are reserved only in OM-2 mode, so a small test without `om2` compiles and hides it. `view` and `edit` are error 16 in both modes. `layout` is not error 16 at all: plain mode compiles it, and in OM-2 mode a line that starts with `layout` is read as a layout declaration, which inside a function sits after the first `fn` and so is error 29 | error 16 | `mistake_om2_word_name.om`, `mistake_om2_word_out.om`, `mistake_om2_word_seal.om`, `mistake_om2_word_open.om`, `mistake_word_view.om`, `mistake_word_edit.om`, `mistake_om2_word_layout.om`, `om2_word_plain.om`, `layout_word_plain.om` |
 | `layout NAME SIZE` block written below `main` or another `fn` | move the block above the first `fn` (a `struct` there is error 9 instead) | error 29 on the `layout` line | `mistake_om2_layout_late.om` |
+| `field tag uchar 0 at 0 little` (COUNT 0) | leave COUNT out for one element, or give 1..4096 | error 29 on the `field` line | `mistake_om2_layout_zero_count.om` |
 | a bare call `f 1` with a result | `v = f 1` | error 7 | `mistake_value_stmt.om` |
 | a 7th parameter | a struct or an array | error 9 | `mistake_seven_params.om` |
 | 2 `view T *` plus 3 scalars (7 slots) | a sized view, a struct, or fewer scalars | error 9 | `mistake_om2_param_slots.om` |
