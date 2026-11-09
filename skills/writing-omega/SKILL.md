@@ -22,10 +22,28 @@ For compiler internals, register rules, wire formats and the reasons behind each
 The language reference is normative. Where this guide and OMEGESE disagree, the compiler at the pin
 decides; this guide records the known disagreements.
 
+A second compiler is in use beside this pin: the omega MCP server compiles with omega-mv `e5b32567`
+(omc sha256 `2c82480596bbdc50cda9626866209ef662d5834f278f839ff4ce0250c495029f`, the `compiler_sha256`
+of its `compile` result, checked 2026-11-07). New first-party code is compiled with the pinned omc of
+the repository that owns it (Drake's pure-Omega directive, 2026-11-07), which may be either one. The
+two compilers accept different loop bounds:
+
+| Program | omc `2c824805` (e5b32567, running MCP) | omc `3ad9f10f` (f4df8239) |
+|---|---|---|
+| `while C bound 999999` | compiles | compiles |
+| `while C bound 1000000`, `2000000`, `9223372036854775807` | error 8 | compiles |
+| `while C bound 0` | error 8 | error 8 |
+| `for i ulong 3 bound 10` (any `for ... bound`) | error 5 | compiles |
+| `while` with no bound, 1000001 passes | trap 4 (exit 104) | trap 4 (exit 104) |
+
+Same on both: a global array of 16777216 elements compiles and 16777217 is error 23; a `for` count of
+another type needs a cast (`for i ulong e` with `e = int 4` is error 7, `for i ulong ulong e` runs).
+At `e5b32567`, write `while C bound N` with N at most 999999 and no `for ... bound`.
+
 ## 1. Compile and run
 
 ```sh
-git clone https://github.com/aien-dev/omega-mv && cd omega-mv
+git clone rad://z6do9WDBhuSnvopDkgFdFr1yWA62 omega-mv && cd omega-mv
 git checkout f4df82394e35893dcf1354dda69a2fe028d94bc1
 sha256sum seed/out/omc      # must print the pinned hash
 sh seed/omega-from-seed.sh  # optional: rebuild omc from the 408-byte loader
@@ -77,7 +95,8 @@ end
 - A function may call a function defined later in the unit, and program-mode functions may recurse.
 - Top-level lines are `note`, `fn`, `text`, `global`, `const`, `struct`, and in OM-2 units
   `layout`, `abstract`, `holds` and `export fn`. `struct` and `layout` lines come before the first
-  `fn` (error 9 after it). A `const` is visible only after its line.
+  `fn`: a `struct` after it is error 9, a `layout` after it is error 29. A `const` is visible only
+  after its line.
 
 Every declaration and statement form at the pin (OMEGESE sections 9 to 12 are the full rules):
 
@@ -103,7 +122,7 @@ Every declaration and statement form at the pin (OMEGESE sections 9 to 12 are th
 | `put A i v`, `put p f v` | function body | store into an array element or a field |
 | `f v1 v2 ...` | function body | a call to a `void` function |
 | `if C` ... `else` ... `end` | function body | `else` is optional; no `else if` |
-| `while C bound N` ... `end` | function body | N 1..9223372036854775807 (IR mode 1..1000000) |
+| `while C bound N` ... `end` | function body | N 1..9223372036854775807 (IR mode 1..1000000); at `e5b32567` N 1..999999 |
 | `for i T K` ... `end` | function body | `unroll` after K in OM-2, K 1..64 |
 | `break`, `continue` | inside a loop | |
 | `ret`, `ret v` | function body | `ret v` in a function with a result |
@@ -190,15 +209,20 @@ A trap ends the process with exit status 100 + N. Output already written stays w
 ## 6. Loops and bounds
 
 - `while COND bound N` runs the body at most N times, N 1..9223372036854775807 (error 8 outside;
-  IR mode 1..1000000). Without `bound` the limit is 1000000. One more pass traps 4. Choose N from
+  IR mode 1..1000000). At `e5b32567` (the running MCP compiler) N is 1..999999 and `bound 1000000`
+  is error 8. Without `bound` the limit is 1000000. One more pass traps 4. Choose N from
   an argument you can write down in a `note`, for example "every pass consumes at least one byte of
   a 65536-byte input".
 - `for i T K` runs i from 0 to K-1. A number K is unguarded. Any other K (a name or value) with no
   `bound` traps 4 (exit 104) after 1000000 passes, as a `while` with no bound. `for i T K bound N`
   takes the same N as `while`, caps every count and traps 4 when K exceeds N (`for_bound.om`,
-  `trap4_for_bound.om`). The MCP pin (`f4df8239`, omc `3ad9f10f…`, since omega-mcp #6) accepts
-  `for ... bound`; the previous MCP pin `e5b32567` (omc `2c824805…`) refused it with error 5.
+  `trap4_for_bound.om`). At `e5b32567` (omc `2c824805…`, the running MCP compiler as of
+  2026-11-07) `for ... bound` is error 5; omega-mcp #6 moved the MCP source to `f4df8239`, but the
+  running server still reports `2c824805`, so check `compiler_sha256` before relying on it.
 - `break` and `continue` work in both loops. There is no `else if`: nest an `if` inside `else`.
+- A bound is a trap, not a clamp. When the pass count follows outside input (a request, a file, a
+  database row), check the length before the loop or exit early below N; one long input otherwise
+  stops the process with trap 4 (`mistake_bound_input.om` exits 104, `bound_input_guard.om` exits 0).
 - No loop runs forever and recursion is bounded by the stack.
 
 ## 7. Arrays, texts, globals, structs
@@ -303,7 +327,7 @@ with its exact stderr line in the matching `.expect`, except 24, which needs a g
 | 5 | words left after a complete statement | `err05_extra_words` | count each word's values; there is no infix |
 | 6 | malformed number | `err06_bad_number` | decimal digits; hex only in OM-2, lowercase |
 | 7 | type mismatch | `err07_type_mismatch` | convert with a type word: `add int 1 int u` |
-| 8 | number out of range | `err08_out_of_range` | a literal that fits its type; a bound 1..9223372036854775807 (IR mode 1..1000000); a trap code 1..14 |
+| 8 | number out of range | `err08_out_of_range` | a literal that fits its type; a bound 1..9223372036854775807 (IR mode 1..1000000; 1..999999 at `e5b32567`); a trap code 1..14 |
 | 9 | a word in a place where it is not allowed | `err09_disallowed` | move it: `new` only in a function's outermost block, `struct` before the first `fn` |
 | 10 | duplicate name | `err10_duplicate` | choose a name that is not visible, not a function, not a struct |
 | 11 | a number with nothing to give it a type | `err11_ambiguous` | `x = uint 5` |
@@ -324,7 +348,7 @@ with its exact stderr line in the matching `.expect`, except 24, which needs a g
 | 26 | never emitted at the pin | none | none |
 | 27 | OM-2 `fresh` element read before it is written | `err27_fresh` | `put` every element before the `get` |
 | 28 | OM-2 `seal` outside the constructor | `err28_seal` | `seal` only as the whole body of `fn NAMEmk ... to NAME` |
-| 29 | OM-2 `layout` field past the size or overlapping | `err29_layout` | keep every field inside SIZE and apart |
+| 29 | OM-2 `layout` refused (omc.om `s_layout`, `ly_num`, `ly_field`, `ly_mark`): a `layout` line after the first `fn`; a SIZE outside 1..4096; a field COUNT outside 1..4096 (a written 0 included); a field that starts or ends past SIZE; two fields sharing a byte. A SIZE, COUNT or OFF written as 2^64 or more is error 8 instead | `err29_layout`, `mistake_om2_layout_late`, `mistake_om2_layout_zero_count` | put every `layout` above the first `fn`; SIZE 1..4096; leave COUNT out for one element or give 1..4096; keep every field inside SIZE and apart |
 | 30 | OM-2 contract clause not allowed | `err30_contract` | integer words on parameters only (and `result` in `ensures`); no calls, floats or host words |
 
 How the emitted set was established at the pin: in `seed/omc/omc.om`, `fn fail` (line 324) writes
@@ -362,12 +386,16 @@ Each row is a program in `examples/` with its observed refusal.
 | `return x` | `ret x` | error 18 (silent assignment) | `mistake_return.om` |
 | `else if c` | `else`, then a nested `if c` | error 5 | `mistake_else_if.om` |
 | `fn main argc int to int` | `argcnt`, `argread` | error 9 | `mistake_main_args.om` |
-| `while c bound 9223372036854775808` (or `bound 0`) | a bound 1..9223372036854775807 | error 8 | `mistake_bound_range.om` |
+| `while c bound 9223372036854775808` (or `bound 0`; at `e5b32567` also `bound 1000000`) | a bound 1..9223372036854775807 (1..999999 at `e5b32567`) | error 8 | `mistake_bound_range.om` |
 | `ir` unit with `while c bound 1000001` | an IR bound 1..1000000 | error 8 | `mistake_ir_bound.om` |
+| a scan `while lt q e bound 70` where `e` comes from outside input (111 letters) | a length check before the loop, or an early exit below the bound (`if gt q 64` / `ret 0`) | trap 4, exit 104 (a run, not a compile refusal) | `mistake_bound_input.om`, `bound_input_guard.om` |
 | `a = new uchar n 0` | a literal or `const` length | error 16 | `mistake_new_var_len.om` |
 | `free a` | nothing: no heap | error 9 | `mistake_free.om` |
 | `len = ...` | another name | error 16 | `mistake_reserved_name.om` |
 | `neg = ...` or `text neg "a"` | another name: `neg` is the negation word | error 16 | `mistake_neg_name.om` |
+| `fresh = ...` in an `om2` unit (also `out`, `seal`, `open`) | another name; these four are reserved only in OM-2 mode, so a small test without `om2` compiles and hides it. `view` and `edit` are error 16 in both modes. `layout` is not error 16 at all: plain mode compiles it, and in OM-2 mode a line that starts with `layout` is read as a layout declaration, which inside a function sits after the first `fn` and so is error 29 | error 16 | `mistake_om2_word_name.om`, `mistake_om2_word_out.om`, `mistake_om2_word_seal.om`, `mistake_om2_word_open.om`, `mistake_word_view.om`, `mistake_word_edit.om`, `mistake_om2_word_layout.om`, `om2_word_plain.om`, `layout_word_plain.om` |
+| `layout NAME SIZE` block written below `main` or another `fn` | move the block above the first `fn` (a `struct` there is error 9 instead) | error 29 on the `layout` line | `mistake_om2_layout_late.om` |
+| `field tag uchar 0 at 0 little` (COUNT 0) | leave COUNT out for one element, or give 1..4096 | error 29 on the `field` line | `mistake_om2_layout_zero_count.om` |
 | a bare call `f 1` with a result | `v = f 1` | error 7 | `mistake_value_stmt.om` |
 | a 7th parameter | a struct or an array | error 9 | `mistake_seven_params.om` |
 | 2 `view T *` plus 3 scalars (7 slots) | a sized view, a struct, or fewer scalars | error 9 | `mistake_om2_param_slots.om` |
@@ -415,6 +443,7 @@ arithmetic expectations are in [`examples/WOLFRAM.md`](../../examples/WOLFRAM.md
 - I/O: `stdin_count`, `echo_args`, `env_read`, `tmp_files`.
 - Traps: `trap1_overflow` .. `trap7_shift`, `trap_code`.
 - OM-2 and contracts: `om2_tour`, `om2_views`, `om2_hex_rotr`, `om2_part_trap`, `om2_param_slots`,
-  `contracts_ok`, `contract_requires`, `contract_ensures`, `contract_invariant`, `contract_release`.
-- Regression guards: `empty_text_part`, `defect_keyword_prefix`.
+  `om2_word_plain`, `layout_word_plain`, `contracts_ok`, `contract_requires`, `contract_ensures`,
+  `contract_invariant`, `contract_release`.
+- Regression guards: `empty_text_part`, `defect_keyword_prefix`, `bound_input_guard`.
 - Refusals: `err01_input` .. `err30_contract`, `mistake_*`.
