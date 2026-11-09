@@ -36,16 +36,19 @@ firmware vendor/revision, SMBIOS copy). `omc.om` went from 510 to 511 `^fn ` lin
 
 Observed 2026-11-05 on a Linux AArch64 host in a clean detached worktree at main `2a1e6d29`:
 `sh seed/omega-from-seed.sh` printed `RC=0` and left `seed/out/omc` at exactly `3ad9f10f…3194`.
-That rerun is history for the example gate. The example gate now uses the pending compiler below.
+That rerun is history for the example gate. The example gate now uses the execenv compiler below.
 
-### Example gate pin (pending omega-mv#1074, not merged main)
+### Example gate pin (omega-mv#1074 execenv reseed)
 
 `examples/gate.sh` pins omega-mv `7d9ed10fd7b7fc33d8bfc39435f3eea80ee55dea`, `seed/out/omc` sha256
 `cfd96b48b0460ab5557853d6856f9c741b96ac8d0d624e06198defb4cbfa0d8a`. That is the execenv reseed. The
-same omc blob is at #1074 heads `5d288784` and `88282ecd`. It is not on origin/main
-(`943d955531b9d4d9f70deb41756c0b46441dd5e0`, omc `5f90edea…`). The MCP pin above refuses
-`examples/execenv.om` with `omc: line 63: error 3`. Rechecked 2026-11-08, Linux AArch64:
-`GATE PASS examples=111 pass=111 fail=0` at `cfd96b48`; the same gate on `5f90edea` or `3ad9f10f` exits 2.
+same omc blob is at #1074 heads `5d288784` and `88282ecd`. #1074 merged on Radicle omega-mv main as
+`6efc45728d5080b0fc5d74016a00ba8bbfcf9698` (2026-11-07); the GitHub mirror's main is still
+`943d955531b9d4d9f70deb41756c0b46441dd5e0` (omc `5f90edea…`). Radicle main has since reseeded to omc
+`0f2de85153b07656f4b992d101272987fe6ed1eee471ef70b132a37f5ba6b02f` at `0062602e` (2026-11-08), so
+main's own compiler is not the gate pin. The MCP pin above refuses `examples/execenv.om` with
+`omc: line 63: error 3`. Rechecked 2026-11-08, Linux AArch64: `GATE PASS examples=111 pass=111 fail=0`
+at `cfd96b48`; the same gate on `5f90edea` or `3ad9f10f` exits 2, and on `0f2de851` (2026-11-09) also exits 2.
 
 ### Previous pin `d3d1b1bc` (checked 2026-11-04, history)
 
@@ -1467,8 +1470,8 @@ the `target x86linux` build gives the same PASS line with exit 0 under `qemu-x86
 and `peername = int 1` as a one-line unit is `omc: line 1: error 16`. This supersedes the pending
 candidate notes of harness draft #108 (candidate omc `4ef67f18`/`6a2916cd`).
 
-**`execenv` (pending [omega-mv#1074](https://github.com/aien-dev/omega-mv/pull/1074), omc `cfd96b48…`;
-the MCP pin refuses it with error 3).** `r = execenv A off n B off m` (keyword 233) is `execprog A off n`
+**`execenv` ([omega-mv#1074](https://github.com/aien-dev/omega-mv/pull/1074), merged on Radicle main `6efc4572`
+2026-11-07, omc `cfd96b48…`; the MCP pin refuses it with error 3).** `r = execenv A off n B off m` (keyword 233) is `execprog A off n`
 with a private environment: the child's environment is exactly packet B, packed like argv (u16 count
 1..64, nonempty u16-length `NAME=VALUE` records, 2..4096 bytes, no zero byte, no trailing bytes). Both
 packets are checked (trap 3, exit 103) before descriptors 3 and up close; it returns only on failure,

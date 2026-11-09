@@ -15,7 +15,7 @@ For compiler internals, register rules, wire formats and the reasons behind each
 
 | Pin | Value |
 |---|---|
-| example-gate omega-mv commit | `7d9ed10fd7b7fc33d8bfc39435f3eea80ee55dea` (pending omega-mv#1074; not origin/main) |
+| example-gate omega-mv commit | `7d9ed10fd7b7fc33d8bfc39435f3eea80ee55dea` (omega-mv#1074; merged on Radicle main `6efc4572`, 2026-11-07; GitHub main `943d9555` lacks it, GitHub branch `hive/execprog-env` has it) |
 | example-gate `seed/out/omc` | sha256 `cfd96b48b0460ab5557853d6856f9c741b96ac8d0d624e06198defb4cbfa0d8a` |
 | MCP pin (refuses `execenv`) | `f4df82394e35893dcf1354dda69a2fe028d94bc1`, omc `3ad9f10f64309e7acf8a725082b28e23a2a4aeb07e98322fb4dc0fcd8fc93194` |
 | language reference | `docs/one_layer/OMEGESE.md` at the MCP pin; `execenv` contract is `seed/host/execenv/README.md` at `7d9ed10f` |
@@ -29,7 +29,7 @@ decides; this guide records the known disagreements.
 ```sh
 git clone https://github.com/aien-dev/omega-mv && cd omega-mv
 git checkout 7d9ed10fd7b7fc33d8bfc39435f3eea80ee55dea
-sha256sum seed/out/omc      # must print cfd96b48…; this commit is not on origin/main until omega-mv#1074 merges
+sha256sum seed/out/omc      # must print cfd96b48…; main's later omc (0f2de851… at Radicle main 0062602e) is refused by the gate
 sh seed/omega-from-seed.sh  # optional: rebuild omc from the 408-byte loader
 seed/out/omc < prog.om > prog; echo "compile $?"
 chmod +x prog && ./prog; echo "exit $?"
@@ -273,13 +273,14 @@ Examples: [`om2_tour.om`](../../examples/om2_tour.om), [`om2_views.om`](../../ex
   `envread` ([`examples/env_read.om`](../../examples/env_read.om)). Short capacity returns -105.
 - Host words carry the process's own permissions; they are not a sandbox.
 
-The table below lists 68 words. `execenv` is in that table and in the example-gate compiler only
-(omc `cfd96b48…`, omega-mv#1074). A call is error 3 on the MCP pin. Inside `fn main`, `execenv = int 1`
-compiles on the MCP pin and is error 16 on the example-gate compiler. OMEGESE section 10 has each contract.
+The table below lists 68 words. `execenv` is in that table and in compilers from omega-mv#1074 on
+(omc `cfd96b48…`, and Radicle main's later omc `0f2de851…`). A call is error 3 on the MCP pin. Inside
+`fn main`, `execenv = int 1` compiles on the MCP pin and is error 16 on `cfd96b48…` and `0f2de851…`.
+OMEGESE section 10 has each contract.
 `A` and `B` are `uchar` arrays, `off`, `n` and `capacity` are `ulong`, and descriptors, flags, modes
 and ids are `int`. A path is the slice `A off n`; a packed list is a `u16` count, then `u16`-length
-records. A reserved word used as a name inside `fn main` is error 16. `execenv` is reserved only at the example-gate pin. An unreserved name
-in the same program compiles.
+records. A reserved word used as a name inside `fn main` is error 16. `execenv` is not reserved at the
+MCP pin. An unreserved name in the same program compiles.
 
 | Area | Words |
 |---|---|

@@ -18,8 +18,8 @@ Companion skills in this package:
 - `omega-encoding`: the language the seeded compiler actually accepts, with verified examples.
 - `writing-omega`: the portable guide for writing a first correct `.om` program, backed by the tested
   programs in `examples/` and `examples/gate.sh`. The example gate pin is omega-mv `7d9ed10f` /
-  omc `cfd96b48` (pending omega-mv#1074, not merged main). The MCP pin remains `f4df8239` /
-  `3ad9f10f` until that compiler is on main.
+  omc `cfd96b48` (omega-mv#1074, merged on Radicle main `6efc4572` 2026-11-07; GitHub main lags).
+  The MCP pin is `f4df8239` / `3ad9f10f`, which refuses `execenv`.
 - `omega-communication`: status labels, reports, handoffs and corrections.
 - `aien-repositories`: what AIEN builds and which repository owns a task.
 

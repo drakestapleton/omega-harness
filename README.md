@@ -109,11 +109,13 @@ but the example-gate pin, then compiles and runs every program here and in `skil
 (5 more, 111 in all).
 
 The example gate requires omega-mv `7d9ed10fd7b7fc33d8bfc39435f3eea80ee55dea`, `seed/out/omc`
-sha256 `cfd96b48b0460ab5557853d6856f9c741b96ac8d0d624e06198defb4cbfa0d8a`, from pending
-omega-mv#1074. That commit is not on origin/main (`943d955531b9d4d9f70deb41756c0b46441dd5e0`,
-omc `5f90edea…`). A clone of main cannot satisfy this gate until #1074 merges. The MCP pin
-`f4df8239` / omc `3ad9f10f…` also refuses `examples/execenv.om` (`omc: line 63: error 3`).
-Do not merge this guide change before that compiler is on omega-mv main.
+sha256 `cfd96b48b0460ab5557853d6856f9c741b96ac8d0d624e06198defb4cbfa0d8a`, the execenv reseed of
+omega-mv#1074. #1074 merged on Radicle omega-mv main as `6efc45728d5080b0fc5d74016a00ba8bbfcf9698`
+(2026-11-07). The GitHub mirror's main is still `943d955531b9d4d9f70deb41756c0b46441dd5e0`
+(omc `5f90edea…`); GitHub carries `7d9ed10f` on branch `hive/execprog-env`. Main's own compiler is
+not the gate pin: Radicle main reseeded to omc `0f2de851…` at `0062602e` (2026-11-08), and the
+gate refuses it like any other hash, so check out `7d9ed10f` as below. The MCP pin `f4df8239` /
+omc `3ad9f10f…` refuses `examples/execenv.om` (`omc: line 63: error 3`).
 
 ```sh
 git clone https://github.com/aien-dev/omega-mv.git omega-src
@@ -124,8 +126,8 @@ examples/gate.sh omega-src/seed/out/omc
 
 It prints `PASS name` or `FAIL name: reason` per program and ends with
 `GATE PASS examples=111 pass=111 fail=0 omc=cfd96b48...` (exit 0), `GATE FAIL ...` (exit 1), or a hash
-refusal (exit 2). Pointing the gate at omc `5f90edea…` or omc `3ad9f10f…` exits 2. Rechecked
-2026-11-08 on Linux AArch64. The `omega-encoding` skill (section 0 and section 13) records the observed results
+refusal (exit 2). Pointing the gate at omc `5f90edea…` or omc `3ad9f10f…` exits 2 (rechecked
+2026-11-08), and so does Radicle main's omc `0f2de851…` (2026-11-09), all on Linux AArch64. The `omega-encoding` skill (section 0 and section 13) records the observed results
 and the negative controls; [`examples/WOLFRAM.md`](examples/WOLFRAM.md) records the Wolfram checks of
 the arithmetic expectations.
 
