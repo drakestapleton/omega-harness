@@ -766,7 +766,8 @@ Main has since moved to the x86 integration compiler `62775d2a...712b` and then 
 Re-check recipe (read only, in a fresh clone, never in a shared working tree another agent may be using):
 
 ```sh
-git clone --depth 1 https://github.com/aien-dev/omega-mv.git omega-src
+git clone rad://z6do9WDBhuSnvopDkgFdFr1yWA62 omega-src
+git -C omega-src checkout f4df82394e35893dcf1354dda69a2fe028d94bc1
 git -C omega-src rev-parse HEAD
 sha256sum omega-src/seed/omc/omc.om omega-src/seed/out/omc
 ```

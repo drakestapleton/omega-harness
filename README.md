@@ -11,7 +11,7 @@ Skills can't make agents flawless. What these do is turn the mistakes agents kee
 | [`omega-encoding`](skills/omega-encoding/SKILL.md) | The language the seeded compiler accepts: prefix words, types, traps, bounds, registers, host I/O, byte layouts, error codes, plus two runnable examples |
 | [`omega-communication`](skills/omega-communication/SKILL.md) | Status labels, reports, PR text, agent handoffs, receipts, wire formats, corrections |
 | [`aien-repositories`](skills/aien-repositories/SKILL.md) | What AIEN builds, who decides what, and which repository owns a task |
-| [`crumb-protocol`](skills/crumb-protocol/SKILL.md) | Directory coordination: read and respect crumbs, claim and release locks, keep committed crumbs fresh, answer `CRUMB-VERIFY` and `crumb-doctor` |
+| [`crumb-protocol`](skills/crumb-protocol/SKILL.md) | RETIRED 2026-11-07 (DRA-97): a stub only. Crumbs are history; claims go through CLAIMS.md under flock, the BOARD CLAIM line, kanban, spark-window and the pool locks |
 | [`wolfram-math`](skills/wolfram-math/SKILL.md) | Mandatory Wolfram for every computation: MCP setup an agent can do alone, verification calls, failure handling |
 | [`lean-verify`](skills/lean-verify/SKILL.md) | Machine-checked Lean 4 + Mathlib proofs of safety invariants over an explicit model through the `lean` MCP: when to use Lean versus Wolfram, the model-to-system link, no `sorry` or extra axioms |
 
@@ -28,8 +28,12 @@ For the documented method and systems-software case study, see Gregory M. Kurtze
 Clone the repository, then put the skill directories where your agent looks for skills:
 
 ```sh
-git clone https://github.com/aien-dev/omega-harness.git
+git clone rad://z39gvwWsnkRZsAConQLjaKiNVLHfW omega-harness
 ```
+
+Radicle is the canonical home (2026-11-07). The `aien-dev` GitHub organization is frozen; its
+`github.com/aien-dev/...` links below are historical citations of the commits they name, not live
+destinations.
 
 | Agent | Skill directory |
 |---|---|
@@ -108,7 +112,7 @@ code, the common mistakes and the known defects. `examples/gate.sh` refuses any 
 pinned one, then compiles and runs every program here and in `skills/*/examples/`:
 
 ```sh
-git clone https://github.com/aien-dev/omega-mv.git omega-src
+git clone rad://z6do9WDBhuSnvopDkgFdFr1yWA62 omega-src
 git -C omega-src checkout f4df82394e35893dcf1354dda69a2fe028d94bc1
 sha256sum omega-src/seed/out/omc   # 3ad9f10f64309e7acf8a725082b28e23a2a4aeb07e98322fb4dc0fcd8fc93194 at main f4df8239 (2026-11-05, #1022 efi 14); b4f45121... at the previous pin d3d1b1bc; be8c5130... at 9920aab1; 24caacf4... at 3a163bc5; 2aec185d... at 91c83438; 734f0a39... at the 2026-10-25 pin 55f9b0af
 examples/gate.sh omega-src/seed/out/omc
@@ -123,7 +127,7 @@ the arithmetic expectations.
 
 ## Keeping it current
 
-**The agent that makes a change updates the guides.** If your work changes the Omega language, the compiler or its pin, build or gate commands, the encoder or bridge, repository ownership or status, or this harness, update the matching skill in the same piece of work. Then open a PR here with the evidence. If you can't, open an issue saying what is now stale. `omega-harness` section 6 has the full map of which change goes in which skill.
+**The agent that makes a change updates the guides.** If your work changes the Omega language, the compiler or its pin, build or gate commands, the encoder or bridge, repository ownership or status, or this harness, update the matching skill in the same piece of work. Then contribute it as a Radicle patch: hand the desk a READY file with the evidence (base, head, bundle, gate logs, negative control); the Radicle publishing lane opens the patch and the desk merges it. Never push to github.com. If you can't, give the desk a note saying what is now stale. `omega-harness` section 6 has the full map of which change goes in which skill.
 
 Each skill names the omega-mv commit it was checked against and lists known disagreements. Historical sections retain their dated pins. `omega-encoding` section 0 adds scoped pins for the IR/wasm backend, the merged Omega 1.0 roadmap, and main `91b3c932` (compiler `189ada82…3b54`): executable contracts, expanded capacity and the f32 return fix. The batch has host evidence, not GPU qualification. When the compiler changes, recheck cited lines, rerun examples, then update pins. Do not edit old evidence. Contributions follow the [shared AIEN agent rules](https://www.aienos.com/agents/RULES.md).
 
