@@ -1314,13 +1314,14 @@ given. It prints one token:
 
 Capacities are 65535 bytes, 4095 lines, 16383 tokens, 63-byte tokens and 128 functions. The rules:
 
-- **B1:** a `while` has `bound N` with N ≤ 8192. A `for` count is a literal, a `const`, `len X`, or carries `bound`.
+- **B1:** a `while` needs `bound N`. A `for` count is a literal, a `const`, `len X` of a declared array, or carries `bound N`. The resolved count or explicit bound must be at most 8192.
 - **B2:** recursion is allowed only in qualified form. Every function on a cycle takes `depth` first, never assigns it and has no `new`.
   - An in-cycle call passes `depth`, or a name guarded by `NAME = add depth 1` / `if gt NAME LIM` (LIM ≤ 64) / an optional call to a unit function / `ret`, `exit` or `trap` / `end`.
   - The stop must close the guard's then-block. An `else` or any other block line inside the guard is refused.
   - The assignment and the call must sit in the same block instance. No line between them may leave that block or start its `else` arm; equal nesting depth alone is not enough.
   - An entry from outside the cycle passes a literal or `const` ≤ 64.
   - The omc/DRA-311 leaf removal then runs over the remaining edges.
+- **B3:** each `global` and each `new` has at most 65536 elements. All globals together occupy at most 65536 bytes. The `new` allocations total at most 65536 bytes per function and at most 65536 bytes across the unit.
 - **E1:** an assigned call or host result is read before it is reassigned or the function returns. The exemption is `note p10 allow E1 <reason>` on the line before.
 - **X1:** host words appear only in a function preceded by `note p10 effect`.
 - **P1:** a function preceded by `note p10 pure` has no `put` and calls only pure functions.
@@ -1334,7 +1335,7 @@ runs these checks and prints `PROFILE CHECK PASS` (exit 0), `PROFILE CHECK FAIL 
 or `NOT_RUN …` (exit 3, wrong or missing omc):
 
 - the 53 fixture, capacity and stop rows;
-- one killed `profile.om` mutant per rule, plus three more for B2 (guard structure and `=`-less assignment);
+- 11 killed `profile.om` mutants with 11 passing controls: five B2 mutants (guard limit, leaf removal, guard structure, block identity and `=`-less assignment), plus one for each other rule;
 - the profile of the `seed/authority` unit (`action`, `store`, `lock`, `dispatch`);
 - the authority gates, including `dispatch-fault-gate`;
 - negative controls with the pre-fix modules.
