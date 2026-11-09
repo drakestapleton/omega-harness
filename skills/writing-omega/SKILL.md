@@ -218,6 +218,9 @@ A trap ends the process with exit status 100 + N. Output already written stays w
   2026-11-07) `for ... bound` is error 5; omega-mcp #6 moved the MCP source to `f4df8239`, but the
   running server still reports `2c824805`, so check `compiler_sha256` before relying on it.
 - `break` and `continue` work in both loops. There is no `else if`: nest an `if` inside `else`.
+- A bound is a trap, not a clamp. When the pass count follows outside input (a request, a file, a
+  database row), check the length before the loop or exit early below N; one long input otherwise
+  stops the process with trap 4 (`mistake_bound_input.om` exits 104, `bound_input_guard.om` exits 0).
 - No loop runs forever and recursion is bounded by the stack.
 
 ## 7. Arrays, texts, globals, structs
@@ -383,6 +386,7 @@ Each row is a program in `examples/` with its observed refusal.
 | `fn main argc int to int` | `argcnt`, `argread` | error 9 | `mistake_main_args.om` |
 | `while c bound 9223372036854775808` (or `bound 0`; at `e5b32567` also `bound 1000000`) | a bound 1..9223372036854775807 (1..999999 at `e5b32567`) | error 8 | `mistake_bound_range.om` |
 | `ir` unit with `while c bound 1000001` | an IR bound 1..1000000 | error 8 | `mistake_ir_bound.om` |
+| a scan `while lt q e bound 70` where `e` comes from outside input (111 letters) | a length check before the loop, or an early exit below the bound (`if gt q 64` / `ret 0`) | trap 4, exit 104 (a run, not a compile refusal) | `mistake_bound_input.om`, `bound_input_guard.om` |
 | `a = new uchar n 0` | a literal or `const` length | error 16 | `mistake_new_var_len.om` |
 | `free a` | nothing: no heap | error 9 | `mistake_free.om` |
 | `len = ...` | another name | error 16 | `mistake_reserved_name.om` |
@@ -439,5 +443,5 @@ arithmetic expectations are in [`examples/WOLFRAM.md`](../../examples/WOLFRAM.md
 - OM-2 and contracts: `om2_tour`, `om2_views`, `om2_hex_rotr`, `om2_part_trap`, `om2_param_slots`,
   `om2_word_plain`, `layout_word_plain`, `contracts_ok`, `contract_requires`, `contract_ensures`,
   `contract_invariant`, `contract_release`.
-- Regression guards: `empty_text_part`, `defect_keyword_prefix`.
+- Regression guards: `empty_text_part`, `defect_keyword_prefix`, `bound_input_guard`.
 - Refusals: `err01_input` .. `err30_contract`, `mistake_*`.

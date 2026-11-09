@@ -370,7 +370,12 @@ binary printed
 `GATE PASS examples=110 pass=110 fail=0 omc=3ad9f10f64309e7acf8a725082b28e23a2a4aeb07e98322fb4dc0fcd8fc93194`
 (exit 0) on 2026-11-05, Linux AArch64. Negative control: the gate pointed at the previous omc
 `b4f45121…9b55` was refused with exit 2 (`GATE FAIL omc sha256 b4f45121…, pinned 3ad9f10f…
-(omega-mv f4df8239…)`). The section below is the previous pin.
+(omega-mv f4df8239…)`). On 2026-11-09 two examples were added (`examples/mistake_bound_input.om`,
+`examples/bound_input_guard.om`, section 8) and the same gate against the same binary printed
+`GATE PASS examples=123 pass=123 fail=0 omc=3ad9f10f…` (exit 0); with the three guard lines
+(`if gt q 64` / `ret 0` / `end`) removed from `bound_input_guard.om` it printed
+`FAIL examples/bound_input_guard: exit 104, expected 0` and `GATE FAIL examples=123 pass=122 fail=1`
+(exit 1). The section below is the previous pin.
 
 ### Rerun at omega-mv `d3d1b1bc` (2026-11-04, previous pin)
 
@@ -1294,6 +1299,14 @@ the bound ranges below are those of the pin `3a163bc5`, and the cited lines are 
 - `break` and `continue` (`omc` only, gate7); `continue` in a `while` re-runs the condition and bound.
 - Choose N from a proof, not a guess. Example: a read loop where every pass adds at least one byte to
   a 65536-byte buffer needs at most 65536 passes. Write that reasoning in a `note`.
+- A bound is a trap, not a clamp. When the pass count follows outside input (a request, a file, a
+  database row), the proof of N must come from a length check made before the loop, or from an early
+  exit inside it that fires below N; otherwise one long input stops the whole process with trap 4.
+  Observed with omc sha256 `3ad9f10f…` (omega-mv `f4df8239`) on 2026-11-09: a scan
+  `while lt q e bound 70` over 111 letters exits 104 (`examples/mistake_bound_input.om`); the same scan
+  with `if gt q 64` / `ret 0` / `end` at the top of the body exits 0 (`examples/bound_input_guard.om`).
+  A server that handles every request in one process (the forge's `forged`) exited 104 on one 30-digit
+  field in a status file until each line's shape was checked first.
 - No loop runs forever and recursion is bounded by the 8 MiB stack. A long-running service needs an
   explicit epoch/restart design, not a bigger bound.
 
@@ -2256,7 +2269,7 @@ are `seed/omc/omc.om` at `9920aab1`.
   traps of section 11b (exit 20, `omc: line 8: error 7`, `omc: line 5: error 12`).
 
 Each carries `.expect` (and `fnv1a32` also `.stdin` `abc` and the 4 expected bytes in `.stdout`) and
-runs in [`examples/gate.sh`](../../examples/gate.sh) with the 116 programs in the repository's
+runs in [`examples/gate.sh`](../../examples/gate.sh) with the 118 programs in the repository's
 `examples/` directory. The gate runs only under the section 0 compiler (`f4df8239`); the observations
 below keep their own dates and compiler hashes. The portable guide
 for writing a first program is [`skills/writing-omega/SKILL.md`](../writing-omega/SKILL.md).
