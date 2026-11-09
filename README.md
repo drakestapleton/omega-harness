@@ -11,7 +11,7 @@ Skills can't make agents flawless. What these do is turn the mistakes agents kee
 | [`omega-encoding`](skills/omega-encoding/SKILL.md) | The language the seeded compiler accepts: prefix words, types, traps, bounds, registers, host I/O, byte layouts, error codes, plus two runnable examples |
 | [`omega-communication`](skills/omega-communication/SKILL.md) | Status labels, reports, PR text, agent handoffs, receipts, wire formats, corrections |
 | [`aien-repositories`](skills/aien-repositories/SKILL.md) | What AIEN builds, who decides what, and which repository owns a task |
-| [`crumb-protocol`](skills/crumb-protocol/SKILL.md) | Directory coordination: read and respect crumbs, claim and release locks, keep committed crumbs fresh, answer `CRUMB-VERIFY` and `crumb-doctor` |
+| [`crumb-protocol`](skills/crumb-protocol/SKILL.md) | RETIRED 2026-11-07 (DRA-97): a stub only. Crumbs are history; claims go through CLAIMS.md under flock, the BOARD CLAIM line, kanban, spark-window and the pool locks |
 | [`wolfram-math`](skills/wolfram-math/SKILL.md) | Mandatory Wolfram for every computation: MCP setup an agent can do alone, verification calls, failure handling |
 | [`lean-verify`](skills/lean-verify/SKILL.md) | Machine-checked Lean 4 + Mathlib proofs of safety invariants over an explicit model through the `lean` MCP: when to use Lean versus Wolfram, the model-to-system link, no `sorry` or extra axioms |
 

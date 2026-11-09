@@ -41,8 +41,10 @@ Cannot check here:
 2. `skills/wolfram-math/SKILL.md` "Setup". It tells an agent to add an MCP server entry pointing
    at `https://agenttools.wolfram.com/mcp` and states that any credential is injected from a vault
    at launch and never written to a file. Check that no step leads an agent to store a token.
-3. `skills/crumb-protocol/SKILL.md`. Crumbs are public files; section 9 item 5 forbids secrets in
-   them. Check the rest of the skill does not contradict that.
+3. The `crumb-protocol` skill, at the revision described above. Crumbs are public files; section 9
+   item 5 forbids secrets in them. Check the rest of the skill does not contradict that. The skill
+   was retired on 2026-11-07 (DRA-97) and its path now holds only a RETIRED stub; read the audited
+   guide with `git show eb07daf4:skills/crumb-protocol/SKILL.md`.
 4. `skills/omega-encoding/examples/fnv1a32.om` (55 lines) and `trap_narrow.om` (9 lines). The first
    reads stdin with a partial-read loop into a bounded buffer and refuses 65536 bytes with exit 2;
    check the bound and the partial-read and partial-write handling. The second shows a narrowing
