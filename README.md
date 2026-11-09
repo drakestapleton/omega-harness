@@ -102,22 +102,30 @@ These host experiments do not qualify device execution or deployment.
 
 ## Check the examples yourself
 
-The examples run on Linux AArch64 hosts only. [`examples/`](examples/) holds 105 programs, each
+The examples run on Linux AArch64 hosts only. [`examples/`](examples/) holds 106 programs, each
 `NAME.om` with `NAME.expect` (and `NAME.stdout` when it prints): every trap, one refusal per error
-code, the common mistakes and the known defects. `examples/gate.sh` refuses any compiler but the
-pinned one, then compiles and runs every program here and in `skills/*/examples/`:
+code, the common mistakes, the known defects, and `execenv`. `examples/gate.sh` refuses any compiler
+but the example-gate pin, then compiles and runs every program here and in `skills/*/examples/`
+(5 more, 111 in all).
+
+The example gate requires omega-mv `7d9ed10fd7b7fc33d8bfc39435f3eea80ee55dea`, `seed/out/omc`
+sha256 `cfd96b48b0460ab5557853d6856f9c741b96ac8d0d624e06198defb4cbfa0d8a`, from pending
+omega-mv#1074. That commit is not on origin/main (`943d955531b9d4d9f70deb41756c0b46441dd5e0`,
+omc `5f90edea…`). A clone of main cannot satisfy this gate until #1074 merges. The MCP pin
+`f4df8239` / omc `3ad9f10f…` also refuses `examples/execenv.om` (`omc: line 63: error 3`).
+Do not merge this guide change before that compiler is on omega-mv main.
 
 ```sh
 git clone https://github.com/aien-dev/omega-mv.git omega-src
-git -C omega-src checkout f4df82394e35893dcf1354dda69a2fe028d94bc1
-sha256sum omega-src/seed/out/omc   # 3ad9f10f64309e7acf8a725082b28e23a2a4aeb07e98322fb4dc0fcd8fc93194 at main f4df8239 (2026-11-05, #1022 efi 14); b4f45121... at the previous pin d3d1b1bc; be8c5130... at 9920aab1; 24caacf4... at 3a163bc5; 2aec185d... at 91c83438; 734f0a39... at the 2026-10-25 pin 55f9b0af
+git -C omega-src checkout 7d9ed10fd7b7fc33d8bfc39435f3eea80ee55dea
+sha256sum omega-src/seed/out/omc   # cfd96b48b0460ab5557853d6856f9c741b96ac8d0d624e06198defb4cbfa0d8a
 examples/gate.sh omega-src/seed/out/omc
 ```
 
 It prints `PASS name` or `FAIL name: reason` per program and ends with
-`GATE PASS examples=110 pass=110 fail=0 omc=3ad9f10f...` (exit 0), `GATE FAIL ...` (exit 1), or a hash
-refusal (exit 2), for example `GATE FAIL omc sha256 b4f45121..., pinned 3ad9f10f... (omega-mv f4df8239...)`
-for the previous pin's compiler. The `omega-encoding` skill (section 0 and section 13) records the observed results
+`GATE PASS examples=111 pass=111 fail=0 omc=cfd96b48...` (exit 0), `GATE FAIL ...` (exit 1), or a hash
+refusal (exit 2). Pointing the gate at omc `5f90edea…` or omc `3ad9f10f…` exits 2. Rechecked
+2026-11-08 on Linux AArch64. The `omega-encoding` skill (section 0 and section 13) records the observed results
 and the negative controls; [`examples/WOLFRAM.md`](examples/WOLFRAM.md) records the Wolfram checks of
 the arithmetic expectations.
 

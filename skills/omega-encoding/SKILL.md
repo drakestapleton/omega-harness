@@ -36,7 +36,16 @@ firmware vendor/revision, SMBIOS copy). `omc.om` went from 510 to 511 `^fn ` lin
 
 Observed 2026-11-05 on a Linux AArch64 host in a clean detached worktree at main `2a1e6d29`:
 `sh seed/omega-from-seed.sh` printed `RC=0` and left `seed/out/omc` at exactly `3ad9f10f…3194`.
-The example gate result is in the "Rerun at omega-mv `f4df8239`" section.
+That rerun is history for the example gate. The example gate now uses the pending compiler below.
+
+### Example gate pin (pending omega-mv#1074, not merged main)
+
+`examples/gate.sh` pins omega-mv `7d9ed10fd7b7fc33d8bfc39435f3eea80ee55dea`, `seed/out/omc` sha256
+`cfd96b48b0460ab5557853d6856f9c741b96ac8d0d624e06198defb4cbfa0d8a`. That is the execenv reseed. The
+same omc blob is at #1074 heads `5d288784` and `88282ecd`. It is not on origin/main
+(`943d955531b9d4d9f70deb41756c0b46441dd5e0`, omc `5f90edea…`). The MCP pin above refuses
+`examples/execenv.om` with `omc: line 63: error 3`. Rechecked 2026-11-08, Linux AArch64:
+`GATE PASS examples=111 pass=111 fail=0` at `cfd96b48`; the same gate on `5f90edea` or `3ad9f10f` exits 2.
 
 ### Previous pin `d3d1b1bc` (checked 2026-11-04, history)
 
@@ -363,7 +372,7 @@ Every citation links to that commit: `https://github.com/aien-dev/omega-mv/blob/
 
 ### Rerun at omega-mv `f4df8239` (2026-11-05)
 
-The example gate pins `f4df82394e35893dcf1354dda69a2fe028d94bc1` (#1022), `seed/out/omc` sha256
+At this rerun the example gate pinned `f4df82394e35893dcf1354dda69a2fe028d94bc1` (#1022), `seed/out/omc` sha256
 `3ad9f10f64309e7acf8a725082b28e23a2a4aeb07e98322fb4dc0fcd8fc93194`, built from seed at main
 `2a1e6d29`. With only the pin moved and no expectation changed, `bash examples/gate.sh` against that
 binary printed
