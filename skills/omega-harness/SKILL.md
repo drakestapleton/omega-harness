@@ -936,15 +936,15 @@ rerun at that head.
 - `make test-checker2-owner-receipt` fails with UNTRUSTED_CHECKER on #885 because checker2's identity
   changed. Drake's YubiKey re-sign is needed (BLOCKED_OPERATOR).
 
-### ΩIR, Omega NG's intermediate form (PENDING omega-mv branches `ng/ir-m0`, `ng/ir-ngrun`, `ng/ir-rand`, `ng/opt-licm`)
+### ΩIR, Omega NG's intermediate form (PENDING omega-mv branches `ng/ir-rand`, `ng/opt-licm`)
 
-This section stays pending until branch `ng/ir-m0` (and `ng/ir-ngrun`, `ng/ir-rand`, then
-`ng/opt-licm`, stacked on it) merges on omega-mv (Hive NG lane ng-ir; not yet PRs because GitHub
-writes were suspended on 2026-11-07). Exercised at local heads `ee07085384c6a8cc99ce66aa9944e8347602f21a` (`ng/ir-m0`, the
-answer to the signed desk review MERGE_AFTER_FIX at `2f3f3d01`),
-`f73dc66de4502448d47bbd1c0ce8b2cf49bb43da` (`ng/ir-ngrun`),
-`39f04efc1` (`ng/ir-rand`, which fixes the f73dc66d review's P3 items forward) and `854d81521`
-(`ng/opt-licm`) on base `943d955531b9`, omc `5f90edea…6df`.
+`ng/ir-m0` (`ee070853`) and `ng/ir-ngrun` (`f73dc66d`) are merged on omega-mv's Radicle main
+(`99a40bb3`, `3c2ebe4d`). This section stays pending until `ng/ir-rand` and then `ng/opt-licm`
+(stacked on it) merge too (Hive NG lane ng-ir; Radicle, GitHub writes suspended since 2026-11-07).
+Exercised at local heads `f9761347c` (`ng/ir-rand`: `39f04efc` with factory bay 8's review fix and
+main merged in) and `ea8914fdb` (`ng/opt-licm`: `854d8152` with factory bay 4's fix, `ng/ir-rand`
+merged, the convergent-op fix, and the workflow file back to main's; the CI timeout for its long
+gate is the separate workflow branch `ng/ir-ci`), both on Radicle main `408c76b7`, omc `0f2de851…`.
 
 - Spec: `seed/ng/IR.md`. One binary form (`OSC1IR` v9, tag `omega.ng.ir.v1`) for CPU and GPU
   kernels; SSA values with block parameters; an ordering token that every check, effect and exit
@@ -973,29 +973,32 @@ answer to the signed desk review MERGE_AFTER_FIX at `2f3f3d01`),
   D9 differential source): `cat seed/ng/src/ir.om seed/ng/ngrand.om | seed/out/omc > ngrand`, then
   `ngrand SEED > u.ir`. Every choice is a tape byte and byte 0 is the smallest choice, so
   `ngrand shrink SEED STATUS OUT CMD [ARG...]` minimizes a unit while `CMD ARG... OUT` exits STATUS
-  (OUT.tape replays it with `ngrand tape FILE`). No floats in v1. On random units ngrun has no second
+  (OUT.tape replays it with `ngrand tape FILE`; the predicate runs at most 20001 times). No floats in v1. On random units ngrun has no second
   oracle (several ops ngrand emits have no run pair), so a back end's mismatch judges both sides.
 - `seed/ng/src/opt.om` (branch `ng/opt-licm`, unit between ir and main in `ng.units`) is the
   optimizer: `@ng opt` rewrites a unit (preheaders, bounds-check elimination to `fact.inbounds`
   origin 1, LICM of class P ops, loop rotation; IR.md s15.1) and `@ng opt-count` prints
-  `opt fns= loops= inloop=A->B bce= hoisted= merged= rotated= preheaders=`. No speed claim: the
-  gate checks ngcheck ACCEPT after opt, ngrun before == after and a fixed point.
+  `opt fns= loops= inloop=A->B bce= hoisted= merged= rotated= preheaders=`. LICM never moves the
+  convergent ops `sync`, `shfl`, `mmald`, `mmast`, `mma` (IR.md s7.12), and adds a preheader only
+  within the IR.md s12 limits. No speed claim: the gate checks ngcheck ACCEPT after opt, ngrun before
+  == after, a fixed point, and the opt-count row pinned on each `O NAME ROW` / `L NAME ROW` case line.
 - Gate: `cat seed/ng/sha256.om seed/ng/gate-ir.om | seed/out/omc > gate-ir`, then
   `gate-ir seed/out/omc SCRATCH` from the repository root: `NGIRGATE PASS cases=135` on `ng/ir-m0`,
-  `cases=164` on `ng/ir-ngrun`, `cases=186` on `ng/ir-rand`, `cases=213` on `ng/opt-licm` (39 min on one Spark core, most of it the L kernels) (R cases: `x-NAME.oir` under ngrun
+  `cases=164` on `ng/ir-ngrun`, `cases=188` on `ng/ir-rand`, `cases=217` on `ng/opt-licm` (about 40 min on one Spark core, most of it the L kernels) (R cases: `x-NAME.oir` under ngrun
   against `x-NAME.om` compiled by omc, exit/stdout/stderr equal at exact trap boundaries; N cases:
   `n-NAME.oir` under ngrun alone with STEPS 1000000, for semantics Omega cannot state). It
   compares whole output lines (the
   ACCEPT witness with counts from the fixture text; each tool's exact refusal line, empty stdout),
   runs `ng ir-copy` on every unit, generates inputs at the capacities, checks that ngbuild refuses a
   wrong pin, and counts a mutant kill only when its named check fails and its pattern occurs exactly
-  once: ngcheck typing, witness prefix, class name, nine ngrun mutants (fuel, rem MIN/-1, u64
-  chk.add/chk.mul, chk.shl low side, conv low bound, chk.bounds e = 0, narrow neg, depth cap),
-  ngrand token edge, and on `ng/opt-licm` four opt mutants (load hoisted, check hoisted, merge
-  ignoring imm, BCE one past its proof). From `ng/ir-rand` it also runs ngrand seeds 1..1000 (whole
+  once: ngcheck typing, witness prefix, class name, ten ngrun mutants (fuel, rem MIN/-1, u64
+  chk.add/chk.mul, chk.shl low side, conv low bound, chk.bounds e = 0, narrow neg, depth cap, step
+  limit one op late), ngrand token edge, and on `ng/opt-licm` five opt mutants (load hoisted, check
+  hoisted, merge ignoring imm, BCE one past its proof, `shfl` hoisted). From `ng/ir-rand` it also runs ngrand seeds 1..1000 (whole
   ACCEPT line, `ngas(ngdis(b)) == b`, ngrun ends cleanly) and one shrink; `ng/opt-licm` adds O/L
-  fixtures (L: long kernels, tens of minutes). HOST_TESTED on fresh clones, 2026-11-07: m0, ngrun and the
-  first ir-rand head on core 1, ir-rand `39f04efc` on core 10, opt-licm `854d8152` on core 11; CI NOT_RUN.
+  fixtures (L: long kernels, tens of minutes). HOST_TESTED on fresh clones: m0, ngrun and the
+  first ir-rand head on core 1, ir-rand `39f04efc` on core 10, opt-licm `854d8152` on core 11
+  (2026-11-07); ir-rand `f9761347` and opt-licm `30790c85` (the code of `ea8914fd`) on core 19 (2026-11-09); CI NOT_RUN.
 - The `ng` units are om2 (`at` is reserved; error 16) and are built only by
   `seed/ng/ngbuild.om` from the sha256-pinned list `seed/ng/ng.units`.
 
