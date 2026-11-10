@@ -1043,6 +1043,16 @@ gate is the separate workflow branch `ng/ir-ci`), both on Radicle main `408c76b7
   (2026-11-07); ir-rand `f9761347` and opt-licm `30790c85` (the code of `ea8914fd`) on core 19 (2026-11-09); CI NOT_RUN.
 - The `ng` units are om2 (`at` is reserved; error 16) and are built only by
   `seed/ng/ngbuild.om` from the sha256-pinned list `seed/ng/ng.units`.
+- PENDING, not merged (omega-mv branch `ham/ngbuild-self` `da12c2e6`, base main `a59a425b`): ngbuild
+  builds itself and every ng tool without `cat`. From the repository root:
+  `seed/out/omc < seed/ng/tests/ngbuild/gate.om > GATE && chmod +x GATE && ./GATE seed/out/omc SCRATCH`
+  (one omc input, no helper units; it first-births ngbuild, then ngbuild rebuilds itself from
+  `seed/ng/ngbuild.units`), then `SCRATCH/ngbuild build seed/out/omc seed/ng/TOOL.units OUT` for
+  TOOL in ng, ngas, ngbench, ngbuild, ngcheck, ngdis, ngrun, gate-ir. Rerun 2026-11-10 at that head,
+  omc `6d1b1cf5…`, Linux AArch64: 19 `PASS case` lines, `NGBUILDGATE PASS` (exit 0), and all eight
+  builds `ngbuild: OK` (exit 0). Negative control: a `.units` file with one pin altered exits 3,
+  `ngbuild: sha256 mismatch …`, and writes no output. Until it merges, main still builds with
+  `cat … | seed/out/omc` as above.
 
 ### ng AArch64 back end (`ng/a64-m2` MERGED on omega-mv main; PENDING `ng/slice-m1`, `ng/a64-rand`)
 
