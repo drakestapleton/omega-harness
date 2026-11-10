@@ -978,15 +978,15 @@ rerun at that head.
 - `make test-checker2-owner-receipt` fails with UNTRUSTED_CHECKER on #885 because checker2's identity
   changed. Drake's YubiKey re-sign is needed (BLOCKED_OPERATOR).
 
-### ΩIR, Omega NG's intermediate form (`ng/ir-rand` MERGED on omega-mv main; PENDING `ng/opt-licm`)
+### ΩIR, Omega NG's intermediate form (`ng/ir-rand` and `ng/opt-licm` MERGED on omega-mv main)
 
 `ng/ir-m0` (`ee070853`) and `ng/ir-ngrun` (`f73dc66d`) are merged on omega-mv's Radicle main
-(`99a40bb3`, `3c2ebe4d`). `ng/ir-rand` (`f9761347`) followed as `56b317ac` (2026-11-10). This section stays pending until `ng/opt-licm`
-(stacked on `ng/ir-rand`) merges too (Hive NG lane ng-ir; Radicle, GitHub writes suspended since 2026-11-07).
+(`99a40bb3`, `3c2ebe4d`). `ng/ir-rand` (`f9761347`) followed as `56b317ac` (2026-11-10). `ng/opt-licm` (`ea8914fd`, stacked on `ng/ir-rand`)
+followed through factory bay 2's trial merge `0dcf3bd3` and `ham/ng-opt-phi-2` `4aa88148` (plus the PHI pass `a0003fd7` and bay 14's fix `f67a37e4`), merged into main `f71942bb` as `2239dccd` (bay 1 VERDICT MERGE) (Hive NG lane ng-ir; Radicle, GitHub writes suspended since 2026-11-07).
 Exercised at local heads `f9761347c` (`ng/ir-rand`: `39f04efc` with factory bay 8's review fix and
 main merged in) and `ea8914fdb` (`ng/opt-licm`: `854d8152` with factory bay 4's fix, `ng/ir-rand`
 merged, the convergent-op fix, and the workflow file back to main's; the CI timeout for its long
-gate is the separate workflow branch `ng/ir-ci`), both on Radicle main `408c76b7`, omc `0f2de851…`. Radicle main is now `9255b45f` (omc `6d1b1cf5…`, rechecked 2026-11-10): `f9761347` is on it, `ea8914fd` is not, and `gate-ir` at `9255b45f` printed `NGIRGATE PASS cases=188` (exit 0, Linux AArch64).
+gate is the separate workflow branch `ng/ir-ci`), both on Radicle main `408c76b7`, omc `0f2de851…`. On 2026-11-10 at `9255b45f` (omc `6d1b1cf5…`) `gate-ir` printed `NGIRGATE PASS cases=188`. Radicle main is now `0158ce88` (omc `564c5835…`, checked 2026-11-10T15:44Z): `f9761347`, `ea8914fd`, `0dcf3bd3`, `a0003fd7` and `f67a37e4` are all on it, and `gate-ir` at `0158ce88`, built and run with main's own omc, printed `NGIRGATE PASS cases=226` (exit 0, 2759 s on one Spark core, Linux AArch64, 2026-11-10T16:30Z).
 
 - Spec: `seed/ng/IR.md`. One binary form (`OSC1IR` v9, tag `omega.ng.ir.v1`) for CPU and GPU
   kernels; SSA values with block parameters; an ordering token that every check, effect and exit
@@ -1017,16 +1017,18 @@ gate is the separate workflow branch `ng/ir-ci`), both on Radicle main `408c76b7
   `ngrand shrink SEED STATUS OUT CMD [ARG...]` minimizes a unit while `CMD ARG... OUT` exits STATUS
   (OUT.tape replays it with `ngrand tape FILE`; the predicate runs at most 20001 times). No floats in v1. On random units ngrun has no second
   oracle (several ops ngrand emits have no run pair), so a back end's mismatch judges both sides.
-- `seed/ng/src/opt.om` (branch `ng/opt-licm`, unit between ir and main in `ng.units`) is the
+- `seed/ng/src/opt.om` (from `ng/opt-licm`; on omega-mv main it is the third row of `ng.units`: ir, front, opt, a64, main) is the
   optimizer: `@ng opt` rewrites a unit (preheaders, bounds-check elimination to `fact.inbounds`
   origin 1, LICM of class P ops, loop rotation; IR.md s15.1) and `@ng opt-count` prints
   `opt fns= loops= inloop=A->B bce= hoisted= merged= rotated= preheaders=`. LICM never moves the
   convergent ops `sync`, `shfl`, `mmald`, `mmast`, `mma` (IR.md s7.12), and adds a preheader only
   within the IR.md s12 limits. No speed claim: the gate checks ngcheck ACCEPT after opt, ngrun before
   == after, a fixed point, and the opt-count row pinned on each `O NAME ROW` / `L NAME ROW` case line.
+  On omega-mv main opt also removes redundant block parameters (PHI pass, `a0003fd7`, fixture o-phi) and repeats PHI, BCE
+  and LICM to a fixed point (`ba072f52`, fixture o-phi2); both commits are ancestors of `0158ce88`.
 - Gate: `cat seed/ng/sha256.om seed/ng/gate-ir.om | seed/out/omc > gate-ir`, then
   `gate-ir seed/out/omc SCRATCH` from the repository root: `NGIRGATE PASS cases=135` on `ng/ir-m0`,
-  `cases=164` on `ng/ir-ngrun`, `cases=188` on `ng/ir-rand`, `cases=217` on `ng/opt-licm` (about 40 min on one Spark core, most of it the L kernels) (R cases: `x-NAME.oir` under ngrun
+  `cases=164` on `ng/ir-ngrun`, `cases=188` on `ng/ir-rand`, `cases=217` on `ng/opt-licm`, `cases=226` on omega-mv main `0158ce88` (about 40 to 46 min on one Spark core, most of it the L kernels) (R cases: `x-NAME.oir` under ngrun
   against `x-NAME.om` compiled by omc, exit/stdout/stderr equal at exact trap boundaries; N cases:
   `n-NAME.oir` under ngrun alone with STEPS 1000000, for semantics Omega cannot state). It
   compares whole output lines (the
@@ -1043,8 +1045,8 @@ gate is the separate workflow branch `ng/ir-ci`), both on Radicle main `408c76b7
   (2026-11-07); ir-rand `f9761347` and opt-licm `30790c85` (the code of `ea8914fd`) on core 19 (2026-11-09); CI NOT_RUN.
 - The `ng` units are om2 (`at` is reserved; error 16) and are built only by
   `seed/ng/ngbuild.om` from the sha256-pinned list `seed/ng/ng.units`.
-- PENDING, not merged (omega-mv branch `ham/ngbuild-self-3` `55c4b360`: first head `da12c2e6` with
-  factory bay 15 and bay 9 review fixes, Radicle main `9255b45f` merged in): ngbuild builds itself and
+- PENDING, not merged (omega-mv branch `ham/ngbuild-self-4` `c9516b87`: `55c4b360` plus factory bay 2's review fixes and Radicle
+  main `82e536e1` merged in; VERDICT MERGE by factory bay 5, 2026-11-10T04:27Z; not on Radicle main `0158ce88` at 2026-11-10T15:44Z, landing asked 15:39Z): ngbuild builds itself and
   every ng tool without `cat`. From the repository root:
   `seed/out/omc < seed/ng/tests/ngbuild/gate.om > GATE && chmod +x GATE && ./GATE seed/out/omc SCRATCH`
   (one omc input, no helper units; it first-births ngbuild, then ngbuild rebuilds itself from
@@ -1055,29 +1057,30 @@ gate is the separate workflow branch `ng/ir-ci`), both on Radicle main `408c76b7
   (exit 0). Negative control: `ngrand.units` with one pin altered exits 3, `ngbuild: sha256 mismatch
   …`, and writes no output. Until it merges, main still builds with `cat … | seed/out/omc` as above.
 
-### ng AArch64 back end (`ng/a64-m2` MERGED on omega-mv main; PENDING `ng/slice-m1`, `ng/a64-rand`)
+### ng AArch64 back end (`ng/a64-m2`, `ng/slice-m1` and `ng/a64-rand` MERGED on omega-mv main)
 
 Hive NG lane ng-a64. Heads to use (gated with the committed `seed/out/omc` of each head: `5f90edea…6df`
-up to `2d2ce8f9` on base `943d955531b9`; `0f2de851…` once main `408c76b7` is merged in; Radicle main `a59a425b` carries omc `6d1b1cf5…`, 2026-11-10):
+up to `2d2ce8f9` on base `943d955531b9`; `0f2de851…` once main `408c76b7` is merged in; Radicle main `a59a425b` carries omc `6d1b1cf5…`, 2026-11-10; Radicle main `0158ce88` carries omc `564c5835…`, checked 2026-11-10T15:44Z):
 - `ng/a64-m2` `2d2ce8f98349` is merged on omega-mv main (Radicle `408c76b76f6c`, desk merge). It
   contains `ng/a64-m1-fix` `5720a78a` (the review fixes of `ng/a64-m1`, verdict MERGE). Do not pin
   `ng/a64-m1` `8a3680b0`: its verdict is MERGE_AFTER_FIX (tsum's expected value was not Omega's
   result, reserved encodings were accepted) and `5720a78a` replaces it. `ng/a64-m2` is the m1 work
   replayed on ng-ir's `ng/ir-ngrun` (`f73dc66d`, the reference interpreter ngrun) plus stack
   arguments, SLICE values, the ngrun differential and the step diagnostics.
-- `ng/slice-m1` `b594fee3` (PENDING) is the Hive NG M1 integration branch: `ng/a64-m2` merged
+- `ng/slice-m1` `b594fee3` (MERGED: an ancestor of Radicle main `0158ce88`, through `ng/a64-rand` below) is the Hive NG M1 integration branch: `ng/a64-m2` merged
   with ng-front's front end (`ng/front-m3` `536bbc83` first, then `ng/front-m5-main` `881bd22b`), so `ng.units` lists
   ir, front, a64, main and one `ng` binary carries the front end and the back end. Its
   `.github/workflows` equals omega-mv main's (gates run on the Spark; Actions do not run for us).
-  ng-front's `881bd22b` is merged on omega-mv main (`1b128ae2`), so main already lists ir, front, a64, main; `b594fee3` itself is not on main. `f59641f6` and `02742a8c` are
+  ng-front's `881bd22b` is merged on omega-mv main (`1b128ae2`). `f59641f6` and `02742a8c` are
   superseded.
-- `ng/a64-rand` `40883917` (PENDING) is `ng/slice-m1` plus ng-ir's `ng/ir-rand` (the random
-  generator ngrand and the current ngrun) and rgate's random phase. ng-ir's `ng/ir-rand` `6964c527` is on omega-mv main (through `56b317ac`); it still cannot merge before
-  `ng/slice-m1` `b594fee3` is reviewed and merged. `7e91cce0`,
-  `d2b4d3db` and `d6a8306a` are superseded.
+- `ng/a64-rand` `40883917` (MERGED) is `ng/slice-m1` plus ng-ir's `ng/ir-rand` (the random
+  generator ngrand and the current ngrun) and rgate's random phase. It reached Radicle main through
+  `ham/ng-a64-float` (`c901f8b5` merges the reviewed `40883917` onto main `a59a425b`; `ham/ng-a64-float-2`
+  became main `f71942bb`, 2026-11-09); `b594fee3`, `40883917` and `6964c527` are all ancestors of main
+  `0158ce88` (`git merge-base --is-ancestor`, 2026-11-10T15:44Z). `7e91cce0`, `d2b4d3db` and `d6a8306a` are superseded.
 
-- Unit `seed/ng/src/a64.om` (second row of `seed/ng/ng.units` on `ng/a64-m2`: ir, a64, main; third row on omega-mv main `a59a425b` (ir, front, a64, main), and third
-  row, after `front.om`, on `ng/slice-m1` and `ng/a64-rand`); design `seed/ng/a64/DESIGN.md`. Every unit of `ng.units` belongs in an `ng` build:
+- Unit `seed/ng/src/a64.om` (second row of `seed/ng/ng.units` on `ng/a64-m2`: ir, a64, main; third row on `ng/slice-m1` and `ng/a64-rand`
+  (ir, front, a64, main); fourth row on omega-mv main `0158ce88` (ir, front, opt, a64, main)); design `seed/ng/a64/DESIGN.md`. Every unit of `ng.units` belongs in an `ng` build:
   `main.om` calls `a6_mode`, so ir + front + main alone is omc error 3. Gates therefore build ng from
   the list (`ngbuild build`, or ng-front's `units:seed/ng/ng.units` source segment), never from a
   hand-written set of units. A file under another lane's directory is that lane's to change, even on

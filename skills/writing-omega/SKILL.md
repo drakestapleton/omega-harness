@@ -47,7 +47,7 @@ At `e5b32567`, write `while C bound N` with N at most 999999 and no `for ... bou
 ```sh
 git clone rad://z6do9WDBhuSnvopDkgFdFr1yWA62 omega-mv && cd omega-mv
 git checkout 7d9ed10fd7b7fc33d8bfc39435f3eea80ee55dea
-sha256sum seed/out/omc      # must print cfd96b48…; main's later omcs (0f2de851… at Radicle main 0062602e, 6d1b1cf5… at a59a425b) are refused by the gate
+sha256sum seed/out/omc      # must print cfd96b48…; main's later omcs (0f2de851… at Radicle main 0062602e, 6d1b1cf5… at a59a425b, 564c5835… at 0158ce88) are refused by the gate
 sh seed/omega-from-seed.sh  # optional: rebuild omc from the 408-byte loader
 seed/out/omc < prog.om > prog; echo "compile $?"
 chmod +x prog && ./prog; echo "exit $?"
@@ -162,7 +162,7 @@ Every declaration and statement form at the pin (OMEGESE sections 9 to 12 are th
 | arithmetic | `add sub mul div rem neg` |
 | bits | `and or xor not shl shr` (`rotr rotl` in OM-2) |
 | compare (give `bool`) | `eq ne lt le gt ge` |
-| float | `add sub mul div neg`, `fsqrt fabs fmin fmax`, `fma a b c` (one rounding; all three the same f32 or f64 type, else error 7; the example-gate omc `cfd96b48…` and main's `6d1b1cf5…` compile it, the MCP pin `3ad9f10f…` refuses it with error 3) |
+| float | `add sub mul div neg`, `fsqrt fabs fmin fmax`, `fma a b c` (one rounding; all three the same f32 or f64 type, else error 7; the example-gate omc `cfd96b48…` and main's `6d1b1cf5…` and `564c5835…` compile it, the MCP pin `3ad9f10f…` refuses it with error 3) |
 | arrays | `new`, `get A i`, `put A i v`, `len A` |
 | structs | `new S v1 v2 ...`, `get p f`, `put p f v` |
 | control | `if` / `else` / `end`, `while COND bound N`, `for i T K`, `break`, `continue`, `ret`, `exit`, `trap N` |
@@ -300,8 +300,8 @@ Examples: [`om2_tour.om`](../../examples/om2_tour.om), [`om2_views.om`](../../ex
 - Host words carry the process's own permissions; they are not a sandbox.
 
 The table below lists 68 words. `execenv` is in that table and in compilers from omega-mv#1074 on
-(omc `cfd96b48…`, and Radicle main's later omcs `0f2de851…` and `6d1b1cf5…`). A call is error 3 on the MCP pin. Inside
-`fn main`, `execenv = int 1` compiles on the MCP pin and is error 16 on `cfd96b48…`, `0f2de851…` and `6d1b1cf5…`.
+(omc `cfd96b48…`, and Radicle main's later omcs `0f2de851…`, `6d1b1cf5…` and `564c5835…`). A call is error 3 on the MCP pin. Inside
+`fn main`, `execenv = int 1` compiles on the MCP pin and is error 16 on `cfd96b48…`, `0f2de851…`, `6d1b1cf5…` and `564c5835…`.
 OMEGESE section 10 has each contract.
 `A` and `B` are `uchar` arrays, `off`, `n` and `capacity` are `ulong`, and descriptors, flags, modes
 and ids are `int`. A path is the slice `A off n`; a packed list is a `u16` count, then `u16`-length
