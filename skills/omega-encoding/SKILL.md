@@ -19,7 +19,7 @@ The quantity and diagnostic audit is merged through omega-mv #914 at main
 `d94a503f7aae57d09697046405da2e9a5895be6d`. The older candidate observations
 below remain dated history, not claims about the newer integration.
 
-### Current main pin (checked 2026-11-05)
+### Language-reference and MCP pin `f4df8239` (omega-mv main on 2026-11-05, checked then; no longer main's head)
 
 | Item | Value |
 |---|---|

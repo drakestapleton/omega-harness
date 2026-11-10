@@ -18,14 +18,14 @@ Eight skills live under `skills/<name>/SKILL.md` in the Agent Skills layout (fro
 | `skills/omega-encoding/SKILL.md` | The language the seeded compiler accepts at a pinned commit: words, types, traps, bounds, registers, host I/O, byte layouts, error codes |
 | `skills/omega-communication/SKILL.md` | Claim ladder, report shape, agent handoffs, semantic and wire data, corrections |
 | `skills/aien-repositories/SKILL.md` | Mission, plan authority, task to repository routing, status discipline, known source drift |
-| `skills/crumb-protocol/SKILL.md` | Directory coordination: crumbs, locks, committed-crumb freshness, `CRUMB-VERIFY` and `crumb-doctor` |
+| `skills/crumb-protocol/SKILL.md` | RETIRED 2026-11-07 (DRA-97): a stub only. Crumbs are history; claims go through CLAIMS.md under flock, the BOARD CLAIM line, kanban, spark-window and the pool locks |
 | `skills/wolfram-math/SKILL.md` | Mandatory Wolfram for every computation, its MCP setup, verification calls and failure handling |
 | `skills/lean-verify/SKILL.md` | Lean 4 + Mathlib proofs of safety invariants over an explicit model, the `lean` MCP setup and pins, `sorry`/axiom checks, the model-to-system link |
 
 `examples/` holds the tested programs: each `NAME.om` with `NAME.expect` (and `NAME.stdout` when it
 prints), one per trap and error code plus the common mistakes. `examples/gate.sh OMC` checks the
 pinned compiler hash and reruns every program in `examples/` and `skills/*/examples/`; run it after
-any change to an example or a language rule. `skills/omega-encoding/examples/` holds two more
+any change to an example or a language rule. `skills/omega-encoding/examples/` holds five more
 runnable programs. `LICENSE` is Apache 2.0.
 
 `coder/` is harness configuration for an Omega-only `omp` session: a TypeScript `omp` extension that
@@ -38,7 +38,8 @@ When `omega-encoding` sections 2-11 change, rebuild the pack with `coder/build-c
 1. Read the skill you intend to change, and `skills/omega-harness/SKILL.md` section 6, which maps a
    kind of change to the skill that must absorb it.
 2. Check the claim against the source it cites, at the commit it names. A skill body is never its own
-   authority. Follow any instruction file and `.crumb` in the repository you are reading.
+   authority. Follow any instruction file in the repository you are reading; `.crumb` files are
+   history, not instructions (DRA-97).
 3. Edit the guide in the same piece of work as the change that made it stale. Give the source commit
    and date, and delete rules the change made untrue instead of adding a contradicting rule.
 4. If an example or expected output changed, rerun it against the new pin and record what you
@@ -76,7 +77,8 @@ recheck the changed parts.
 
 ## Verifying a change here
 
-There is no build and no test suite: the deliverables are Markdown and two example programs.
+There is no build and no test suite: the deliverables are Markdown and the example programs in
+`examples/` and `skills/*/examples/`.
 
 - Every relative link and file path you add or move must resolve in the checkout.
 - Frontmatter `name` must equal the directory name, and `description` must say when to use the skill.
