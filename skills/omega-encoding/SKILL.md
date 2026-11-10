@@ -1370,6 +1370,8 @@ or `NOT_RUN …` (exit 3, wrong or missing omc):
 - the authority gates, including `dispatch-fault-gate`;
 - negative controls with the pre-fix modules.
 
+Rechecked 2026-11-10 on Radicle omega-mv main `a59a425b` (omc `6d1b1cf5…`, Linux AArch64): `check.om` printed `PROFILE CHECK FAIL failed=3` (exit 1). The 53 profile cases, the 11 killed mutants with 11 controls, the authority unit profile, all seven authority gates (each exit 0) and both pre-fix controls passed; the three failures are freshness checks, `dispatch-gate.om`, `dispatch-order-gate.om` and `dispatch-fault-gate.om` "is stale against" their `seed/authority` sources. Until omega-mv regenerates those gates, a FAIL from `check.om` at main is not by itself a profile defect: read its FAIL lines. The profile itself still gives `PROFILE-PASS` on `examples/p10_profile.om`.
+
 The `om-profile-arm64` workflow builds and runs `check.om` weekly and on PRs. The fixes that this profile forced add the following codes:
 
 | Code | Where | Meaning |
