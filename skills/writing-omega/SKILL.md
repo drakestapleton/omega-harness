@@ -15,10 +15,10 @@ For compiler internals, register rules, wire formats and the reasons behind each
 
 | Pin | Value |
 |---|---|
-| example-gate omega-mv commit | `7d9ed10fd7b7fc33d8bfc39435f3eea80ee55dea` (omega-mv#1074; merged on Radicle main `6efc4572`, 2026-11-07; GitHub main `943d9555` lacks it, GitHub branch `hive/execprog-env` has it) |
-| example-gate `seed/out/omc` | sha256 `cfd96b48b0460ab5557853d6856f9c741b96ac8d0d624e06198defb4cbfa0d8a` |
+| example-gate omega-mv commit | `c106bae04231f47912f4b90b49f426a44a1f4238` (Radicle main, 2026-11-10; the earlier pin `7d9ed10f`, omc `cfd96b48…`, is history) |
+| example-gate `seed/out/omc` | sha256 `f4fa7951816bbd09c5eaaae6692852a70c3c305164b365027c5b683dec7d63e9` (674,212 bytes; rebuilt from seed0 to the same bytes, 2026-11-10T20:31Z) |
 | MCP pin (refuses `execenv`) | `f4df82394e35893dcf1354dda69a2fe028d94bc1`, omc `3ad9f10f64309e7acf8a725082b28e23a2a4aeb07e98322fb4dc0fcd8fc93194` |
-| language reference | `docs/one_layer/OMEGESE.md` at the MCP pin; `execenv` contract is `seed/host/execenv/README.md` at `7d9ed10f` |
+| language reference | `docs/one_layer/OMEGESE.md` at the MCP pin; `execenv` contract is `seed/host/execenv/README.md` at `c106bae0` |
 | host | Linux AArch64 only; omc writes a static AArch64 Linux ELF |
 
 The language reference is normative. Where this guide and OMEGESE disagree, the compiler at the pin
@@ -46,8 +46,8 @@ At `e5b32567`, write `while C bound N` with N at most 999999 and no `for ... bou
 
 ```sh
 git clone rad://z6do9WDBhuSnvopDkgFdFr1yWA62 omega-mv && cd omega-mv
-git checkout 7d9ed10fd7b7fc33d8bfc39435f3eea80ee55dea
-sha256sum seed/out/omc      # must print cfd96b48…; main's later omcs (0f2de851… at Radicle main 0062602e, 6d1b1cf5… at a59a425b, 564c5835… at 0158ce88) are refused by the gate
+git checkout c106bae04231f47912f4b90b49f426a44a1f4238
+sha256sum seed/out/omc      # must print f4fa7951…; any other omc (the old pin cfd96b48…, 564c5835… at 0158ce88, later reseeds) is refused by the gate
 sh seed/omega-from-seed.sh  # optional: rebuild omc from the 408-byte loader
 seed/out/omc < prog.om > prog; echo "compile $?"
 chmod +x prog && ./prog; echo "exit $?"
@@ -162,7 +162,7 @@ Every declaration and statement form at the pin (OMEGESE sections 9 to 12 are th
 | arithmetic | `add sub mul div rem neg` |
 | bits | `and or xor not shl shr` (`rotr rotl` in OM-2) |
 | compare (give `bool`) | `eq ne lt le gt ge` |
-| float | `add sub mul div neg`, `fsqrt fabs fmin fmax`, `fma a b c` (one rounding; all three the same f32 or f64 type, else error 7; the example-gate omc `cfd96b48…` and main's `6d1b1cf5…` and `564c5835…` compile it, the MCP pin `3ad9f10f…` refuses it with error 3) |
+| float | `add sub mul div neg`, `fsqrt fabs fmin fmax`, `fma a b c` (one rounding; all three the same f32 or f64 type, else error 7; the example-gate omc `f4fa7951…` and the earlier `cfd96b48…`, `6d1b1cf5…` and `564c5835…` compile it, the MCP pin `3ad9f10f…` refuses it with error 3) |
 | arrays | `new`, `get A i`, `put A i v`, `len A` |
 | structs | `new S v1 v2 ...`, `get p f`, `put p f v` |
 | control | `if` / `else` / `end`, `while COND bound N`, `for i T K`, `break`, `continue`, `ret`, `exit`, `trap N` |
@@ -249,7 +249,8 @@ A trap ends the process with exit status 100 + N. Output already written stays w
 
 ## 8. Names and limits
 
-- Variable, parameter, global, text, const, struct and field names: at most 8 characters (error 13).
+- Variable, parameter, global, text, const, struct and field names: at most 63 bytes (error 13; since omc
+  `564c5835`, omega-mv main `12bdb787`). IR-mode names, `abstract`/`layout` names and layout fields stay at 8.
   Function names: at most 63, but see section 13 for names that start with an 8-letter keyword.
 - A new name may not repeat a visible name, a function or a struct (error 10). A name first assigned
   inside a block ends at that block's `end`; assign it before the block to keep it.
@@ -300,8 +301,8 @@ Examples: [`om2_tour.om`](../../examples/om2_tour.om), [`om2_views.om`](../../ex
 - Host words carry the process's own permissions; they are not a sandbox.
 
 The table below lists 68 words. `execenv` is in that table and in compilers from omega-mv#1074 on
-(omc `cfd96b48…`, and Radicle main's later omcs `0f2de851…`, `6d1b1cf5…` and `564c5835…`). A call is error 3 on the MCP pin. Inside
-`fn main`, `execenv = int 1` compiles on the MCP pin and is error 16 on `cfd96b48…`, `0f2de851…`, `6d1b1cf5…` and `564c5835…`.
+(omc `cfd96b48…`, and Radicle main's later omcs `0f2de851…`, `6d1b1cf5…`, `564c5835…` and the example-gate `f4fa7951…`). A call is error 3 on the MCP pin. Inside
+`fn main`, `execenv = int 1` compiles on the MCP pin and is error 16 on `cfd96b48…`, `0f2de851…`, `6d1b1cf5…`, `564c5835…` and `f4fa7951…`.
 OMEGESE section 10 has each contract.
 `A` and `B` are `uchar` arrays, `off`, `n` and `capacity` are `ulong`, and descriptors, flags, modes
 and ids are `int`. A path is the slice `A off n`; a packed list is a `u16` count, then `u16`-length

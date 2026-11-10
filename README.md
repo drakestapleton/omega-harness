@@ -112,25 +112,24 @@ code, the common mistakes, the known defects, and `execenv`. `examples/gate.sh` 
 but the example-gate pin, then compiles and runs every program here and in `skills/*/examples/`
 (5 more, 126 in all).
 
-The example gate requires omega-mv `7d9ed10fd7b7fc33d8bfc39435f3eea80ee55dea`, `seed/out/omc`
-sha256 `cfd96b48b0460ab5557853d6856f9c741b96ac8d0d624e06198defb4cbfa0d8a`, the execenv reseed of
-omega-mv#1074. #1074 merged on Radicle omega-mv main as `6efc45728d5080b0fc5d74016a00ba8bbfcf9698`
-(2026-11-07). The GitHub mirror's main is still `943d955531b9d4d9f70deb41756c0b46441dd5e0`
-(omc `5f90edea…`); GitHub carries `7d9ed10f` on branch `hive/execprog-env`. Main's own compiler is
-not the gate pin: Radicle main reseeded to omc `0f2de851…` at `0062602e` (2026-11-08), to `6d1b1cf5…` at `a0d12c25` (main `a59a425b`), to `b87c8b65…` at `ac7b7724` and to `564c5835…` at `cd7c5132` (2026-11-09; `564c5835…` is still the omc of Radicle main `0158ce88`, checked 2026-11-10T15:44Z), and the
-gate refuses each like any other hash, so check out `7d9ed10f` as below. The MCP pin `f4df8239` /
-omc `3ad9f10f…` refuses `examples/execenv.om` (`omc: line 63: error 3`).
+The example gate requires omega-mv `c106bae04231f47912f4b90b49f426a44a1f4238` (Radicle omega-mv
+main, 2026-11-10), `seed/out/omc` sha256 `f4fa7951816bbd09c5eaaae6692852a70c3c305164b365027c5b683dec7d63e9`
+(674,212 bytes; the omc of `ham/omc-perf-mem-4` `83b230bf`, merged as `887311bb`, unchanged up to
+`c106bae0`). Rebuilt from seed0 with `sh seed/omega-from-seed.sh` at `c106bae0` it is the same bytes
+(2026-11-10T20:31Z, Linux AArch64). The earlier gate pin was omega-mv `7d9ed10f` / omc `cfd96b48…`
+(the execenv reseed of omega-mv#1074); the gate now refuses it like any other hash. The MCP pin
+`f4df8239` / omc `3ad9f10f…` refuses `examples/execenv.om` (`omc: line 63: error 3`).
 
 ```sh
 git clone rad://z6do9WDBhuSnvopDkgFdFr1yWA62 omega-src
-git -C omega-src checkout 7d9ed10fd7b7fc33d8bfc39435f3eea80ee55dea
-sha256sum omega-src/seed/out/omc   # cfd96b48b0460ab5557853d6856f9c741b96ac8d0d624e06198defb4cbfa0d8a
+git -C omega-src checkout c106bae04231f47912f4b90b49f426a44a1f4238
+sha256sum omega-src/seed/out/omc   # f4fa7951816bbd09c5eaaae6692852a70c3c305164b365027c5b683dec7d63e9
 examples/gate.sh omega-src/seed/out/omc
 ```
 
 It prints `PASS name` or `FAIL name: reason` per program and ends with
-`GATE PASS examples=126 pass=126 fail=0 omc=cfd96b48...` (exit 0), `GATE FAIL ...` (exit 1), or a hash
-refusal (exit 2). Pointing the gate at omc `5f90edea…` or omc `3ad9f10f…` exits 2 (rechecked
+`GATE PASS examples=126 pass=126 fail=0 omc=f4fa7951...` (exit 0), `GATE FAIL ...` (exit 1), or a hash
+refusal (exit 2). With the gate pinned to `f4fa7951…`, omc `564c5835…` (main `0158ce88`) exits 2 (2026-11-10T20:31Z). Under the earlier `cfd96b48…` pin, pointing the gate at omc `5f90edea…` or omc `3ad9f10f…` exits 2 (rechecked
 2026-11-08), and so do Radicle main's omc `0f2de851…` (2026-11-09), `6d1b1cf5…` (2026-11-10) and `564c5835…` (main `0158ce88`, 2026-11-10T15:44Z), all on Linux AArch64. The `omega-encoding` skill (section 0 and section 13) records the observed results
 and the negative controls; [`examples/WOLFRAM.md`](examples/WOLFRAM.md) records the Wolfram checks of
 the arithmetic expectations.

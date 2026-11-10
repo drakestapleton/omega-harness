@@ -19,6 +19,35 @@ The quantity and diagnostic audit is merged through omega-mv #914 at main
 `d94a503f7aae57d09697046405da2e9a5895be6d`. The older candidate observations
 below remain dated history, not claims about the newer integration.
 
+### Example-gate pin: omega-mv main `c106bae0` (checked 2026-11-10T20:31Z)
+
+| Item | Value |
+|---|---|
+| Commit | `c106bae04231f47912f4b90b49f426a44a1f4238` (Radicle omega-mv main, 2026-11-10T19:21:07Z) |
+| Compiler source `seed/omc/omc.om` | 19,438 lines, 520 `^fn ` lines, sha256 `c86159627820cf5741be0a2a4c05df0efb78f5c91a652b986fec5d745baa62ed` |
+| Compiler `seed/out/omc` | sha256 `f4fa7951816bbd09c5eaaae6692852a70c3c305164b365027c5b683dec7d63e9`, 674,212 bytes (equals `seed/out/omc.sha256`; last `seed/omc/size-history.tsv` row `pinned-globals-on-0ed21175`) |
+| Seed loader `seed/rung0/seed0.hex` | sha256 `baaf081fe6055a768485c5d25d7435681ce00b04cfa80b26c48169f78944e14d` (unchanged) |
+
+Long names (omc `564c5835…c999`) are on main since `12bdb787`. Three stacked omc heads then landed on main
+(merge --no-ff, 2026-11-10T16:29:17Z), in this order; each reseeded omc, and the last one is the pin:
+
+| Head | Merge on main | Change | `seed/out/omc` sha256 | omc.om lines / `^fn ` |
+|---|---|---|---|---|
+| `d58b271dda8304ada7c7247b7dee07973e70e687` (`ham/omc-perf-loops-6`) | `281b7a3d` | OM-2 AArch64 `for` loops tested at the latch | `6844d173abc85ecbc04154cce85e4e5eeec8bf7b21f4ab1c10728c55efe7dd00`, 669,192 bytes | 19,257 / 515 |
+| `f8c8c7dc7d387fd033e3106e173bf5a85a474e12` (`ham/om-threads-4`) | `9581eff5` | scheduler host words 236..240 (section 9) | `0ed21175a1709cb755c289383cd8fcbfaac8330c3967fe4656b9f82fc96a3c4f`, 672,960 bytes | 19,369 / 517 |
+| `83b230bf2ed352f354f6f5f7e000578b57fe9a0a` (`ham/omc-perf-mem-4`) | `887311bb` | OM-2 AArch64 pinned global registers X18..X26 (section 6, `scrub`) | `f4fa7951816bbd09c5eaaae6692852a70c3c305164b365027c5b683dec7d63e9`, 674,212 bytes | 19,438 / 520 |
+
+No commit after `887311bb` up to `c106bae0` changes `seed/out/omc` or `seed/out/omc.sha256` (`git log
+887311bbc..c106bae0 -- seed/out/omc seed/out/omc.sha256` is empty); the later merges are NG front, NG IR
+and NG host-word work.
+
+Observed 2026-11-10T20:31Z on the Spark (Linux AArch64), in a fresh detached clone at `c106bae0`:
+`sh seed/omega-from-seed.sh` printed `RC=0`, left the tree clean, and its `seed/out/omc` is byte-identical
+to the committed `f4fa7951…63e9`. `examples/gate.sh` with that compiler: `GATE PASS examples=126 pass=126
+fail=0` (exit 0), after `err13_long_name` moved to a 64-byte name. The same gate refuses main's previous
+omc `564c5835…` (omega-mv `0158ce88`) with exit 2. Earlier the same day each of the three heads above
+passed the gate in its own clean worktree (123 examples on omega-harness `af497dc`; ham lane OmcRebase).
+
 ### Language-reference and MCP pin `f4df8239` (omega-mv main on 2026-11-05, checked then; no longer main's head)
 
 | Item | Value |
@@ -36,11 +65,11 @@ firmware vendor/revision, SMBIOS copy). `omc.om` went from 510 to 511 `^fn ` lin
 
 Observed 2026-11-05 on a Linux AArch64 host in a clean detached worktree at main `2a1e6d29`:
 `sh seed/omega-from-seed.sh` printed `RC=0` and left `seed/out/omc` at exactly `3ad9f10f…3194`.
-That rerun is history for the example gate. The example gate now uses the execenv compiler below.
+That rerun is history for the example gate, which now uses main `c106bae0` (top of this section).
 
-### Example gate pin (omega-mv#1074 execenv reseed)
+### Previous example gate pin (omega-mv#1074 execenv reseed, history since 2026-11-10T20:31Z)
 
-`examples/gate.sh` pins omega-mv `7d9ed10fd7b7fc33d8bfc39435f3eea80ee55dea`, `seed/out/omc` sha256
+Until guides-current-4, `examples/gate.sh` pinned omega-mv `7d9ed10fd7b7fc33d8bfc39435f3eea80ee55dea`, `seed/out/omc` sha256
 `cfd96b48b0460ab5557853d6856f9c741b96ac8d0d624e06198defb4cbfa0d8a`. That is the execenv reseed. The
 same omc blob is at #1074 heads `5d288784` and `88282ecd`. #1074 merged on Radicle omega-mv main as
 `6efc45728d5080b0fc5d74016a00ba8bbfcf9698` (2026-11-07); the GitHub mirror's main is still
@@ -48,7 +77,7 @@ same omc blob is at #1074 heads `5d288784` and `88282ecd`. #1074 merged on Radic
 `0f2de85153b07656f4b992d101272987fe6ed1eee471ef70b132a37f5ba6b02f` at `0062602e` (2026-11-08), to `6d1b1cf5a44803389a831b67f750ea4cd1c9f53edfde9d6d9241d7352887f1f8` at `a0d12c25` (main `a59a425b`, 2026-11-10), to `b87c8b65…` at `ac7b7724` and to `564c5835f307a65c07908eb5bd236addb060a42f44cfb7ac496879195486c999` at `cd7c5132` (ham/omc-train, 2026-11-09; on Radicle main `0158ce88`, checked 2026-11-10T15:44Z), so
 main's own compiler is not the gate pin. The MCP pin above refuses `examples/execenv.om` with
 `omc: line 63: error 3`. Rechecked 2026-11-08, Linux AArch64: `GATE PASS examples=111 pass=111 fail=0`
-at `cfd96b48`; the same gate on `5f90edea` or `3ad9f10f` exits 2, and on `0f2de851` (2026-11-09) also exits 2. Rerun 2026-11-10, Linux AArch64, on omega-harness branch `ham/guides-current` (121 programs in `examples/` plus 5 in `skills/*/examples/`): `GATE PASS examples=126 pass=126 fail=0` at `cfd96b48`; on `6d1b1cf5` it exits 2. Later on 2026-11-10 Radicle omega-mv main moved to `19ed248e`, `9255b45f` and then `0158ce88` (ng-bench, ng-ir `ng/ir-rand` and `ng/opt-licm`, ng-a64 float, ng-front, the omc train with omc `564c5835…`, crumb removal, docs and `seed/text` merges). Rerun 2026-11-10T15:44Z, Linux AArch64, at omega-harness `c9780bf5`: `GATE PASS examples=126 pass=126 fail=0` at `cfd96b48`; on main's `564c5835` it exits 2 (`GATE FAIL omc sha256 564c5835…, pinned cfd96b48…`). So in this section `f4df8239` is the language-reference and MCP pin (an ancestor of main), `7d9ed10f` is the example-gate pin, and neither is main's head.
+at `cfd96b48`; the same gate on `5f90edea` or `3ad9f10f` exits 2, and on `0f2de851` (2026-11-09) also exits 2. Rerun 2026-11-10, Linux AArch64, on omega-harness branch `ham/guides-current` (121 programs in `examples/` plus 5 in `skills/*/examples/`): `GATE PASS examples=126 pass=126 fail=0` at `cfd96b48`; on `6d1b1cf5` it exits 2. Later on 2026-11-10 Radicle omega-mv main moved to `19ed248e`, `9255b45f` and then `0158ce88` (ng-bench, ng-ir `ng/ir-rand` and `ng/opt-licm`, ng-a64 float, ng-front, the omc train with omc `564c5835…`, crumb removal, docs and `seed/text` merges). Rerun 2026-11-10T15:44Z, Linux AArch64, at omega-harness `c9780bf5`: `GATE PASS examples=126 pass=126 fail=0` at `cfd96b48`; on main's `564c5835` it exits 2 (`GATE FAIL omc sha256 564c5835…, pinned cfd96b48…`). That was the state until 2026-11-10T20:31Z; now `f4df8239` stays the language-reference and MCP pin (an ancestor of main) and the example-gate pin is main `c106bae0` (omc `f4fa7951…`).
 
 ### Previous pin `d3d1b1bc` (checked 2026-11-04, history)
 
@@ -1196,7 +1225,12 @@ the target's limits, and a NaN gives 0, with no trap (observed at `e5b32567`,
   previous bit as a long. `scrub n` (n ulong, a multiple of 16, at most 1048576, else trap 3; trap 6 when
   SP - n is below the stack floor) zeroes `[SP - n, SP)`, the dead general registers (free pool
   registers, X16, X7, X18-X26, X29), V0-V15 and every dead float twin V16+j (since #994; up to
-  `3a163bc5` all of V0-V31), and gives 0. Refusals: function mode error 9, a wrong
+  `3a163bc5` all of V0-V31), and gives 0. Since omega-mv `ham/omc-perf-mem-4` (head `83b230bf`, omc
+  `f4fa7951…`, merged on main as `887311bb`, 2026-11-10): in an OM-2 AArch64 program each global array declared before the first
+  `fn` takes, in order, one of X18-X26 for its base and one more for its length when that is above 4095,
+  until the nine are taken; `scrub` zeroes X18-X26 and then sets those pinned registers back to their public
+  constants (OMEGESE 9.13.1); a global declared after the first function body gets no pin; OM-1, IR and x86
+  units have no pins. Refusals: function mode error 9, a wrong
   operand type error 7, use as a name or as a bare statement (`scrub 16` on its own line) in an `om2`
   unit error 16, `target x86linux` error 25; `ir` with `om2` is already error 16. Observed with omc
   `38626559…` on 2026-10-31 (host only), each fixture of `seed/omc/om2/s5/` at `23678743` run directly:
@@ -1499,6 +1533,15 @@ fixed limit (section 4).
 Base words ([#L476-L486](https://github.com/aien-dev/omega-mv/blob/55f9b0af47de70a3d06357985cf99ae3e45c016f/docs/one_layer/OMEGESE.md#L476-L486)): `read fd A off n`,
 `write fd A off n`, `pread`/`pwrite fd A off n pos`. Native host words ([#L624-L747](https://github.com/aien-dev/omega-mv/blob/55f9b0af47de70a3d06357985cf99ae3e45c016f/docs/one_layer/OMEGESE.md#L624-L747)):
 files, directories, clocks, sockets, poll, processes, arguments, environment, random.
+
+**Scheduler words 236..240: omega-mv `ham/om-threads-4` (head `f8c8c7dc`, omc `0ed21175…`), merged on main as `9581eff5` (2026-11-10); in the example-gate pin `c106bae0`.**
+`cpuset pid A off n` (236, sched_setaffinity, AArch64 122 / x86linux 203; checked byte-mask slice; long 0 or
+minus errno, an empty mask -22), `cpuget pid A off n` (237, sched_getaffinity 123 / 204; long bytes copied),
+`cpunow` (238, getcpu 168 / 309; long CPU number), `setprio which who prio` (239, setpriority 140 / 141; long 0
+or minus errno; Linux privilege checks remain) and `getprio which who` (240, getpriority 141 / 140; the raw
+kernel value 20 minus nice). Program-only: function mode error 9, contracts 30, x86efi 25. Gate:
+`seed/host/affinity/sched.cases` (19 cases, one-core and nice-19 pools included). Contract:
+`spec/omegese-cpu-workers.md`. Host evidence only; x86linux rows run under qemu-x86_64.
 
 **cpufence / cpurelax: merged in [omega-mv#946](https://github.com/aien-dev/omega-mv/pull/946) as `d94617177`; in the current pin `d3d1b1bc` / omc `b4f45121` (since `91c83438`).**
 Rechecked 2026-10-31 at omega-mv main `91c83438daec0bdb88bf5c077cae10f3d15d365d` (omc sha256
@@ -2373,7 +2416,7 @@ are `seed/omc/omc.om` at `9920aab1`.
 
 Each carries `.expect` (and `fnv1a32` also `.stdin` `abc` and the 4 expected bytes in `.stdout`) and
 runs in [`examples/gate.sh`](../../examples/gate.sh) with the 121 programs in the repository's
-`examples/` directory. The gate runs only under the section 0 example-gate compiler (omega-mv `7d9ed10f`, omc `cfd96b48…`); the observations
+`examples/` directory. The gate runs only under the section 0 example-gate compiler (omega-mv `c106bae0`, omc `f4fa7951…`); the observations
 below keep their own dates and compiler hashes. The portable guide
 for writing a first program is [`skills/writing-omega/SKILL.md`](../writing-omega/SKILL.md).
 

@@ -17,8 +17,8 @@ Companion skills in this package:
 
 - `omega-encoding`: the language the seeded compiler actually accepts, with verified examples.
 - `writing-omega`: the portable guide for writing a first correct `.om` program, backed by the tested
-  programs in `examples/` and `examples/gate.sh`. The example gate pin is omega-mv `7d9ed10f` /
-  omc `cfd96b48` (omega-mv#1074, merged on Radicle main `6efc4572` 2026-11-07; GitHub main lags).
+  programs in `examples/` and `examples/gate.sh`. The example gate pin is omega-mv main `c106bae0` /
+  omc `f4fa7951` (2026-11-10; the earlier pin `7d9ed10f` / `cfd96b48` is history).
   The MCP pin is `f4df8239` / `3ad9f10f`, which refuses `execenv`.
 - `omega-communication`: status labels, reports, handoffs and corrections.
 - `aien-repositories`: what AIEN builds and which repository owns a task.
@@ -986,7 +986,7 @@ followed through factory bay 2's trial merge `0dcf3bd3` and `ham/ng-opt-phi-2` `
 Exercised at local heads `f9761347c` (`ng/ir-rand`: `39f04efc` with factory bay 8's review fix and
 main merged in) and `ea8914fdb` (`ng/opt-licm`: `854d8152` with factory bay 4's fix, `ng/ir-rand`
 merged, the convergent-op fix, and the workflow file back to main's; the CI timeout for its long
-gate is the separate workflow branch `ng/ir-ci`), both on Radicle main `408c76b7`, omc `0f2de851…`. On 2026-11-10 at `9255b45f` (omc `6d1b1cf5…`) `gate-ir` printed `NGIRGATE PASS cases=188`. Radicle main is now `0158ce88` (omc `564c5835…`, checked 2026-11-10T15:44Z): `f9761347`, `ea8914fd`, `0dcf3bd3`, `a0003fd7` and `f67a37e4` are all on it, and `gate-ir` at `0158ce88`, built and run with main's own omc, printed `NGIRGATE PASS cases=226` (exit 0, 2759 s on one Spark core, Linux AArch64, 2026-11-10T16:30Z).
+gate is the separate workflow branch `ng/ir-ci`), both on Radicle main `408c76b7`, omc `0f2de851…`. On 2026-11-10 at `9255b45f` (omc `6d1b1cf5…`) `gate-ir` printed `NGIRGATE PASS cases=188`. Radicle main was then `0158ce88` (omc `564c5835…`, checked 2026-11-10T15:44Z; main is `c106bae0`, omc `f4fa7951…`, since 2026-11-10T19:21Z, and `gate-ir` is NOT_RUN there): `f9761347`, `ea8914fd`, `0dcf3bd3`, `a0003fd7` and `f67a37e4` are all on it, and `gate-ir` at `0158ce88`, built and run with main's own omc, printed `NGIRGATE PASS cases=226` (exit 0, 2759 s on one Spark core, Linux AArch64, 2026-11-10T16:30Z).
 
 - Spec: `seed/ng/IR.md`. One binary form (`OSC1IR` v9, tag `omega.ng.ir.v1`) for CPU and GPU
   kernels; SSA values with block parameters; an ordering token that every check, effect and exit
@@ -1045,8 +1045,8 @@ gate is the separate workflow branch `ng/ir-ci`), both on Radicle main `408c76b7
   (2026-11-07); ir-rand `f9761347` and opt-licm `30790c85` (the code of `ea8914fd`) on core 19 (2026-11-09); CI NOT_RUN.
 - The `ng` units are om2 (`at` is reserved; error 16) and are built only by
   `seed/ng/ngbuild.om` from the sha256-pinned list `seed/ng/ng.units`.
-- PENDING, not merged (omega-mv branch `ham/ngbuild-self-4` `c9516b87`: `55c4b360` plus factory bay 2's review fixes and Radicle
-  main `82e536e1` merged in; VERDICT MERGE by factory bay 5, 2026-11-10T04:27Z; not on Radicle main `0158ce88` at 2026-11-10T15:44Z, landing asked 15:39Z): ngbuild builds itself and
+- MERGED (omega-mv branch `ham/ngbuild-self-4` `c9516b87`: `55c4b360` plus factory bay 2's review fixes and Radicle
+  main `82e536e1` merged in; VERDICT MERGE by factory bay 5, 2026-11-10T04:27Z; on Radicle main as `80437313`, 2026-11-10T15:40:51Z, an ancestor of the example-gate pin `c106bae0`): ngbuild builds itself and
   every ng tool without `cat`. From the repository root:
   `seed/out/omc < seed/ng/tests/ngbuild/gate.om > GATE && chmod +x GATE && ./GATE seed/out/omc SCRATCH`
   (one omc input, no helper units; it first-births ngbuild, then ngbuild rebuilds itself from
@@ -1055,7 +1055,8 @@ gate is the separate workflow branch `ng/ir-ci`), both on Radicle main `408c76b7
   ngbuild, ngcheck, ngdis, ngrand, ngrun. Rerun 2026-11-10 at `55c4b360`, omc `6d1b1cf5…`, Linux
   AArch64: 19 `PASS case` lines, `NGBUILDGATE PASS` (exit 0), and all nine builds `ngbuild: OK`
   (exit 0). Negative control: `ngrand.units` with one pin altered exits 3, `ngbuild: sha256 mismatch
-  …`, and writes no output. Until it merges, main still builds with `cat … | seed/out/omc` as above.
+  …`, and writes no output. Rerun 2026-11-10T20:33Z at main `c106bae0`, omc `f4fa7951…`, Linux AArch64:
+  19 `PASS case` lines, `NGBUILDGATE PASS` (exit 0), tree clean after.
 
 ### ng AArch64 back end (`ng/a64-m2`, `ng/slice-m1` and `ng/a64-rand` MERGED on omega-mv main)
 
