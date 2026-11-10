@@ -162,7 +162,7 @@ Every declaration and statement form at the pin (OMEGESE sections 9 to 12 are th
 | arithmetic | `add sub mul div rem neg` |
 | bits | `and or xor not shl shr` (`rotr rotl` in OM-2) |
 | compare (give `bool`) | `eq ne lt le gt ge` |
-| float | `add sub mul div neg`, `fsqrt fabs fmin fmax` |
+| float | `add sub mul div neg`, `fsqrt fabs fmin fmax`, `fma a b c` (one rounding; all three the same f32 or f64 type, else error 7; the example-gate omc `cfd96b48…` and main's `6d1b1cf5…` compile it, the MCP pin `3ad9f10f…` refuses it with error 3) |
 | arrays | `new`, `get A i`, `put A i v`, `len A` |
 | structs | `new S v1 v2 ...`, `get p f`, `put p f v` |
 | control | `if` / `else` / `end`, `while COND bound N`, `for i T K`, `break`, `continue`, `ret`, `exit`, `trap N` |
