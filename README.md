@@ -106,7 +106,7 @@ These host experiments do not qualify device execution or deployment.
 
 ## Check the examples yourself
 
-The examples run on Linux AArch64 hosts only. [`examples/`](examples/) holds 118 programs, each
+The examples run on Linux AArch64 hosts only. [`examples/`](examples/) holds 119 programs, each
 `NAME.om` with `NAME.expect` (and `NAME.stdout` when it prints): every trap, one refusal per error
 code, the common mistakes, the known defects, and `execenv`. `examples/gate.sh` refuses any compiler
 but the example-gate pin, then compiles and runs every program here and in `skills/*/examples/`

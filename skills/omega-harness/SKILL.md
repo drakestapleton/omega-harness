@@ -978,6 +978,72 @@ rerun at that head.
 - `make test-checker2-owner-receipt` fails with UNTRUSTED_CHECKER on #885 because checker2's identity
   changed. Drake's YubiKey re-sign is needed (BLOCKED_OPERATOR).
 
+### ΩIR, Omega NG's intermediate form (PENDING omega-mv branches `ng/ir-rand`, `ng/opt-licm`)
+
+`ng/ir-m0` (`ee070853`) and `ng/ir-ngrun` (`f73dc66d`) are merged on omega-mv's Radicle main
+(`99a40bb3`, `3c2ebe4d`). This section stays pending until `ng/ir-rand` and then `ng/opt-licm`
+(stacked on it) merge too (Hive NG lane ng-ir; Radicle, GitHub writes suspended since 2026-11-07).
+Exercised at local heads `f9761347c` (`ng/ir-rand`: `39f04efc` with factory bay 8's review fix and
+main merged in) and `ea8914fdb` (`ng/opt-licm`: `854d8152` with factory bay 4's fix, `ng/ir-rand`
+merged, the convergent-op fix, and the workflow file back to main's; the CI timeout for its long
+gate is the separate workflow branch `ng/ir-ci`), both on Radicle main `408c76b7`, omc `0f2de851…`.
+
+- Spec: `seed/ng/IR.md`. One binary form (`OSC1IR` v9, tag `omega.ng.ir.v1`) for CPU and GPU
+  kernels; SSA values with block parameters; an ordering token that every check, effect and exit
+  consumes; checks (`chk.*`) are the only ops that trap; every memory access is covered by a
+  dominating `chk.bounds`/`chk.slice` or a fact. A unit is a program with exactly one export of no
+  parameters and result i32 (D11, refusal ENTRY exit 30).
+- `seed/ng/ngcheck.om` is the validator: `ACCEPT <sha256> fns= blocks= ops=` or
+  `ngcheck: CLASS at OFFSET`, exit 10..30 (IR.md s11). `ngas`/`ngdis` (`ngtxt.om` + `ngas.om`/
+  `ngdis.om`) convert the one canonical text form (IR.md s10) and binary. Every reader refuses input
+  over 16777216 bytes as LIMIT at 16777216 (they read one byte past the buffer); the text tools hold
+  65536 of each table (types, globals, functions, blocks, parameters) and refuse more with LIMIT
+  (`ngas: limit at line N`). STRUCT elements are storage-only: reach per-record data as a STRUCT of
+  ARRAY fields (IR.md s7.5).
+- `ng` reads its mode line (`@ng ir-copy`) apart from the payload; the payload starts at `i_in`
+  offset 0, and refusals print `ng: refused class C at OFFSET` (offset in the payload).
+- `seed/ng/ngrun.om` (branch `ng/ir-ngrun`) is the reference interpreter of IR.md s7:
+  `cat seed/ng/src/ir.om seed/ng/ngrun.om | seed/out/omc > ngrun`, then `ngrun FILE.ir [STEPS]`. Exit status
+  = the entry's result, a failing check exits 100 + code, unsupported ops (vectors, tiles, kernels,
+  fma, fmath, f16/bf16/fp8) exit 125 with one stderr line. On `ng/ir-rand` its own limits never use
+  100..114: STEPS executed ops (default 2^36) end with `ngrun: step limit at OFF` and exit 124, an
+  element outside its REF/SLICE object with `ngrun: access outside storage at OFF` and exit 126. Its
+  exit status means something only for a unit ngcheck accepts. Diff a back end's output against it (D9).
+  It reads through `src/ir.om`, as `ng` does, so a fault in that shared reader shows only in the gate's
+  run pairs (ngrun against omc on the same program in Omega), not in a back-end diff against ngrun.
+- `seed/ng/ngrand.om` (branch `ng/ir-rand`) writes random units ngcheck accepts by construction (the
+  D9 differential source): `cat seed/ng/src/ir.om seed/ng/ngrand.om | seed/out/omc > ngrand`, then
+  `ngrand SEED > u.ir`. Every choice is a tape byte and byte 0 is the smallest choice, so
+  `ngrand shrink SEED STATUS OUT CMD [ARG...]` minimizes a unit while `CMD ARG... OUT` exits STATUS
+  (OUT.tape replays it with `ngrand tape FILE`; the predicate runs at most 20001 times). No floats in v1. On random units ngrun has no second
+  oracle (several ops ngrand emits have no run pair), so a back end's mismatch judges both sides.
+- `seed/ng/src/opt.om` (branch `ng/opt-licm`, unit between ir and main in `ng.units`) is the
+  optimizer: `@ng opt` rewrites a unit (preheaders, bounds-check elimination to `fact.inbounds`
+  origin 1, LICM of class P ops, loop rotation; IR.md s15.1) and `@ng opt-count` prints
+  `opt fns= loops= inloop=A->B bce= hoisted= merged= rotated= preheaders=`. LICM never moves the
+  convergent ops `sync`, `shfl`, `mmald`, `mmast`, `mma` (IR.md s7.12), and adds a preheader only
+  within the IR.md s12 limits. No speed claim: the gate checks ngcheck ACCEPT after opt, ngrun before
+  == after, a fixed point, and the opt-count row pinned on each `O NAME ROW` / `L NAME ROW` case line.
+- Gate: `cat seed/ng/sha256.om seed/ng/gate-ir.om | seed/out/omc > gate-ir`, then
+  `gate-ir seed/out/omc SCRATCH` from the repository root: `NGIRGATE PASS cases=135` on `ng/ir-m0`,
+  `cases=164` on `ng/ir-ngrun`, `cases=188` on `ng/ir-rand`, `cases=217` on `ng/opt-licm` (about 40 min on one Spark core, most of it the L kernels) (R cases: `x-NAME.oir` under ngrun
+  against `x-NAME.om` compiled by omc, exit/stdout/stderr equal at exact trap boundaries; N cases:
+  `n-NAME.oir` under ngrun alone with STEPS 1000000, for semantics Omega cannot state). It
+  compares whole output lines (the
+  ACCEPT witness with counts from the fixture text; each tool's exact refusal line, empty stdout),
+  runs `ng ir-copy` on every unit, generates inputs at the capacities, checks that ngbuild refuses a
+  wrong pin, and counts a mutant kill only when its named check fails and its pattern occurs exactly
+  once: ngcheck typing, witness prefix, class name, ten ngrun mutants (fuel, rem MIN/-1, u64
+  chk.add/chk.mul, chk.shl low side, conv low bound, chk.bounds e = 0, narrow neg, depth cap, step
+  limit one op late), ngrand token edge, and on `ng/opt-licm` five opt mutants (load hoisted, check
+  hoisted, merge ignoring imm, BCE one past its proof, `shfl` hoisted). From `ng/ir-rand` it also runs ngrand seeds 1..1000 (whole
+  ACCEPT line, `ngas(ngdis(b)) == b`, ngrun ends cleanly) and one shrink; `ng/opt-licm` adds O/L
+  fixtures (L: long kernels, tens of minutes). HOST_TESTED on fresh clones: m0, ngrun and the
+  first ir-rand head on core 1, ir-rand `39f04efc` on core 10, opt-licm `854d8152` on core 11
+  (2026-11-07); ir-rand `f9761347` and opt-licm `30790c85` (the code of `ea8914fd`) on core 19 (2026-11-09); CI NOT_RUN.
+- The `ng` units are om2 (`at` is reserved; error 16) and are built only by
+  `seed/ng/ngbuild.om` from the sha256-pinned list `seed/ng/ng.units`.
+
 ## 4. Effects and authority
 
 - A proposed program or effect description does not authorize running it. Confirm capability and privilege at the execution boundary. Model confidence and semantic identity grant no authority.

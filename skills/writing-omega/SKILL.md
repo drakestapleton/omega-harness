@@ -187,8 +187,8 @@ A trap ends the process with exit status 100 + N. Output already written stays w
 
 | Cause | Trap | Exit | Example |
 |---|---|---|---|
-| signed overflow in `add sub mul neg` | 1 | 101 | `examples/trap1_overflow.om` |
-| `div` or `rem` by zero, and signed minimum divided by -1 | 2 | 102 | `trap2_divzero.om` |
+| signed overflow in `add sub mul neg`, and signed minimum `div` -1 | 1 | 101 | `examples/trap1_overflow.om`, `trap1_divmin.om` |
+| `div` or `rem` by zero | 2 | 102 | `trap2_div0.om` |
 | array index or I/O slice out of bounds | 3 | 103 | `trap3_bounds.om` |
 | a loop past its bound | 4 | 104 | `trap4_loop.om` |
 | an integer conversion whose value does not fit | 5 | 105 | `trap5_conv.om` |
@@ -199,6 +199,8 @@ A trap ends the process with exit status 100 + N. Output already written stays w
 
 - Unsigned arithmetic wraps modulo 2^width and never traps
   ([`examples/unsigned_wrap.om`](../../examples/unsigned_wrap.om)).
+- Signed minimum `rem` -1 is 0 and does not trap; signed minimum `div` -1 traps 1 (overflow)
+  ([`examples/trap1_divmin.om`](../../examples/trap1_divmin.om)).
 - Integer conversions are checked: `uchar x` with x = 300 traps 5. Keep the low bits on purpose with
   a mask: `uchar and x 255`.
 - Float to integer truncates toward zero and saturates at the type's limits; NaN gives 0; it never

@@ -387,6 +387,10 @@ binary printed
 `GATE PASS examples=123 pass=123 fail=0 omc=3ad9f10f…` (exit 0); with the three guard lines
 (`if gt q 64` / `ret 0` / `end`) removed from `bound_input_guard.om` it printed
 `FAIL examples/bound_input_guard: exit 104, expected 0` and `GATE FAIL examples=123 pass=122 fail=1`
+(exit 1). Merged with `examples/trap1_divmin.om` (signed minimum `div` -1 is trap 1, exit 101; Hive NG
+lane ng-ir), the same gate against the same binary printed `GATE PASS examples=124 pass=124 fail=0
+omc=3ad9f10f…` (exit 0) on 2026-11-09; with that example's expected exit changed to 102 it printed
+`FAIL examples/trap1_divmin: exit 101, expected 102` and `GATE FAIL examples=124 pass=123 fail=1`
 (exit 1). The section below is the previous pin.
 
 ### Rerun at omega-mv `d3d1b1bc` (2026-11-04, previous pin)
@@ -2366,7 +2370,7 @@ are `seed/omc/omc.om` at `9920aab1`.
   traps of section 11b (exit 20, `omc: line 8: error 7`, `omc: line 5: error 12`).
 
 Each carries `.expect` (and `fnv1a32` also `.stdin` `abc` and the 4 expected bytes in `.stdout`) and
-runs in [`examples/gate.sh`](../../examples/gate.sh) with the 118 programs in the repository's
+runs in [`examples/gate.sh`](../../examples/gate.sh) with the 119 programs in the repository's
 `examples/` directory. The gate runs only under the section 0 compiler (`f4df8239`); the observations
 below keep their own dates and compiler hashes. The portable guide
 for writing a first program is [`skills/writing-omega/SKILL.md`](../writing-omega/SKILL.md).
