@@ -117,7 +117,7 @@ sha256 `cfd96b48b0460ab5557853d6856f9c741b96ac8d0d624e06198defb4cbfa0d8a`, the e
 omega-mv#1074. #1074 merged on Radicle omega-mv main as `6efc45728d5080b0fc5d74016a00ba8bbfcf9698`
 (2026-11-07). The GitHub mirror's main is still `943d955531b9d4d9f70deb41756c0b46441dd5e0`
 (omc `5f90edea…`); GitHub carries `7d9ed10f` on branch `hive/execprog-env`. Main's own compiler is
-not the gate pin: Radicle main reseeded to omc `0f2de851…` at `0062602e` (2026-11-08) and to `6d1b1cf5…` at `a0d12c25` (main `a59a425b`, still the omc of main `19ed248e` on 2026-11-10), and the
+not the gate pin: Radicle main reseeded to omc `0f2de851…` at `0062602e` (2026-11-08) and to `6d1b1cf5…` at `a0d12c25` (main `a59a425b`, still the omc of main `9255b45f` on 2026-11-10), and the
 gate refuses it like any other hash, so check out `7d9ed10f` as below. The MCP pin `f4df8239` /
 omc `3ad9f10f…` refuses `examples/execenv.om` (`omc: line 63: error 3`).
 
