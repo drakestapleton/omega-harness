@@ -986,7 +986,7 @@ rerun at that head.
 Exercised at local heads `f9761347c` (`ng/ir-rand`: `39f04efc` with factory bay 8's review fix and
 main merged in) and `ea8914fdb` (`ng/opt-licm`: `854d8152` with factory bay 4's fix, `ng/ir-rand`
 merged, the convergent-op fix, and the workflow file back to main's; the CI timeout for its long
-gate is the separate workflow branch `ng/ir-ci`), both on Radicle main `408c76b7`, omc `0f2de851…`.
+gate is the separate workflow branch `ng/ir-ci`), both on Radicle main `408c76b7`, omc `0f2de851…`. Radicle main is now `a59a425b` (omc `6d1b1cf5…`, rechecked 2026-11-10): neither `f9761347` nor `ea8914fd` is on it.
 
 - Spec: `seed/ng/IR.md`. One binary form (`OSC1IR` v9, tag `omega.ng.ir.v1`) for CPU and GPU
   kernels; SSA values with block parameters; an ordering token that every check, effect and exit
@@ -1047,7 +1047,7 @@ gate is the separate workflow branch `ng/ir-ci`), both on Radicle main `408c76b7
 ### ng AArch64 back end (`ng/a64-m2` MERGED on omega-mv main; PENDING `ng/slice-m1`, `ng/a64-rand`)
 
 Hive NG lane ng-a64. Heads to use (gated with the committed `seed/out/omc` of each head: `5f90edea…6df`
-up to `2d2ce8f9` on base `943d955531b9`; `0f2de851…` once main `408c76b7` is merged in):
+up to `2d2ce8f9` on base `943d955531b9`; `0f2de851…` once main `408c76b7` is merged in; Radicle main `a59a425b` carries omc `6d1b1cf5…`, 2026-11-10):
 - `ng/a64-m2` `2d2ce8f98349` is merged on omega-mv main (Radicle `408c76b76f6c`, desk merge). It
   contains `ng/a64-m1-fix` `5720a78a` (the review fixes of `ng/a64-m1`, verdict MERGE). Do not pin
   `ng/a64-m1` `8a3680b0`: its verdict is MERGE_AFTER_FIX (tsum's expected value was not Omega's
@@ -1058,14 +1058,14 @@ up to `2d2ce8f9` on base `943d955531b9`; `0f2de851…` once main `408c76b7` is m
   with ng-front's front end (`ng/front-m3` `536bbc83` first, then `ng/front-m5-main` `881bd22b`), so `ng.units` lists
   ir, front, a64, main and one `ng` binary carries the front end and the back end. Its
   `.github/workflows` equals omega-mv main's (gates run on the Spark; Actions do not run for us).
-  It merges after ng-front's `881bd22b` is reviewed and merged. `f59641f6` and `02742a8c` are
+  ng-front's `881bd22b` is merged on omega-mv main (`1b128ae2`), so main already lists ir, front, a64, main; `b594fee3` itself is not on main. `f59641f6` and `02742a8c` are
   superseded.
 - `ng/a64-rand` `40883917` (PENDING) is `ng/slice-m1` plus ng-ir's `ng/ir-rand` (the random
   generator ngrand and the current ngrun) and rgate's random phase. It cannot merge before ng-ir's
   `ng/ir-rand` `6964c527` and `ng/slice-m1` `b594fee3` are reviewed and merged. `7e91cce0`,
   `d2b4d3db` and `d6a8306a` are superseded.
 
-- Unit `seed/ng/src/a64.om` (second row of `seed/ng/ng.units` on `ng/a64-m2`: ir, a64, main; third
+- Unit `seed/ng/src/a64.om` (second row of `seed/ng/ng.units` on `ng/a64-m2`: ir, a64, main; third row on omega-mv main `a59a425b` (ir, front, a64, main), and third
   row, after `front.om`, on `ng/slice-m1` and `ng/a64-rand`); design `seed/ng/a64/DESIGN.md`. Every unit of `ng.units` belongs in an `ng` build:
   `main.om` calls `a6_mode`, so ir + front + main alone is omc error 3. Gates therefore build ng from
   the list (`ngbuild build`, or ng-front's `units:seed/ng/ng.units` source segment), never from a

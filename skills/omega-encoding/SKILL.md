@@ -45,10 +45,10 @@ That rerun is history for the example gate. The example gate now uses the execen
 same omc blob is at #1074 heads `5d288784` and `88282ecd`. #1074 merged on Radicle omega-mv main as
 `6efc45728d5080b0fc5d74016a00ba8bbfcf9698` (2026-11-07); the GitHub mirror's main is still
 `943d955531b9d4d9f70deb41756c0b46441dd5e0` (omc `5f90edea…`). Radicle main has since reseeded to omc
-`0f2de85153b07656f4b992d101272987fe6ed1eee471ef70b132a37f5ba6b02f` at `0062602e` (2026-11-08), so
+`0f2de85153b07656f4b992d101272987fe6ed1eee471ef70b132a37f5ba6b02f` at `0062602e` (2026-11-08) and to `6d1b1cf5a44803389a831b67f750ea4cd1c9f53edfde9d6d9241d7352887f1f8` at `a0d12c25` (main `a59a425b`, 2026-11-10), so
 main's own compiler is not the gate pin. The MCP pin above refuses `examples/execenv.om` with
 `omc: line 63: error 3`. Rechecked 2026-11-08, Linux AArch64: `GATE PASS examples=111 pass=111 fail=0`
-at `cfd96b48`; the same gate on `5f90edea` or `3ad9f10f` exits 2, and on `0f2de851` (2026-11-09) also exits 2.
+at `cfd96b48`; the same gate on `5f90edea` or `3ad9f10f` exits 2, and on `0f2de851` (2026-11-09) also exits 2. Rerun 2026-11-10, Linux AArch64, on omega-harness branch `ham/guides-current` (121 programs in `examples/` plus 5 in `skills/*/examples/`): `GATE PASS examples=126 pass=126 fail=0` at `cfd96b48`; on `6d1b1cf5` it exits 2.
 
 ### Previous pin `d3d1b1bc` (checked 2026-11-04, history)
 
@@ -1326,7 +1326,7 @@ the bound ranges below are those of the pin `3a163bc5`, and the cited lines are 
 - No loop runs forever and recursion is bounded by the 8 MiB stack. A long-running service needs an
   explicit epoch/restart design, not a bigger bound.
 
-### Critical source profile `seed/profile` (pending omega-mv #1063, DRA-419; not on main)
+### Critical source profile `seed/profile` (omega-mv #1063, DRA-419; on Radicle omega-mv main: `b27482f4` is an ancestor of `a59a425b`)
 
 `seed/profile/profile.om` is a seeded-Omega, token-level checker that adapts Holzmann's Power of Ten to
 `.om` units. It is stricter than `omc`, which compiles every B1/B2/B3 refusal fixture. Run it from the
@@ -2370,8 +2370,8 @@ are `seed/omc/omc.om` at `9920aab1`.
   traps of section 11b (exit 20, `omc: line 8: error 7`, `omc: line 5: error 12`).
 
 Each carries `.expect` (and `fnv1a32` also `.stdin` `abc` and the 4 expected bytes in `.stdout`) and
-runs in [`examples/gate.sh`](../../examples/gate.sh) with the 119 programs in the repository's
-`examples/` directory. The gate runs only under the section 0 compiler (`f4df8239`); the observations
+runs in [`examples/gate.sh`](../../examples/gate.sh) with the 121 programs in the repository's
+`examples/` directory. The gate runs only under the section 0 example-gate compiler (omega-mv `7d9ed10f`, omc `cfd96b48…`); the observations
 below keep their own dates and compiler hashes. The portable guide
 for writing a first program is [`skills/writing-omega/SKILL.md`](../writing-omega/SKILL.md).
 
