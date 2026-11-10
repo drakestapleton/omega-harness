@@ -1310,6 +1310,82 @@ the bound ranges below are those of the pin `3a163bc5`, and the cited lines are 
 - No loop runs forever and recursion is bounded by the 8 MiB stack. A long-running service needs an
   explicit epoch/restart design, not a bigger bound.
 
+### Critical source profile `seed/profile` (pending omega-mv #1063, DRA-419; not on main)
+
+`seed/profile/profile.om` is a seeded-Omega, token-level checker that adapts Holzmann's Power of Ten to
+`.om` units. It is stricter than `omc`, which compiles every B1/B2/B3 refusal fixture. Run it from the
+omega-mv root, because it reads host words from `seed/effects/effects.om`:
+`profile [bounds] [SOURCE ...]`. The sources are concatenated, and stdin is used when no source is
+given. It prints one token:
+
+| Exit | Output | Meaning |
+|---|---|---|
+| 0 | `PROFILE-PASS` | the unit passes |
+| 1 | `PROFILE-REFUSED:<rule>:<line>` | a rule was violated |
+| 2 | | usage error |
+| 3 | `PROFILE-INVALID` | the unit exceeds a capacity |
+| 4 | | I/O error |
+
+Capacities are 65535 bytes, 4095 lines, 16383 tokens, 63-byte tokens and 128 functions. The rules:
+
+- **B1:** a `while` needs `bound N`. A `for` count is a literal, a `const`, `len X` of a declared array, or carries `bound N`. The resolved count or explicit bound must be at most 8192.
+- **B2:** recursion is allowed only in qualified form. Every function on a cycle takes `depth` first, never assigns it and has no `new`.
+  - An in-cycle call passes `depth`, or a name guarded by `NAME = add depth 1` / `if gt NAME LIM` (LIM ≤ 64) / an optional call to a unit function / `ret`, `exit` or `trap` / `end`.
+  - The stop must close the guard's then-block. An `else` or any other block line inside the guard is refused.
+  - The assignment and the call must sit in the same block instance. No line between them may leave that block or start its `else` arm; equal nesting depth alone is not enough.
+  - An entry from outside the cycle passes a literal or `const` ≤ 64.
+  - The omc/DRA-311 leaf removal then runs over the remaining edges.
+- **B3:** each `global` and each `new` has at most 65536 elements. All globals together occupy at most 65536 bytes. The `new` allocations total at most 65536 bytes per function and at most 65536 bytes across the unit.
+- **E1:** an assigned call or host result is read before it is reassigned or the function returns. The exemption is `note p10 allow E1 <reason>` on the line before.
+- **X1:** host words appear only in a function preceded by `note p10 effect`.
+- **P1:** a function preceded by `note p10 pure` has no `put` and calls only pure functions.
+- **C1:** `requires`, `ensures` and `invariant` need `om2`. `om2 release` is refused.
+- **Assignments:** omc accepts `name [=] value`, so B2, B3 and E1 share one classifier that recognises both spellings. A line assigns when its second token is `=`, or when its first token is not a statement keyword, a unit function or a host word. omc refuses names that shadow a function (error 10) or a host word (error 16). So `nd sub nd 1`, `depth ulong 0`, `b new T N` and `r f 2` are checked like their `=` forms. The canonical B2 guard must still be written `NAME = add depth 1`.
+
+`bounds` mode skips E1 and X1. The seeded driver `seed/profile/check.om` (it replaced `check.sh` at
+#1063 head `b27482f4`; build it with the pinned compiler and run it from the omega-mv root:
+`mkdir -p build/seed && seed/out/omc < seed/profile/check.om > build/seed/profile-check && chmod +x build/seed/profile-check && build/seed/profile-check`)
+runs these checks and prints `PROFILE CHECK PASS` (exit 0), `PROFILE CHECK FAIL failed=N` (exit 1)
+or `NOT_RUN …` (exit 3, wrong or missing omc):
+
+- the 53 fixture, capacity and stop rows;
+- 11 killed `profile.om` mutants with 11 passing controls: five B2 mutants (guard limit, leaf removal, guard structure, block identity and `=`-less assignment), plus one for each other rule;
+- the profile of the `seed/authority` unit (`action`, `store`, `lock`, `dispatch`);
+- the authority gates, including `dispatch-fault-gate`;
+- negative controls with the pre-fix modules.
+
+The `om-profile-arm64` workflow builds and runs `check.om` weekly and on PRs. The fixes that this profile forced add the following codes:
+
+| Code | Where | Meaning |
+|---|---|---|
+| 43 | `lacq` | more than 1000 tries requested |
+| 40 | `ltry` | the owner pid could not be read: `lerr` is 32 (open), 33 (close) or 34 (short read). Before the fix, a live pid 32 was misread as an error. |
+| 76 | `dispatch` | reconcile refused |
+| 77 | `dispatch` | post-effect record write failed |
+| 78 | `dispatch` | release failed |
+| 79 | `dispatch` | `actlost` failed after a generation change |
+
+What the profile does not do:
+
+- It is not path-sensitive and not a typechecker.
+- It does not check callees outside the unit.
+- It makes no whole-kernel claim.
+
+Example: `examples/p10_profile.om` passes both `omc` and the profile. On 2026-11-07, at omega-mv
+#1063 heads `7ae0a1df` (profile sha256 `98c95aff…e613`), `795f5d0d` (`f4d730cb…1671`), `e6974c5d` (`2d19340a…f5f7`) and `b27482f4` (`2d19340a…f5f7`, `PROFILE-PASS` on the example), its mutants were refused:
+
+| Mutant | Output |
+|---|---|
+| bound removed | `PROFILE-REFUSED:B1:15` |
+| effect note removed | `PROFILE-REFUSED:X1:23` |
+| result overwritten | `PROFILE-REFUSED:E1:34` |
+
+Its output, 285, was checked with Wolfram: `Sum[k^2,{k,0,9}] -> 285`.
+Rerun 2026-11-07 on Linux AArch64 with this example added: `bash examples/gate.sh` against omc
+`3ad9f10f…3194` (omega-mv `f4df8239`, the pin of `gate.sh`) printed `GATE PASS examples=111 pass=111
+fail=0`, exit 0. The profile runs used omega-mv `943d9555` omc `5f90edea…f6df` (`OMC_PIN` at that main).
+At `b27482f4` the same gate printed the same line, and `build/seed/profile-check` printed `PROFILE CHECK PASS`, exit 0.
+
 ### Compiler limits checked at main `bf54b19fa` (2026-10-29; rechecked at `91c83438d` on 2026-10-31)
 
 Checked with main's `seed/out/omc` (sha256 `62775d2a391cfef7cde64e387655caa9809a267093112910ec76bfa568f3712b`)
