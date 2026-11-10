@@ -986,7 +986,7 @@ rerun at that head.
 Exercised at local heads `f9761347c` (`ng/ir-rand`: `39f04efc` with factory bay 8's review fix and
 main merged in) and `ea8914fdb` (`ng/opt-licm`: `854d8152` with factory bay 4's fix, `ng/ir-rand`
 merged, the convergent-op fix, and the workflow file back to main's; the CI timeout for its long
-gate is the separate workflow branch `ng/ir-ci`), both on Radicle main `408c76b7`, omc `0f2de851…`. Radicle main is now `a59a425b` (omc `6d1b1cf5…`, rechecked 2026-11-10): neither `f9761347` nor `ea8914fd` is on it.
+gate is the separate workflow branch `ng/ir-ci`), both on Radicle main `408c76b7`, omc `0f2de851…`. Radicle main is now `19ed248e` (omc `6d1b1cf5…`, rechecked 2026-11-10): neither `f9761347` nor `ea8914fd` is on it.
 
 - Spec: `seed/ng/IR.md`. One binary form (`OSC1IR` v9, tag `omega.ng.ir.v1`) for CPU and GPU
   kernels; SSA values with block parameters; an ordering token that every check, effect and exit
