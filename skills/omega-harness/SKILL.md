@@ -1044,6 +1044,136 @@ gate is the separate workflow branch `ng/ir-ci`), both on Radicle main `408c76b7
 - The `ng` units are om2 (`at` is reserved; error 16) and are built only by
   `seed/ng/ngbuild.om` from the sha256-pinned list `seed/ng/ng.units`.
 
+### ng AArch64 back end (`ng/a64-m2` MERGED on omega-mv main; PENDING `ng/slice-m1`, `ng/a64-rand`)
+
+Hive NG lane ng-a64. Heads to use (gated with the committed `seed/out/omc` of each head: `5f90edea…6df`
+up to `2d2ce8f9` on base `943d955531b9`; `0f2de851…` once main `408c76b7` is merged in):
+- `ng/a64-m2` `2d2ce8f98349` is merged on omega-mv main (Radicle `408c76b76f6c`, desk merge). It
+  contains `ng/a64-m1-fix` `5720a78a` (the review fixes of `ng/a64-m1`, verdict MERGE). Do not pin
+  `ng/a64-m1` `8a3680b0`: its verdict is MERGE_AFTER_FIX (tsum's expected value was not Omega's
+  result, reserved encodings were accepted) and `5720a78a` replaces it. `ng/a64-m2` is the m1 work
+  replayed on ng-ir's `ng/ir-ngrun` (`f73dc66d`, the reference interpreter ngrun) plus stack
+  arguments, SLICE values, the ngrun differential and the step diagnostics.
+- `ng/slice-m1` `b594fee3` (PENDING) is the Hive NG M1 integration branch: `ng/a64-m2` merged
+  with ng-front's front end (`ng/front-m3` `536bbc83` first, then `ng/front-m5-main` `881bd22b`), so `ng.units` lists
+  ir, front, a64, main and one `ng` binary carries the front end and the back end. Its
+  `.github/workflows` equals omega-mv main's (gates run on the Spark; Actions do not run for us).
+  It merges after ng-front's `881bd22b` is reviewed and merged. `f59641f6` and `02742a8c` are
+  superseded.
+- `ng/a64-rand` `40883917` (PENDING) is `ng/slice-m1` plus ng-ir's `ng/ir-rand` (the random
+  generator ngrand and the current ngrun) and rgate's random phase. It cannot merge before ng-ir's
+  `ng/ir-rand` `6964c527` and `ng/slice-m1` `b594fee3` are reviewed and merged. `7e91cce0`,
+  `d2b4d3db` and `d6a8306a` are superseded.
+
+- Unit `seed/ng/src/a64.om` (second row of `seed/ng/ng.units` on `ng/a64-m2`: ir, a64, main; third
+  row, after `front.om`, on `ng/slice-m1` and `ng/a64-rand`); design `seed/ng/a64/DESIGN.md`. Every unit of `ng.units` belongs in an `ng` build:
+  `main.om` calls `a6_mode`, so ir + front + main alone is omc error 3. Gates therefore build ng from
+  the list (`ngbuild build`, or ng-front's `units:seed/ng/ng.units` source segment), never from a
+  hand-written set of units. A file under another lane's directory is that lane's to change, even on
+  an integration branch.
+  `ng` reads a first line naming the mode: `@ng a64` compiles ΩIR to an AArch64 Linux ELF in omc's
+  memory map (save pairs, D13 default), `@ng a64 split` the same with single saves, `@ng a64-enc`
+  encodes an instruction case list. `main.om` asks `a6_mode` about the mode line (read through
+  `ng_mlb`: an earlier unit cannot name a later unit's global, error 3) before its unknown-mode exit,
+  reads the payload from offset 0, then calls `a6_run`. Refusals: the ΩIR reader's class (10..30);
+  exit 5 with `a64: unsupported`, `immediate out of range`, `branch out of range` or `reserved
+  operand value N`.
+- Slice: integer ops, compares, select, conversions, control flow, calls with up to 64 arguments
+  (IR.md s12; past the eighth machine argument they go to the caller's outgoing slots
+  `[sp, 8j]`, read by the callee at `[sp + frame + 8j]`), checks 70..82 with their exact trap codes;
+  memory on a REF to an ARRAY or a SLICE of bool or integers (load, store, alloca zero-filled per
+  invocation, gaddr, len, slice, fill; globals at omc's addresses; frames below 16 MiB); a SLICE value
+  is two allocated wires, address and count, moved together through block arguments and passed as
+  two machine arguments; host words read, write, monons and realns (omc's clock_gettime sequence and traps),
+  cpufence (DSB SY) and cpurelax (YIELD); liveness, linear scan over x0..x14 / x19..x27 with spills,
+  frame with the x28 stack-floor check (trap 6), 64-byte aligned function entries, and the E loop
+  shape (a self call whose result is added and returned becomes an accumulator loop). Not yet:
+  STRUCT and VEC access, atomics, SLICE results of calls and select, `retv` of a SLICE (exit 5),
+  other host words, floats,
+  kernels. Stack depth is not semantic: trap 6 is compared only when both compilers trap.
+- Front to back (rgate step 6, committed on `ng/slice-m1`): for 23 Omega sources (ng-ir's 14
+  integer `x-*` run pairs and ng-front's nine integer bench kernels arith, branch, leafcall, fib38,
+  fib40, isort, sieve, sort, matmul at full size) `ng` mode `@ng front-ir` must exit 0, ngcheck must
+  accept its ΩIR, and `@ng a64` and `@ng a64 split` must both give omc's exit status, stdout byte for
+  byte and stderr byte for byte, except that a one-line decimal stderr from omc (OMC-EFF-2: the
+  kernel's elapsed nanoseconds, new every run) needs a one-line decimal stderr from ng. Float programs
+  (x-float, linear: f64, Hive NG M4) must pass front-ir and ngcheck and be refused by a64 (exit 5);
+  they are counted as refused, never as compared. Negative control: fib40's ng path against omc's
+  build of `seed/ng/a64/tests/front/fib39.om` must be sound and differ in stdout, or the gate fails.
+  Also by hand: bcopy and sort match omc and Wolfram at full size in the mkir set; fib,
+  bcopy, sort and ChaCha20 (SLICE parameters, scaled) match ngrun as ΩIR text, ChaCha20 also omc on
+  `om/tls/chacha.om`. ΩIR call arguments must equal the parameter types (IR.md row 64), so passing an
+  `edit` array or slice to a `view` parameter has no ΩIR form yet.
+- ΩIR text (ngas) for fixtures: `slice` is a reader (`%s = slice TYPE tok r off n`); `alloca`
+  returns a token and the REF (`%t %r = alloca TYPE tok`); blocks appear in label order; `cbr` passes
+  no block arguments (an exit block reads the loop header's parameters); a load or store must be
+  covered by a `chk.bounds` or `fact.inbounds` on the same object, index and element count (IR.md
+  s8); class-1 (data) globals are read-only.
+- Omega in fixture references: a global array cannot be passed as an argument (error 19; a scalar
+  global given to a scalar parameter is error 7), a comparison
+  cannot be a conversion's operand (`long eq a b` is error 9: use `if`), `gt` is a keyword (error 16
+  as a global name). A narrow conversion re-extends from its source type, so a test of load
+  extension must compare the loaded value at its own type.
+- Gates, from the repository root, each with a line naming an existing scratch directory:
+  `seed/out/omc < seed/ng/a64/gate.om > gate && chmod +x gate && echo SCRATCH | ./gate`
+  (encoder vs GNU objdump, `cases 213 match 213`, wrong-bit mutant; then the refusal list, below) and
+  `seed/out/omc < seed/ng/a64/rgate.om > rgate && chmod +x rgate && echo SCRATCH | ./rgate` (`&&`:
+  a failed compile must not run an old binary). rgate: 14 mkir fixtures including bcopy, sort and lv
+  (ngcheck accepts; both save forms give the Wolfram-computed status or trap code and the same
+  stdout; omc agrees on all but tsum, where omc traps 6 a million calls deep, exit 106, and ng's
+  accumulator loop returns 32), then 75 ΩIR text fixtures (ng-ir's `x-*` run pairs but
+  x-float, and `seed/ng/a64/tests/oir/`: every check op with its trap code on narrow and 64-bit types,
+  stack arguments, globals, loads and stores, block-parameter loops, the E loop, slices, fill, monons,
+  realns, the bench kernels) assembled by ngas, accepted by ngcheck, where both save forms must give ngrun's
+  exit status, stdout and stderr; 25 mutants caught, among them a wrong trap code, one stack-parameter
+  (17: stack parameters all read the first incoming slot) and one stack-argument (18: stack
+  arguments one slot low), three slice, two clock, a fill and the x15 mutant. Counts are those of
+  `ng/a64-m2` `2d2ce8f9`, HOST_TESTED on a fresh clone, core 1, 2026-11-07, with negative controls:
+  a wrong expectation, a no-op mutant, tsum without its mask, the refusal check disabled; the earlier
+  head `a5f1a82f` also failed a wrong omc stdout, ngrun exiting 99 + code and ngrun writing shifted
+  bytes; CI NOT_RUN. A mutant's replacement text must be
+  exactly as long as the text it replaces (rgate patches the source in place; otherwise
+  `cannot run step 8`). From `2d2ce8f9` an omc build that fails prints `cannot run step 9
+  status R source PATH build.err LINE`: R 127 with `(empty)` means omc never ran (exec or descriptor
+  failure); R above 256 is 256 + the signal that ended omc, and 265 (signal 9) is rgate's kill after
+  30 s; any other R is omc's exit status, with its first message line. A file that cannot be opened
+  is `cannot run step 1` or `2` with its path. On
+  `ng/slice-m1` rgate adds the front phase: front cases ok 23/23, front
+  refused ok 2/2, front control differs 1 (HOST_TESTED on fresh clones of `02742a8c`, `f59641f6`
+  (review fixes and step diagnostics merged) and `b594fee3` (ng-front's front-m5-main merged:
+  front 23/23, 2/2, differs 1; FRONTGATE PASS fail=0 killed 5/5; FRONTIRGATE PASS cases=62), core 1, 2026-11-07 and 2026-11-09; CI NOT_RUN). Its
+  controls each fail the gate: the fib39 control made fib40 (control
+  differs 0), no timing-line exception (16/23: the seven kernels that print elapsed time) and
+  ng-front's for-latch mutant in `front.om` with `ng.units` re-pinned (16/23: same exit status,
+  different checksum stdout). The front phase catches front-end miscompiles too, not only a64 ones.
+- Random differential (D9, rgate step 7, on `ng/a64-rand`): ng-ir's `ngrand SEED` writes a ΩIR unit
+  valid by construction; for seeds 1..1000 ngcheck must accept it and both a64 forms must give ngrun's
+  exit status, stdout and stderr. A refusal by a64 fails the seed, because a refused unit is never
+  compared. Count wrong results and refusals separately when hunting: before the fix the 1000 seeds
+  gave 0 wrong and 147 refused, all `rotl`/`rotr` on u8 (ngrand's value types are i64, i32, u64,
+  u32, i8 and u8; u16 rotates are covered by fixture `r-rot`; IR.md rows 22/23 allow every unsigned
+  width). a64 now rotates u8 and u16 on a copy repeated across 32 bits (ORR with itself shifted by the
+  width, RORV W). `ngrand shrink SEED STATUS OUT CMD` reduces a failing seed to its smallest unit;
+  the shrunk seed 12 (`rotr u8`) is kept as fixture `r-s12`. At `40883917` (with ng-ir's
+  `6964c527` ngrun), fresh clone, core 1, 2026-11-09: ngrun fixtures 77/77, random seeds 1000/1000, random control differs 1, mutants 27/27, NGIRGATE PASS cases=188; refusing u8 rotates again
+  drops the random phase to 853/1000; a hunt outside the gate (ngrand, ngcheck, ngrun and ng
+  built with omc, seeds 1..1000) gives 0 wrong and 0 refused, and the same hunt with rgate's mutant 1 (a spill
+  reload reads the next slot) gives 29 wrong of 200 (HOST_TESTED; CI NOT_RUN).
+- Review fixes of `ng/a64-m1` (verdict MERGE_AFTER_FIX on `8a3680b0`; branch `ng/a64-m1-fix`
+  `5720a78a`, verdict MERGE, merged into `ng/a64-m2`, `ng/slice-m1` and `ng/a64-rand`, not rebased). The encoder
+  refuses in-field values that DDI 0487 reserves (exit 5, `a64: reserved operand value N`): shift
+  amounts, UBFM/SBFM immr/imms and EXTR lsb of 32 or more and MOVZ/MOVN hw 2..3 on 32-bit forms, ROR
+  on ADD/SUB shifted register, any shift on multiply, two-source and float forms. A field that is too
+  small is never masked (`immediate out of range`). `gate.om` runs each line of
+  `seed/ng/a64/tests/enc-refuse.cases` alone (exit 5, no word, exact stderr: 23/23) and a masking
+  mutant must fail some of them. mkir lowers main's `int` with `chk.conv` (trap 5) as IR.md s13 does,
+  so a fixture whose result does not fit i32 must reduce it first (tsum: `& 255`, 32). Fixture `lv`
+  keeps 20 values live across checked ops with no call, so an allocator handing out x15 (the checked
+  ops' scratch) fails (89, not 165); that mutant is rgate's 16th on `ng/a64-m1-fix`, 25th on
+  `ng/a64-m2` and `ng/slice-m1`, 27th on `ng/a64-rand`. Widening the spill scan to x15 is an equivalent
+  mutant (identical ELFs), documented, not gated. HOST_TESTED on a fresh clone of `5720a78a` with
+  seven negative controls, core 1, 2026-11-07; CI NOT_RUN.
+
 ## 4. Effects and authority
 
 - A proposed program or effect description does not authorize running it. Confirm capability and privilege at the execution boundary. Model confidence and semantic identity grant no authority.
