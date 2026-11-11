@@ -1351,7 +1351,7 @@ Before you finish, check whether your change touched any of these, and update th
 | Conversion, encoder or bridge behavior, or what it supports | the conversion note in `omega-harness` section 2, and the README |
 | Status vocabulary, receipts, report or handoff conventions, wire formats | `omega-communication` |
 | Repository purpose, ownership, names, archive state, plan authority, merge or Alpha policy, a resolved or new contradiction | `aien-repositories` |
-| Any project repository's purpose, status or links, or a new repository | that repository's row in `repos.tsv` of the sovereign-intelligence Radicle repository (`rad:z2JJz4RDfZZxKGBLn6UhmW5p9VJQj`; columns name, rid, head, tier, description), in the same piece of work |
+| Any project repository's purpose, status or links, or a new repository | that repository's row in `compiler/inventory.tsv` of the sovereign-intelligence Radicle repository (`rad:z2JJz4RDfZZxKGBLn6UhmW5p9VJQj`; columns name, rid, description; core tier in `compiler/order.tsv`), in the same piece of work. Heads and branches in its `repos.tsv`, README and served `/si` are generated from Radicle (since SI main `ba770327`, 2026-11-11); never type one |
 | A new source of hardware facts, a new use of an NVIDIA SDK tool, or stored NVIDIA-tool output | that repository's `PROVENANCE.md`, and section 4 here if the rule changed |
 | These skills, their install method or their layout | the README and the affected skill |
 
