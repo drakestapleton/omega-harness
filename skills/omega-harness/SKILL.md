@@ -21,7 +21,9 @@ Companion skills in this package:
   omc `f4fa7951` (2026-11-10; the earlier pin `7d9ed10f` / `cfd96b48` is history). Radicle omega-mv main
   is `b2ad967e` (checked 2026-11-11) and carries the same omc `f4fa7951`: the 22 commits after `c106bae0`
   are ng work (section 3, "ng additions").
-  The MCP pin is `f4df8239` / `3ad9f10f`, which refuses `execenv`.
+  The language-reference pin is `f4df8239` / `3ad9f10f`, which refuses `execenv`. omega-mcp's source
+  pins `b2ad967e` / `f4fa7951` (omega-mcp `2e8e12a2`), but the installed MCP server reported omc
+  `2c824805` on 2026-11-11T12:34Z: read `compiler_sha256` from a trivial `compile` first.
 - `omega-communication`: status labels, reports, handoffs and corrections.
 - `aien-repositories`: what AIEN builds and which repository owns a task.
 
@@ -58,7 +60,44 @@ This wording follows the method and systems-software case study documented by Gr
 
 ## 1. Orient before acting
 
-1. Identify the owning repository with `aien-repositories`. Record its actual remote, default branch and exact source commit, then read its `AGENTS.md` (or `CLAUDE.md`). Crumbs are retired from the active workflow (DRA-97, 2026-11-07; Drake: "Retire Crumbs from the active workflow while preserving live ownership"). An existing `.crumb` or `.crumb.local` file is history, not an instruction or a lock: do not read, write, claim or refresh crumbs as a step of the work. Claim shared files and branches in the hive `CLAIMS.md` under its flock with a matching `CLAIM <agent> <item>` line on the hive BOARD, own tasks through kanban cards, take the GPU through a `spark-window` lease and CPU cores through the queen's pool locks. An open PR, a local branch and a deployed service are three different states.
+**Interplane is the only forge (standing rule, Drake 2026-11-11: "No more GitHub? Everything goes to
+interplane.").** Interplane (https://interplane.io, which serves the Radicle repositories) is the
+canonical source. Never push to a GitHub remote, open or update a GitHub PR or issue, publish with `gh`,
+or cite a GitHub branch as current state. New work is a new Radicle repository or a landing on a
+repository's Radicle `main` with a receipt, and it is finished only when interplane.io shows it: give
+the page URL and its HTTP status (this repository: https://interplane.io/drakestapleton/omega-harness).
+Clone with `rad clone rad:<RID>` or `git clone https://www.aienos.com/rad/<RID>.git`. Every
+`github.com/aien-dev/...` link in these skills is a dated citation of the commit, PR, issue or run it
+names, history and never a place to work or a source of current state. Only Drake reverses this rule.
+
+**No hard caps on our own software (standing rule, Drake 2026-11-11).** In his words:
+"We've hit that cap a couple times. why is it there? I would suggest removing if it isn't going to
+cause problems" / "Instead of caps to prevent something, just put a TEST that will alarm if it passes
+the threshold." / "The goal is not to be afraid of an infinite loop or a dead system wasting memory.
+The goal is for us to notice and fix it because nothing is permanent in software. Everything is
+redoable. So there's no reason to have hard caps anywhere, unless you're going to physically break the
+hardware. So don't protect software. By limiting hardware."
+
+- Do not add a fixed limit to our own software as a guard against our own bugs or growth. When a limit
+  exists only because a buffer or table was given a fixed size, remove the cause: size it from the
+  input, grow it, or restructure. Documenting the number is not the fix.
+- Put a test that alarms in place of the cap. It measures the quantity and fails loudly, with the number
+  and its source, when the quantity passes a stated threshold. It tells someone to look; it does not
+  stop the work.
+- A limit stays only when crossing it physically harms hardware (state the mechanism) or it is a real
+  boundary of the machine (address space, a fixed-width wire field, disk size). Say which, with the
+  measurement. A refusal stays defined behaviour: never trade a clean refusal for an overrun, silent
+  truncation or memory corruption. "No cap" means the structure really holds the larger input, proven
+  by a test far past the old number.
+- Exception until Drake rules on it: limits that contain other people rather than our own bugs
+  (untrusted outsiders' code and uploads on public endpoints, such as sandbox resource limits, shelf
+  quotas and runner job limits, and limits promised to a volunteer about their own machine). Keep
+  those as they are, add no new ones beyond containment, and add the alarm tests beside them.
+- Report every cap you meet: where it is, the number, why it was there, and what you did with it.
+  omc `f4fa7951`'s capacity limits (`writing-omega` section 8) are such caps, recorded as dated facts
+  with the table behind each.
+
+1. Identify the owning repository with `aien-repositories`. Record its actual remote, default branch and exact source commit, then read its `AGENTS.md` (or `CLAUDE.md`). Crumbs are retired from the active workflow (DRA-97, 2026-11-07; Drake: "Retire Crumbs from the active workflow while preserving live ownership"). An existing `.crumb` or `.crumb.local` file is history, not an instruction or a lock: do not read, write, claim or refresh crumbs as a step of the work. Claim shared files and branches in the hive `CLAIMS.md` under its flock with a matching `CLAIM <agent> <item>` line on the hive BOARD, own tasks through kanban cards, take the GPU through a `spark-window` lease and CPU cores through the queen's pool locks. An open Radicle patch, a local branch and a deployed service are three different states.
 2. Read `omega-encoding` before writing `.om`. Treat skills, memory and model recall as navigation aids, not language authorities. Check their claims against the chosen revision's `docs/one_layer/OMEGESE.md`, `seed/omc/omc.om`, `seed/host/README.md` and real fixtures. Find a path before opening it; never guess one.
 3. Work in an isolated checkout pinned to the canonical source. Do not use another agent's dirty working tree, and never checkout, reset or stash in a shared one. Read lock files and the contracts of callers and the build before choosing dependencies.
 4. Write a short plan: intended behavior, invariants, affected consumers, allowed effects, the acceptance command and a negative control. For device work, start from the hardware mechanism and its vendor manual. Having a tool installed does not authorize using it.
@@ -177,7 +216,7 @@ establish macOS host-word support. Positive runtime receipts below do not close
 this language gap.
 
 - First-party implementation belongs in `.om`. Existing C, Rust and shell are unfinished migration, not permission to add more foreign code. Never pass off a foreign implementation as generated code, vendor code, glue or an `.om` file.
-- When the language lacks something, build it (Drake's standing rule, 2026-10-26: "If .om doesn't have a feature, you need to make that feature"). Hand in an omega-mv Radicle patch (`rad:z6do9WDBhuSnvopDkgFdFr1yWA62`) through a READY file to the desk, coordinated with whoever owns the compiler lane, that carries the word or facility, its error code, gates with a negative control, parity against an independent oracle, and the guide update. Do not invent a word you have not implemented, and do not route around the gap with host code. Host code is a last resort only, recorded with its Omega successor and the omega-mv patch that will replace it. A gap that needs a decision Drake has not made (for example heap or imports, omega-mv #793 and #795, frozen GitHub numbers) is put to him rather than built around.
+- When the language lacks something, build it (Drake's standing rule, 2026-10-26: "If .om doesn't have a feature, you need to make that feature"). Land it on omega-mv Radicle main (`rad:z6do9WDBhuSnvopDkgFdFr1yWA62`) with a receipt (section 6), coordinated with whoever owns the compiler lane, carrying the word or facility, its error code, gates with a negative control, parity against an independent oracle, and the guide update. Do not invent a word you have not implemented, and do not route around the gap with host code. Host code is a last resort only, recorded with its Omega successor and the omega-mv change that will replace it. A gap that needs a decision Drake has not made (for example heap or imports, omega-mv #793 and #795, frozen GitHub numbers kept as history) is put to him rather than built around.
 - Seeded Omegese, compiled by `seed/out/omc`, is the forward language. The historical console syntax in `spec/omega-language-v0.md` and the C compiler checks are different things. As of omega-mv main `55f9b0af47de70a3d06357985cf99ae3e45c016f` (2026-10-25), the seeded compiler and its host and device words are on main. Any source saying they exist only on candidate branches is stale.
 - Do not promote design ambitions into supported syntax. Check the keyword table, typing and lowering, and the fixtures of the compiler you will actually run. Compiler limits are implementation limits at a pin, not permanent properties of Omega.
 - Optimize for verified programs produced per unit of inference cost on held-out tasks (first-attempt correctness, successful compilation, verified behavior, completion time, and total compute cost). Tokenization is not a language rule: fitting vocabulary to single tokens under a specific tokenizer is an empirical cost measurement, not a binding language constraint.
@@ -828,7 +867,7 @@ Merged as `3a10bd29fb7debdcf2c8f5cb58680cc74cb5b1f3`; compiler pin unchanged.
   `be8c5130…`: `q = ulong add k 1` on `k = -5` exits 105; `kq = and add k 1 3` then `ulong kq`
   exits 0.
 
-### Developer kernel template (GitHub, CPU only)
+### Developer kernel template (frozen GitHub history, CPU only)
 
 [aien-dev/omega-kernel-template](https://github.com/aien-dev/omega-kernel-template) was the
 public on-ramp for this backend. It is frozen GitHub history since 2026-11-07 and has no Radicle copy in
@@ -1311,7 +1350,7 @@ Before you finish, check whether your change touched any of these, and update th
 | Conversion, encoder or bridge behavior, or what it supports | the conversion note in `omega-harness` section 2, and the README |
 | Status vocabulary, receipts, report or handoff conventions, wire formats | `omega-communication` |
 | Repository purpose, ownership, names, archive state, plan authority, merge or Alpha policy, a resolved or new contradiction | `aien-repositories` |
-| Any project repository's purpose, status or links, or a new repository | that repository's entry in the sovereign-intelligence Radicle repository (`rad:z2JJz4RDfZZxKGBLn6UhmW5p9VJQj`) `index/curated.yml` (layer, evidence, one-line purpose), in the same piece of work |
+| Any project repository's purpose, status or links, or a new repository | that repository's row in `repos.tsv` of the sovereign-intelligence Radicle repository (`rad:z2JJz4RDfZZxKGBLn6UhmW5p9VJQj`; columns name, rid, head, tier, description), in the same piece of work |
 | A new source of hardware facts, a new use of an NVIDIA SDK tool, or stored NVIDIA-tool output | that repository's `PROVENANCE.md`, and section 4 here if the rule changed |
 | These skills, their install method or their layout | the README and the affected skill |
 
@@ -1319,17 +1358,17 @@ How to do it:
 
 1. Edit the guide in the same piece of work as the change. Give the new source commit and date, and remove any rule the change made untrue; do not just add a contradicting one.
 2. If an example or expected output changed, rerun it against the new pin and record what you observed. Never copy a predicted result into the guide.
-3. Hand the change in as a Radicle patch on omega-harness (`rad:z39gvwWsnkRZsAConQLjaKiNVLHfW`) with the evidence, linked to the change that caused it: write a READY file (repo, base, head, bundle, gate logs, negative control) and the Radicle publishing lane opens the patch; the desk merges after a signed review of the exact head. Lanes never push to Radicle or GitHub, and the `aien-dev` GitHub org is frozen, so never open a GitHub PR or issue there. If the causing change is not merged yet, say in the READY file that the guide patch is pending until it lands.
-4. If you are not allowed to change the guide, or you are unsure, give the desk a note describing exactly what is now stale (the publishing lane can file it as a Radicle issue), and say so in your report. Silence is not an option.
+3. Land the change on omega-harness Radicle main (`rad:z39gvwWsnkRZsAConQLjaKiNVLHfW`) with a receipt, linked to the change that caused it: check the exact head in a fresh `rad clone` that fast-forwards from main, run `examples/gate.sh` with the pinned omc plus a wrong-compiler control, and write the landing receipt (commands, exit codes, pins, log sha256) before the push; then confirm the new head on https://interplane.io/drakestapleton/omega-harness with its HTTP status. If the causing change has not landed yet, the guide change waits for it. GitHub is not a route: never open a GitHub PR or issue (section 1).
+4. If you are not allowed to change the guide, or you are unsure, file a Radicle issue on omega-harness describing exactly what is now stale (`rad issue open`), or hand the same note to the desk, and say so in your report. Silence is not an option.
 5. Your final report must say one of two things: which guides you updated, or that no guide was affected and why.
 
 ## Sources
 
 - Shared public rules: https://www.aienos.com/agents/RULES.md
-- Repository contract: https://github.com/aien-dev/omega-mv/blob/55f9b0af47de70a3d06357985cf99ae3e45c016f/AGENTS.md
-- Seed construction: https://github.com/aien-dev/omega-mv/blob/55f9b0af47de70a3d06357985cf99ae3e45c016f/seed/omega-from-seed.sh
-- Language: https://github.com/aien-dev/omega-mv/blob/55f9b0af47de70a3d06357985cf99ae3e45c016f/docs/one_layer/OMEGESE.md
-- OM-2 contract (normative, on main since #801): https://github.com/aien-dev/omega-mv/blob/19f014f2178ca9cd3473728fe00a475a2398c409/spec/omegese-om2.md
-- Omega 1.0 roadmap and its acceptance gates (a plan, not a status claim; tracking issues #790..#800): https://github.com/aien-dev/omega-mv/blob/19f014f2178ca9cd3473728fe00a475a2398c409/docs/ROADMAP-1.0.md
+- Repository contract: https://interplane.io/drakestapleton/omega-mv/blob/55f9b0af47de70a3d06357985cf99ae3e45c016f/AGENTS.md
+- Seed construction: https://interplane.io/drakestapleton/omega-mv/blob/55f9b0af47de70a3d06357985cf99ae3e45c016f/seed/omega-from-seed.sh
+- Language: https://interplane.io/drakestapleton/omega-mv/blob/55f9b0af47de70a3d06357985cf99ae3e45c016f/docs/one_layer/OMEGESE.md
+- OM-2 contract (normative, on main since #801): https://interplane.io/drakestapleton/omega-mv/blob/19f014f2178ca9cd3473728fe00a475a2398c409/spec/omegese-om2.md
+- Omega 1.0 roadmap and its acceptance gates (a plan, not a status claim; tracking issues #790..#800 are frozen GitHub history): https://interplane.io/drakestapleton/omega-mv/blob/19f014f2178ca9cd3473728fe00a475a2398c409/docs/ROADMAP-1.0.md
 
 When the compiler changes, refresh the pins and the examples. Older measured evidence stays as dated history: correct the guidance rather than rewriting receipts.

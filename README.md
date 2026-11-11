@@ -32,12 +32,17 @@ For the documented method and systems-software case study, see Gregory M. Kurtze
 Clone the repository, then put the skill directories where your agent looks for skills:
 
 ```sh
-git clone rad://z39gvwWsnkRZsAConQLjaKiNVLHfW omega-harness
+rad clone rad:z39gvwWsnkRZsAConQLjaKiNVLHfW omega-harness
+# or, without Radicle installed:
+git clone https://www.aienos.com/rad/z39gvwWsnkRZsAConQLjaKiNVLHfW.git omega-harness
 ```
 
-Radicle is the canonical home (2026-11-07). The `aien-dev` GitHub organization is frozen; its
+**Interplane is the only forge (Drake, 2026-11-11).** This repository is shown at
+https://interplane.io/drakestapleton/omega-harness, and its Radicle `main` is the canonical source.
+Never push to a GitHub remote, open or update a GitHub PR or issue, publish with `gh`, or cite a GitHub
+branch as current state. The `aien-dev` GitHub organization has been frozen since 2026-11-07; its
 `github.com/aien-dev/...` links below are historical citations of the commits they name, not live
-destinations.
+destinations. Only Drake reverses this rule.
 
 | Agent | Skill directory |
 |---|---|
@@ -60,7 +65,7 @@ C++ browser adapter Omega, and firmware-hosted emulation does not establish
 standalone-kernel or native Apple Silicon support. These are unmerged experiment
 branches; they do not change the compiler pin or supported language.
 
-These skills cover working in Omega itself. Conversion between Omega and other languages belongs to [`omega-bridge`](https://github.com/aien-dev/omega-bridge). It converts a declared, checked subset and refuses to attempt universal conversion. You can run an MCP server in front of it if you want automated conversion, but that wrapper doesn't let it convert anything beyond that subset.
+These skills cover working in Omega itself. Conversion between Omega and other languages belongs to [`omega-bridge`](https://interplane.io/drakestapleton/omega-bridge). It converts a declared, checked subset and refuses to attempt universal conversion. You can run an MCP server in front of it if you want automated conversion, but that wrapper doesn't let it convert anything beyond that subset.
 
 Merged [omega-bridge #32](https://github.com/aien-dev/omega-bridge/pull/32) localizes private
 ABI1/ABI2 runtime symbols so independent generated translation units link without collisions.
@@ -140,7 +145,7 @@ the arithmetic expectations.
 
 ## Keeping it current
 
-**The agent that makes a change updates the guides.** If your work changes the Omega language, the compiler or its pin, build or gate commands, the encoder or bridge, repository ownership or status, or this harness, update the matching skill in the same piece of work. Then contribute it as a Radicle patch: hand the desk a READY file with the evidence (base, head, bundle, gate logs, negative control); the Radicle publishing lane opens the patch and the desk merges it. Never push to github.com. If you can't, give the desk a note saying what is now stale. `omega-harness` section 6 has the full map of which change goes in which skill.
+**The agent that makes a change updates the guides.** If your work changes the Omega language, the compiler or its pin, build or gate commands, the encoder or bridge, repository ownership or status, or this harness, update the matching skill in the same piece of work. Then land it on Radicle `main` with a receipt: rerun `examples/gate.sh` and its wrong-compiler control in a fresh clone of the exact head, write the landing receipt, land it, and confirm the new head on https://interplane.io/drakestapleton/omega-harness. Never push to github.com. If you can't make the change, open a Radicle issue (`rad issue open`) saying what is now stale. `omega-harness` section 6 has the full map of which change goes in which skill.
 
 Each skill names the omega-mv commit it was checked against and lists known disagreements. Historical sections retain their dated pins. `omega-encoding` section 0 adds scoped pins for the IR/wasm backend, the merged Omega 1.0 roadmap, and main `91b3c932` (compiler `189ada82…3b54`): executable contracts, expanded capacity and the f32 return fix. The batch has host evidence, not GPU qualification. When the compiler changes, recheck cited lines, rerun examples, then update pins. Do not edit old evidence. Contributions follow the [shared AIEN agent rules](https://www.aienos.com/agents/RULES.md).
 

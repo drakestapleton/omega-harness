@@ -6,10 +6,12 @@ description: Portable guide to writing Omega (.om) programs that the seeded omc 
 # Writing Omega programs
 
 This guide is for any agent or person writing `.om` on any machine. It needs only a clone of
-[aien-dev/omega-mv](https://github.com/aien-dev/omega-mv) and of this repository. The worked
+omega-mv (`rad clone rad:z6do9WDBhuSnvopDkgFdFr1yWA62`, or `git clone
+https://www.aienos.com/rad/z6do9WDBhuSnvopDkgFdFr1yWA62.git`; browse it at
+https://interplane.io/drakestapleton/omega-mv) and of this repository. The worked
 examples are rerun by [`examples/gate.sh`](../../examples/gate.sh), which accepts only the
 example-gate compiler below. `execenv` needs that compiler. The other rules were recorded at the
-MCP pin; those programs still pass at the example-gate compiler.
+language-reference pin; those programs still pass at the example-gate compiler.
 For compiler internals, register rules, wire formats and the reasons behind each rule, read
 [`skills/omega-encoding/SKILL.md`](../omega-encoding/SKILL.md).
 
@@ -18,18 +20,24 @@ For compiler internals, register rules, wire formats and the reasons behind each
 | example-gate omega-mv commit | `c106bae04231f47912f4b90b49f426a44a1f4238` (Radicle main, 2026-11-10; the earlier pin `7d9ed10f`, omc `cfd96b48…`, is history) |
 | example-gate `seed/out/omc` | sha256 `f4fa7951816bbd09c5eaaae6692852a70c3c305164b365027c5b683dec7d63e9` (674,212 bytes; rebuilt from seed0 to the same bytes, 2026-11-10T20:31Z) |
 | omega-mv Radicle main | `b2ad967e57146172c1bedf1eac98babb75baef65` (checked 2026-11-11) with the same `seed/out/omc` `f4fa7951…`: no commit in `c106bae0..b2ad967e` changes `seed/out/omc`, `seed/omc/omc.om`, `seed/rung0/seed0.hex` or `docs/one_layer/OMEGESE.md`; those 22 commits are ng work (`omega-harness` section 3, "ng additions") |
-| MCP pin (refuses `execenv`) | `f4df82394e35893dcf1354dda69a2fe028d94bc1`, omc `3ad9f10f64309e7acf8a725082b28e23a2a4aeb07e98322fb4dc0fcd8fc93194` |
-| language reference | `docs/one_layer/OMEGESE.md` at the MCP pin; `execenv` contract is `seed/host/execenv/README.md` at `c106bae0` |
+| language-reference pin (refuses `execenv`; omega-mcp's source pin until `2e8e12a2`) | `f4df82394e35893dcf1354dda69a2fe028d94bc1`, omc `3ad9f10f64309e7acf8a725082b28e23a2a4aeb07e98322fb4dc0fcd8fc93194` |
+| omega-mcp source pin | omega-mv `b2ad967e`, omc `f4fa7951…` (the example-gate omc), omega-mcp Radicle main `2e8e12a2` (2026-11-11) |
+| installed omega MCP server (Spark) | omc `2c82480596bbdc50cda9626866209ef662d5834f278f839ff4ce0250c495029f` (omega-mv `e5b32567`), the `compiler_sha256` of a trivial `compile` at 2026-11-11T12:34Z |
+| language reference | `docs/one_layer/OMEGESE.md` at the language-reference pin; `execenv` contract is `seed/host/execenv/README.md` at `c106bae0` |
 | host | Linux AArch64 only; omc writes a static AArch64 Linux ELF |
 
 The language reference is normative. Where this guide and OMEGESE disagree, the compiler at the pin
 decides; this guide records the known disagreements.
 
-A second compiler is in use beside this pin: the omega MCP server compiles with omega-mv `e5b32567`
-(omc sha256 `2c82480596bbdc50cda9626866209ef662d5834f278f839ff4ce0250c495029f`, the `compiler_sha256`
-of its `compile` result, checked 2026-11-07). New first-party code is compiled with the pinned omc of
-the repository that owns it (Drake's pure-Omega directive, 2026-11-07), which may be either one. The
-two compilers accept different loop bounds:
+The omega MCP server is not on the example-gate compiler. Its source (omega-mcp `2e8e12a2`) pins
+`f4fa7951…`, but on 2026-11-11T12:34Z the installed server on the Spark still compiled with omc
+`2c824805…` (omega-mv `e5b32567`); a switch to the new build at 12:29Z was rolled back at 12:33Z.
+Before trusting an MCP result, run a trivial `compile` and read its `compiler_sha256`. Whenever it
+reports `2c824805…`, that compiler's limits apply, all observed with it on 2026-11-11: a 9-byte name is
+error 13 (8 bytes is the limit), `for ... bound` is error 5, `bound 1000000` is error 8 (999999
+compiles), and in an `om2` unit `out` is a reserved word (`out = ulong 1` is error 16). New first-party
+code is compiled with the pinned omc of the repository that owns it (Drake's pure-Omega directive,
+2026-11-07). The two older compilers accept different loop bounds:
 
 | Program | omc `2c824805` (e5b32567, running MCP) | omc `3ad9f10f` (f4df8239) |
 |---|---|---|
@@ -163,7 +171,7 @@ Every declaration and statement form at the pin (OMEGESE sections 9 to 12 are th
 | arithmetic | `add sub mul div rem neg` |
 | bits | `and or xor not shl shr` (`rotr rotl` in OM-2) |
 | compare (give `bool`) | `eq ne lt le gt ge` |
-| float | `add sub mul div neg`, `fsqrt fabs fmin fmax`, `fma a b c` (one rounding; all three the same f32 or f64 type, else error 7; the example-gate omc `f4fa7951…` and the earlier `cfd96b48…`, `6d1b1cf5…` and `564c5835…` compile it, the MCP pin `3ad9f10f…` refuses it with error 3) |
+| float | `add sub mul div neg`, `fsqrt fabs fmin fmax`, `fma a b c` (one rounding; all three the same f32 or f64 type, else error 7; the example-gate omc `f4fa7951…` and the earlier `cfd96b48…`, `6d1b1cf5…` and `564c5835…` compile it, the language-reference omc `3ad9f10f…` refuses it with error 3) |
 | arrays | `new`, `get A i`, `put A i v`, `len A` |
 | structs | `new S v1 v2 ...`, `get p f`, `put p f v` |
 | control | `if` / `else` / `end`, `while COND bound N`, `for i T K`, `break`, `continue`, `ret`, `exit`, `trap N` |
@@ -212,16 +220,16 @@ A trap ends the process with exit status 100 + N. Output already written stays w
 ## 6. Loops and bounds
 
 - `while COND bound N` runs the body at most N times, N 1..9223372036854775807 (error 8 outside;
-  IR mode 1..1000000). At `e5b32567` (the running MCP compiler) N is 1..999999 and `bound 1000000`
-  is error 8. Without `bound` the limit is 1000000. One more pass traps 4. Choose N from
+  IR mode 1..1000000). At `e5b32567` (omc `2c824805…`, the installed MCP compiler observed on
+  2026-11-11) N is 1..999999 and `bound 1000000` is error 8. Without `bound` the limit is 1000000. One more pass traps 4. Choose N from
   an argument you can write down in a `note`, for example "every pass consumes at least one byte of
   a 65536-byte input".
 - `for i T K` runs i from 0 to K-1. A number K is unguarded. Any other K (a name or value) with no
   `bound` traps 4 (exit 104) after 1000000 passes, as a `while` with no bound. `for i T K bound N`
   takes the same N as `while`, caps every count and traps 4 when K exceeds N (`for_bound.om`,
-  `trap4_for_bound.om`). At `e5b32567` (omc `2c824805…`, the running MCP compiler as of
-  2026-11-07) `for ... bound` is error 5; omega-mcp #6 moved the MCP source to `f4df8239`, but the
-  running server still reports `2c824805`, so check `compiler_sha256` before relying on it.
+  `trap4_for_bound.om`). At `e5b32567` (omc `2c824805…`, the installed MCP compiler observed on
+  2026-11-11) `for ... bound` is error 5. omega-mcp `2e8e12a2` pins `f4fa7951…`, but check
+  `compiler_sha256` in a trivial `compile` result before relying on the server.
 - `break` and `continue` work in both loops. There is no `else if`: nest an `if` inside `else`.
 - A bound is a trap, not a clamp. When the pass count follows outside input (a request, a file, a
   database row), check the length before the loop or exit early below N; one long input otherwise
@@ -269,6 +277,29 @@ A trap ends the process with exit status 100 + N. Output already written stays w
   expression into several assignments of one or two words each.
 - Size limits: an array up to 16777216 elements, 4 MiB of local arrays per function, 1 GiB of
   globals (error 23).
+- Capacity of omc `f4fa7951…` (error 14). These are dated facts of this compiler, each caused by a
+  fixed-size table or budget inside omc. They are not rules of Omega: Drake's standing rule of
+  2026-11-11 is no hard caps on our own software (`omega-harness` section 1), and a next omc without
+  these caps is being built. Bisected 2026-11-11 with omc `f4fa7951…` (omega-mv main `b2ad967e`, Linux
+  AArch64):
+  - Names: omc's name table holds 8192 entries (`nm_*` globals, `seed/omc/omc.om` line 107; `addname`
+    fails at line 3080), and `text` records and globals share it. 8192 `text t0 "a"` .. `text t8191 "a"`
+    lines plus a bare `fn main` compile and run (exit 0), and 8193 are `omc: line 8193: error 14`.
+    8191 texts plus one global compile, while 8192 texts plus one global, or 4096 texts plus 4097
+    globals, are error 14.
+  - Trap sites: each function has an 8192-entry trap-site list (`tsite`, omc.om lines 2613 and 3126),
+    and each call takes one entry. `main` with 8192 calls to `fn f to void` compiles and runs (exit 0),
+    and 8193 calls are `omc: line 8196: error 14`. The bound is the same for `g 1`, `r = h` and
+    `r = add r h`, and with 4096 `r = add r 1` lines before the calls (those take no entry: 20000 of
+    them compile).
+  - OM-2 code budget: in a unit whose first line is `om2`, one function's emitted code must stay under
+    262144 bytes (omc.om `emitb`/`emit`, lines 610 and 628). This is reached before the trap-site list
+    when calls are larger: a call passing one unsized `view uchar *` is 40 bytes, so 6552 such calls
+    compile and run and 6553 are error 14. A call `g 1 2` is 36 bytes (7281 compile, 7282 refused),
+    and a bare void call is 28 bytes (8192, the trap-site bound). The same lists in a unit without `om2`
+    stop at 8192.
+  - Until the next omc lands, split long call lists or long generated `main` bodies across helper
+    functions.
 
 ## 9. OM-2 units
 
@@ -306,13 +337,13 @@ Examples: [`om2_tour.om`](../../examples/om2_tour.om), [`om2_views.om`](../../ex
 - Host words carry the process's own permissions; they are not a sandbox.
 
 The table below lists 68 words. `execenv` is in that table and in compilers from omega-mv#1074 on
-(omc `cfd96b48…`, and Radicle main's later omcs `0f2de851…`, `6d1b1cf5…`, `564c5835…` and the example-gate `f4fa7951…`). A call is error 3 on the MCP pin. Inside
-`fn main`, `execenv = int 1` compiles on the MCP pin and is error 16 on `cfd96b48…`, `0f2de851…`, `6d1b1cf5…`, `564c5835…` and `f4fa7951…`.
+(omc `cfd96b48…`, and Radicle main's later omcs `0f2de851…`, `6d1b1cf5…`, `564c5835…` and the example-gate `f4fa7951…`). A call is error 3 on the language-reference pin `3ad9f10f…`. Inside
+`fn main`, `execenv = int 1` compiles on the language-reference pin and is error 16 on `cfd96b48…`, `0f2de851…`, `6d1b1cf5…`, `564c5835…` and `f4fa7951…`.
 OMEGESE section 10 has each contract.
 `A` and `B` are `uchar` arrays, `off`, `n` and `capacity` are `ulong`, and descriptors, flags, modes
 and ids are `int`. A path is the slice `A off n`; a packed list is a `u16` count, then `u16`-length
 records. A reserved word used as a name inside `fn main` is error 16. `execenv` is not reserved at the
-MCP pin. An unreserved name in the same program compiles.
+language-reference pin. An unreserved name in the same program compiles.
 
 | Area | Words |
 |---|---|
@@ -344,7 +375,7 @@ with its exact stderr line in the matching `.expect`, except 24, which needs a g
 | 11 | a number with nothing to give it a type | `err11_ambiguous` | `x = uint 5` |
 | 12 | register pool exhausted (16 per function) | `err12_registers` | fewer live names, a helper function, shorter expressions (section 8) |
 | 13 | name too long | `err13_long_name` | at most 63 bytes, function names included; IR-mode names, `abstract`/`layout` names and layout fields at most 8 (section 8) |
-| 14 | compiler capacity: names, functions, exports, expansion | `err14_capacity` | split the function or the unit |
+| 14 | compiler capacity: names, functions, exports, expansion | `err14_capacity` | split the function or the unit. At omc `f4fa7951`: 8192 names (texts and globals together), 8192 trap sites per function (one per call), 256 KiB of code per OM-2 function (section 8) |
 | 15 | the input ends inside an open block | `err15_missing_end` | close every block with `end` |
 | 16 | syntax: unknown word or misplaced form | `err16_syntax` | start each line with a statement word; comments are `note` lines |
 | 17 | a line after `ret`, `break`, `continue`, `trap` or `exit` in the same block | `err17_after_path` | delete the line or move it above |

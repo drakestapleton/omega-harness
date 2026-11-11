@@ -63,7 +63,7 @@ ng work (`omega-harness` section 3, "ng additions"). They add no omc syntax:
 - `vec f32 4` and `vec f64 2` are ΩIR types that ng-a64 lowers. `seed/ng/src/front.om` has no vector
   lowering at `b2ad967e`, so no Omega source form reaches them yet.
 
-### Language-reference and MCP pin `f4df8239` (omega-mv main on 2026-11-05, checked then; no longer main's head)
+### Language-reference pin `f4df8239` (omega-mv main on 2026-11-05, checked then; no longer main's head; omega-mcp's source pin until `2e8e12a2`)
 
 | Item | Value |
 |---|---|
@@ -90,9 +90,9 @@ same omc blob is at #1074 heads `5d288784` and `88282ecd`. #1074 merged on Radic
 `6efc45728d5080b0fc5d74016a00ba8bbfcf9698` (2026-11-07); the GitHub mirror's main is still
 `943d955531b9d4d9f70deb41756c0b46441dd5e0` (omc `5f90edea…`). Radicle main has since reseeded to omc
 `0f2de85153b07656f4b992d101272987fe6ed1eee471ef70b132a37f5ba6b02f` at `0062602e` (2026-11-08), to `6d1b1cf5a44803389a831b67f750ea4cd1c9f53edfde9d6d9241d7352887f1f8` at `a0d12c25` (main `a59a425b`, 2026-11-10), to `b87c8b65…` at `ac7b7724` and to `564c5835f307a65c07908eb5bd236addb060a42f44cfb7ac496879195486c999` at `cd7c5132` (ham/omc-train, 2026-11-09; on Radicle main `0158ce88`, checked 2026-11-10T15:44Z), so
-main's own compiler is not the gate pin. The MCP pin above refuses `examples/execenv.om` with
+main's own compiler is not the gate pin. The language-reference omc `3ad9f10f` above refuses `examples/execenv.om` with
 `omc: line 63: error 3`. Rechecked 2026-11-08, Linux AArch64: `GATE PASS examples=111 pass=111 fail=0`
-at `cfd96b48`; the same gate on `5f90edea` or `3ad9f10f` exits 2, and on `0f2de851` (2026-11-09) also exits 2. Rerun 2026-11-10, Linux AArch64, on omega-harness branch `ham/guides-current` (121 programs in `examples/` plus 5 in `skills/*/examples/`): `GATE PASS examples=126 pass=126 fail=0` at `cfd96b48`; on `6d1b1cf5` it exits 2. Later on 2026-11-10 Radicle omega-mv main moved to `19ed248e`, `9255b45f` and then `0158ce88` (ng-bench, ng-ir `ng/ir-rand` and `ng/opt-licm`, ng-a64 float, ng-front, the omc train with omc `564c5835…`, crumb removal, docs and `seed/text` merges). Rerun 2026-11-10T15:44Z, Linux AArch64, at omega-harness `c9780bf5`: `GATE PASS examples=126 pass=126 fail=0` at `cfd96b48`; on main's `564c5835` it exits 2 (`GATE FAIL omc sha256 564c5835…, pinned cfd96b48…`). That was the state until 2026-11-10T20:31Z; now `f4df8239` stays the language-reference and MCP pin (an ancestor of main) and the example-gate pin is main `c106bae0` (omc `f4fa7951…`).
+at `cfd96b48`; the same gate on `5f90edea` or `3ad9f10f` exits 2, and on `0f2de851` (2026-11-09) also exits 2. Rerun 2026-11-10, Linux AArch64, on omega-harness branch `ham/guides-current` (121 programs in `examples/` plus 5 in `skills/*/examples/`): `GATE PASS examples=126 pass=126 fail=0` at `cfd96b48`; on `6d1b1cf5` it exits 2. Later on 2026-11-10 Radicle omega-mv main moved to `19ed248e`, `9255b45f` and then `0158ce88` (ng-bench, ng-ir `ng/ir-rand` and `ng/opt-licm`, ng-a64 float, ng-front, the omc train with omc `564c5835…`, crumb removal, docs and `seed/text` merges). Rerun 2026-11-10T15:44Z, Linux AArch64, at omega-harness `c9780bf5`: `GATE PASS examples=126 pass=126 fail=0` at `cfd96b48`; on main's `564c5835` it exits 2 (`GATE FAIL omc sha256 564c5835…, pinned cfd96b48…`). That was the state until 2026-11-10T20:31Z; now `f4df8239` stays the language-reference pin (an ancestor of main), the example-gate pin is main `c106bae0` (omc `f4fa7951…`), and the MCP compilers are stated in "The omega MCP tools" paragraph of this section.
 
 ### Previous pin `d3d1b1bc` (checked 2026-11-04, history)
 
@@ -141,15 +141,21 @@ byte-identical to the ones `24caacf4` emits; `abc`, `a` and empty input gave `0b
 with exit 105. The same `fnv1a32.om` prefixed with `target x86linux` printed `0b e9 47 1a` for
 `abc` with exit 0 under `qemu-x86_64` 8.2.2: EMULATED, not native x86.
 
-The omega MCP tools (`compile`, `run`, `lookup`) use the guide pin since omega-mcp
-[#6](https://github.com/aien-dev/omega-mcp/pull/6): omega-mv `f4df8239`, omc `3ad9f10f…3194`.
-Before that they used omega-mv `e5b32567`, omc `2c824805…029f` (history): that omc predated #848,
-so `while ... bound 1000000` was `error 8` there (1..999999), and it still had the #775 empty-text
-defect (`len` of a `text e ""` passed as `view uchar *` returned a stale register value, exit 36 in
-the program recorded under "Empty text" below). Both are gone at the MCP pin. A server process
-started before the repin still runs the old binary: check `compiler_sha256` in a `compile` result.
-At this pin `execprog` closes every descriptor at or above 3 (omega-mv #970); omega-mcp #6 moved its
-bwrap control pipes to fds 0..2 for that reason.
+The omega MCP tools (`compile`, `run`, `explain_error`, `lookup`): omega-mcp's source pins omega-mv
+`b2ad967e`, omc `f4fa7951…63e9` (the example-gate omc) since omega-mcp Radicle main `2e8e12a2`
+(`rad:z3e8UBQVfwEcESJrcTWEbyMAHWFBZ`, 2026-11-11). Before that its source pinned omega-mv `f4df8239`, omc
+`3ad9f10f…3194` (omega-mcp [#6](https://github.com/aien-dev/omega-mcp/pull/6), frozen GitHub history).
+The installed server on the Spark is a different matter: at 2026-11-11T12:34Z a trivial `compile`
+reported `compiler_sha256` `2c82480596bb…029f` (omega-mv `e5b32567`), and all its running processes ran
+the October build. A switch to the new build at 12:29Z was rolled back at 12:33Z. So read
+`compiler_sha256` from a trivial `compile` before trusting any MCP result. Whenever it reports
+`2c824805…`, that omc's limits apply: it predates #848, so `while ... bound 1000000` is `error 8`
+(1..999999) and `for ... bound` is error 5; names over 8 bytes are error 13; `out` is reserved in `om2`
+units (error 16); and it has the #775 empty-text defect (`len` of a `text e ""` passed as
+`view uchar *` returned a stale register value, exit 36 in the program recorded under "Empty text"
+below). The first four were observed through the MCP on 2026-11-11.
+From omc `3ad9f10f` on, `execprog` closes every descriptor at or above 3 (omega-mv #970); omega-mcp #6
+moved its bwrap control pipes to fds 0..2 for that reason.
 
 ### Previous pin `3a163bc5` (2026-10-31, history)
 
@@ -514,7 +520,7 @@ Two defects recorded at `e5b32567` are fixed in this compiler (the #904 integrat
 of `uint 4294967295` compares equal to -1 and `add` 2 returns 1, and `bitcast uint` of `int -1`
 compares equal to 4294967295. At `2c824805` those three programs were error 16, exit 2 and exit 2,
 and `add` 2 trapped 1. `fn continue` is still error 16. The #775 empty-text defect was reproduced at
-`2c824805` (see the bullet below); it is fixed at the guide and MCP pin, so `part e 0 0` is only
+`2c824805` (see the bullet below); it is fixed at the guide pin and in omc `f4fa7951`, but not in the `2c824805` that the installed MCP server reported on 2026-11-11, so `part e 0 0` is
 needed for an older vendored omc. Other "observed at e5b32567" lines below are dated history; the
 example suite still matches them.
 
@@ -630,7 +636,7 @@ Changes and confirmations against the rules below, each observed with a program:
     makes it exit 60; `ret int f part e 0 0` exits 0.
 
   With the guide pin all three exit 0 (`be8c5130…` 2026-11-04, `b4f45121…` 2026-11-05; fixed by the
-  #904 integration `e2662fff`). The MCP pin has carried the fix since omega-mcp #6. On an older
+  #904 integration `e2662fff`). omega-mcp's source pin carries the fix; the installed server reported `2c824805…` on 2026-11-11, which does not. On an older
   vendored omc (anything built before `e2662fff`) pass `part e 0 0` instead
   (`examples/empty_text_part.om`). synapse-mcp hit it: every empty-text record arrived with len
   28-60 and positional arguments were refused as too long.
@@ -1584,7 +1590,7 @@ AArch64 host with main `seed/out/omc` (`omc < file`): `seed/omc/om2/s4/v-bad-pre
 `omc: line 5: error 20` (rc 20); `seed/omc/om2/s4/v-pwrite-text.om` compiles (rc 0) and runs with
 exit 0, writing `ABC\n` to stdout. Host evidence only.
 
-Historical note: up to omc `2c824805…` (omega-mv `e5b32567`, the omega MCP pin before omega-mcp #6) the check sat on
+Historical note: up to omc `2c824805…` (omega-mv `e5b32567`; the installed omega MCP server still reported it on 2026-11-11) the check sat on
 the wrong word: `pwrite` from a `text` was error 20 and `pread` into a `text` compiled and returned
 `-EFAULT` at run time. Code written for that pin copied a text into a `new` array before `pwrite`.
 
@@ -1627,7 +1633,7 @@ and `peername = int 1` as a one-line unit is `omc: line 1: error 16`. This super
 candidate notes of harness draft #108 (candidate omc `4ef67f18`/`6a2916cd`).
 
 **`execenv` ([omega-mv#1074](https://github.com/aien-dev/omega-mv/pull/1074), merged on Radicle main `6efc4572`
-2026-11-07, omc `cfd96b48…`; the MCP pin refuses it with error 3).** `r = execenv A off n B off m` (keyword 233) is `execprog A off n`
+2026-11-07, omc `cfd96b48…`; the language-reference omc `3ad9f10f…` refuses it with error 3).** `r = execenv A off n B off m` (keyword 233) is `execprog A off n`
 with a private environment: the child's environment is exactly packet B, packed like argv (u16 count
 1..64, nonempty u16-length `NAME=VALUE` records, 2..4096 bytes, no zero byte, no trailing bytes). Both
 packets are checked (trap 3, exit 103) before descriptors 3 and up close; it returns only on failure,
@@ -1650,7 +1656,7 @@ exit 7; launching `/nonexistent/x` printed `PURE_LAUNCH_REFUSED` and exited 2 (E
 descriptor 3 got EPERM (exit 1) under `execpure`, and EBADF (exit 9) under `execprog` with the parent's
 descriptor 3 open. The omc of `1db941627^` (`0243e4aff`, sha256 `1578b357…`) refuses `execpure` with
 error 3, and its `execprog` child read the inherited descriptor 3 (exit 50). Older pins, including the
-omega MCP pin before omega-mcp #6 (`2c824805…`), lack both; the current MCP pin `3ad9f10f…` has both.
+omc `2c824805…` (the installed MCP server's compiler, observed 2026-11-11), lack both; the language-reference omc `3ad9f10f…` and the example-gate `f4fa7951…` have both.
 
 - Types: `fd`, flags, modes, pids are `int`; offsets, counts, capacities `ulong`; file positions and
   intervals `long`; buffers are `uchar` arrays. Every result is `long`.
@@ -2150,7 +2156,7 @@ separate namespace in the same registry (OMEGESE section 11.1). The message form
 | Code | Meaning | Code | Meaning |
 |---|---|---|---|
 | 1, 2 | compiler input / output (stdin a directory: 1; stdout `/dev/full`: 2; both observed) | 13 | name over 63 bytes (IR-mode names, `abstract`/`layout` names and layout fields: over 8) |
-| 3 | unknown name or field | 14 | capacity at `91b3c932`: 8192 names, 4096 functions, 512 nested blocks, 1024 nesting depth, 8 MiB input/output |
+| 3 | unknown name or field | 14 | capacity at `91b3c932`: 8192 names, 4096 functions, 512 nested blocks, 1024 nesting depth, 8 MiB input/output. Dated facts of omc `f4fa7951…` (omega-mv `b2ad967e`), bisected 2026-11-11; each comes from a fixed table in omc and is not a rule of Omega (no-hard-caps rule, `omega-harness` section 1). Name table (8192, `nm_*`, omc.om line 107): 8192 `text` lines plus a bare main compile, 8193 are `omc: line 8193: error 14`, and texts and globals share it (8191 + 1 global compile, 8192 + 1 refused). Trap-site list (8192 per function, `tsite`, line 2613): one entry per call, so 8192 calls of `fn f to void` compile and 8193 are `omc: line 8196: error 14` (same for `g 1`, `r = h`, `r = add r h`). OM-2 code budget (262144 bytes per function, lines 610 and 628): an `om2` call with one unsized view argument is 40 bytes, so 6552 compile and 6553 are error 14 (`g 1 2`: 36 bytes, 7281) |
 | 4 | line ends too early | 15 | missing `end` |
 | 5 | extra words on the line | 16 | syntax / unknown word |
 | 6 | malformed number | 17 | line after `ret`/`break`/`continue`/`trap`/`exit` |
@@ -2388,15 +2394,16 @@ are `seed/omc/omc.om` at `9920aab1`.
 4. No silent fallback. If `omc` cannot express something, do not write it in C, Rust, shell or
    Python and call the result Omega. Say exactly which word or capacity is missing.
 5. Missing is not impossible, and it is not a stopping point. Drake's standing rule (2026-10-26):
-   "If .om doesn't have a feature, you need to make that feature." Build it in Omega as an omega-mv
-   pull request, coordinated with whoever owns the compiler lane at the time. The PR names the
+   "If .om doesn't have a feature, you need to make that feature." Build it in Omega and land it on
+   omega-mv Radicle main (`rad:z6do9WDBhuSnvopDkgFdFr1yWA62`) with a receipt (`omega-harness` section
+   6), coordinated with whoever owns the compiler lane at the time. The change names the
    hardware or OS need, the word and its types, refusal codes and a new error code if one is needed,
    gates with a negative control, parity against an independent oracle, and the matching update to
    this skill. Host code is a last resort only. When it is used, record it with its Omega successor
-   and the omega-mv PR that will replace it. Known decision-blocked gaps still need Drake's decision
-   before they are built (roadmap RM4 heap, RM6 imports;
+   and the omega-mv change that will replace it. Known decision-blocked gaps still need Drake's decision
+   before they are built (roadmap RM4 heap, RM6 imports; frozen GitHub history:
    [omega-mv#793](https://github.com/aien-dev/omega-mv/issues/793), [#795](https://github.com/aien-dev/omega-mv/issues/795)).
-   They are listed at `55f9b0af` ([OM_COMPLETION.md#L62-L72](https://github.com/aien-dev/omega-mv/blob/55f9b0af47de70a3d06357985cf99ae3e45c016f/docs/one_layer/OM_COMPLETION.md#L62-L72)),
+   They are listed at `55f9b0af` ([OM_COMPLETION.md#L62-L72](https://interplane.io/drakestapleton/omega-mv/blob/55f9b0af47de70a3d06357985cf99ae3e45c016f/docs/one_layer/OM_COMPLETION.md)),
    unchanged at main `bf54b19f` ([#L65-L73](https://github.com/aien-dev/omega-mv/blob/bf54b19fa590e8ae925c0e80815516dbf41e7326/docs/one_layer/OM_COMPLETION.md#L65-L73)):
    packed structs (FR-2), imports (FR-3, units concatenate), threads/atomics (FR-6), C ABI/shared
    objects (FR-7), heap (decision 24). x86-64 (FR-9) is no longer missing: since main `bf54b19f`

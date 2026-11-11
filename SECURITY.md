@@ -2,12 +2,12 @@
 
 ## Reporting a vulnerability
 
-Report privately. Do not open a public issue, pull request or discussion about it.
+Report privately. Do not open a public issue, patch or discussion about it, on Radicle or anywhere
+else.
 
-1. GitHub: open this repository's Security tab and choose "Report a vulnerability". This
-   creates a private advisory that only the maintainers can see. If that option is not shown,
-   private vulnerability reporting has not been enabled for this repository yet; use email.
-2. Email: drake@aienos.com with the subject `[omega-harness] security report`.
+Email drake@aienos.com with the subject `[omega-harness] security report`. GitHub security advisories
+are not a route: the project's GitHub organization has been frozen since 2026-11-07, and Interplane
+(Radicle) is its only forge since 2026-11-11.
 
 Include the commit or release you tested, the component (path), steps to reproduce, and what an
 attacker gains. If the report involves a secret, say where it was exposed and do not send the
@@ -43,8 +43,10 @@ In scope:
 
 Out of scope:
 
-- The Omega compiler and runtime themselves; report those to `aien-dev/omega-mv`.
-- Conversion between Omega and other languages; report that to `aien-dev/omega-bridge`.
+- The Omega compiler and runtime themselves; report those privately to the omega-mv maintainer
+  (Radicle `rad:z6do9WDBhuSnvopDkgFdFr1yWA62`, https://interplane.io/drakestapleton/omega-mv).
+- Conversion between Omega and other languages; report that privately to the omega-bridge maintainer
+  (https://interplane.io/drakestapleton/omega-bridge).
 - The agent harnesses that load these skills (omp, Claude Code, Codex and others), the Wolfram
   hosted endpoint, and the host operating system.
 

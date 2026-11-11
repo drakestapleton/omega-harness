@@ -2,6 +2,13 @@
 
 Operating instructions for an agent working in this repository. Read this before editing a skill.
 
+**Standing rules (Drake, 2026-11-11).** Interplane (https://interplane.io, serving the Radicle
+repositories) is the only forge and the canonical source: never push to a GitHub remote, open or update
+a GitHub PR or issue, publish with `gh`, or cite a GitHub branch as current state. New work is a new
+Radicle repository or a landing on Radicle `main` with a receipt, finished only when interplane.io shows
+it (URL and HTTP status). No hard caps on our own software: put a test that alarms instead.
+`skills/omega-harness/SKILL.md` section 1 has both rules in full. Only Drake reverses them.
+
 ## What this repository is
 
 Agent skills for working in Omega and the AIEN repositories: the checks that catch the mistakes agents
@@ -96,11 +103,16 @@ output, the negative control, and what was not run.
 
 ## Contributing
 
-This repository lives on Radicle: `git clone rad://z39gvwWsnkRZsAConQLjaKiNVLHfW`. The `aien-dev`
-GitHub organization is frozen (2026-11-07); never push, open a PR or open an issue there, and treat its
-links as historical citations. Contribute through Radicle patches: hand the desk a READY file (repo,
-base, head, bundle, gate logs, negative control); the Radicle publishing lane opens the patch and the
-desk merges after a signed review of the exact head. Lanes never push to Radicle themselves.
+This repository lives on Radicle: `rad clone rad:z39gvwWsnkRZsAConQLjaKiNVLHfW` or `git clone
+https://www.aienos.com/rad/z39gvwWsnkRZsAConQLjaKiNVLHfW.git`, shown at
+https://interplane.io/drakestapleton/omega-harness. The `aien-dev` GitHub organization is frozen
+(2026-11-07) and GitHub is not a route (2026-11-11): never push, open a PR or open an issue there, and
+treat its links as historical citations. A change lands on Radicle `main` with a receipt (receipts, not
+approvals, 2026-11-11): rerun `examples/gate.sh` with the pinned omc and a wrong-compiler control in a
+fresh `rad clone` of the exact head, write the landing receipt (commands, exit codes, pins, log
+sha256), land it with the hive landing tools, then confirm the head on the interplane.io page. A
+non-MERGE review verdict on that head stops the landing. To report something stale without changing
+it, open a Radicle issue (`rad issue open`).
 
 Keep the attribution in `README.md` and `LICENSE` intact. Contributions follow the shared AIEN agent
 rules at https://www.aienos.com/agents/RULES.md.
