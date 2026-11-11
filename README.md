@@ -1,7 +1,3 @@
-<!-- languages -->
-**English** · [简体中文](README.zh-CN.md)
-<!-- /languages -->
-
 # Omega Harness
 
 Agent skills for working in Omega, the `.om` language of AienOS, and in the AIEN repositories. An agent that loads these skills finds the actual source before acting, writes `.om` code that the seeded compiler accepts, runs what it builds, and reports its status without overstating it.
