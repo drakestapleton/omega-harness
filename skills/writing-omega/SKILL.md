@@ -315,6 +315,8 @@ A trap ends the process with exit status 100 + N. Output already written stays w
   view compiled, 6553 did not). A server or toolchain still on that omc keeps those limits: split long
   call lists or generated `main` bodies across helper functions there.
 
+ng is a separate compiler: its 2026-11-11 no-caps arena change (omega-mv `229f77bc`) removes its old fixed table capacities; it does not change omc's language or this guide's pin. For ng's shared-arena costs, stack-derived nesting bound, reader verdicts and complete gate set, see `omega-harness` section 3, "ng arena and no-caps gate".
+
 ## 9. OM-2 units
 
 A unit whose first line that is not blank or `note` is exactly `om2` is an OM-2 unit. OM-1 code keeps

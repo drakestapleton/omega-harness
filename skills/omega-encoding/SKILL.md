@@ -78,6 +78,8 @@ ng work (`omega-harness` section 3, "ng additions"). They add no omc syntax:
 - `vec f32 4` and `vec f64 2` are ΩIR types that ng-a64 lowers. `seed/ng/src/front.om` has no vector
   lowering at `b2ad967e`, so no Omega source form reaches them yet.
 
+ng is a separate compiler: its 2026-11-11 no-caps arena change (omega-mv `229f77bc`) removes its old fixed table capacities; it does not change omc's language or this guide's pin. For ng's shared-arena costs, stack-derived nesting bound, reader verdicts and complete gate set, see `omega-harness` section 3, "ng arena and no-caps gate".
+
 ### Language-reference pin `f4df8239` (omega-mv main on 2026-11-05, checked then; no longer main's head; omega-mcp's source pin until `2e8e12a2`)
 
 | Item | Value |

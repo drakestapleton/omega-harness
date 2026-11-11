@@ -1096,6 +1096,46 @@ gate is the separate workflow branch `ng/ir-ci`), both on Radicle main `408c76b7
   …`, and writes no output. Rerun 2026-11-10T20:33Z at main `c106bae0`, omc `f4fa7951…`, Linux AArch64:
   19 `PASS case` lines, `NGBUILDGATE PASS` (exit 0), tree clean after.
 
+### ng arena and no-caps gate (source checked 2026-11-11)
+
+At omega-mv `229f77bc`, ng has no fixed table capacities of its own. Input, names, functions,
+calls, blocks, nesting cells, the ΩIR payload, output and globals, and a64's per-function tables
+(including fixups) are regions of one 128 MiB arena, as in omc's arena implementation. Regions grow
+and the arena compacts; a full arena is a defined refusal with an `ng-use` record, never truncation
+or a table overrun (`seed/ng/src/ir.om` `ar_*`, `seed/ng/src/a64.om`'s per-function tables).
+The record names the arena groups and what each held. Value nesting is still bounded by ng's own
+stack at 32768 (`front.om` `fe_rdval`, error 14 on the value's line). a64 still needs ten arena
+words per wire per function, plus liveness bitsets sized by blocks times wires; those costs can fill
+the shared arena even when the front end accepts the source. ΩIR's own format limits remain
+(`seed/ng/IR.md` sections 12 and 14); `ngcheck`'s separate reader is not ng's arena reader.
+
+The earlier ng input/name/function/block/nesting/call/fixup table sizes are history, not refusal
+thresholds for this implementation. In particular, a historical `ngcap` result does not establish a
+current cap. The source's front gate now compares the formerly capped call cases normally.
+The no-caps gate generates units far past the old tables, re-imposes each old limit as a mutant and
+checks the usage alarm; the alarm measures growth rather than refusing a user's program.
+
+Run the full ng acceptance set from the omega-mv root: ngbuild's gate and two byte-identical ng
+builds; front-check, lower-scope, contract-scope and front-ir (`seed/ng/front/README.md`);
+no-caps; gate-ir built through `seed/ng/gate-ir.units`; a64's gate and rgate; and the Mach-O bundle
+(the commands in the surrounding sections). The additional no-caps command is:
+
+```sh
+cat seed/ng/sha256.om seed/ng/tests/nocaps/gate.om | seed/out/omc > nocaps-gate && chmod +x nocaps-gate
+./nocaps-gate seed/out/omc OMC_SHA256 SCRATCH [NG]
+```
+
+`OMC_SHA256` is the actual oracle binary's sha256, `SCRATCH` must be new, and `[NG]` means an
+optional ng binary, not literal brackets. Without it the gate builds ng through `ng.units` and runs
+the mutants; with it the gate judges that binary and omits mutant builds (the old-ng negative
+control). An incorrect oracle hash or existing scratch directory is INVALID, not PASS.
+
+Gate-ir's `G over n/x` rows now expect TRAILING (14) at byte 16777216, not the old capacity refusal:
+the arena reader reads the whole unit and sees the extra byte. The `M a-fib 31` row keeps ngcheck's
+LIMIT `23@28` but expects ng's NONCANONICAL `13@42` (the third global's class is 5); the optional
+NGEXIT/NGOFF fields pin that distinct verdict. These are reader contracts, not weakened checks
+(`seed/ng/tests/ir/cases`, `IR.md` section 14).
+
 ### ng AArch64 back end (`ng/a64-m2`, `ng/slice-m1` and `ng/a64-rand` MERGED on omega-mv main)
 
 Hive NG lane ng-a64. Heads to use (gated with the committed `seed/out/omc` of each head: `5f90edea…6df`
