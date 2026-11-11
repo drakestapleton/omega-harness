@@ -13,9 +13,9 @@ cannot express, and before encoding bytes, integers or host I/O in Omega.
 <!-- gen:pin -->
 | Pin (`PIN`) | Value |
 |---|---|
-| omega-mv commit | `83507124cafc45a3d1b5a82356e8b45a19aa0d93` |
-| `seed/out/omc` sha256 | `2495bc253c662dce362ac62393796a3579156dcfd5df7e3eba06df3436ae5d04` |
-| reference data | `data/reference.tsv`: omega-mcp's `data/reference.json` for this pin, with 197 keyword-table entries (80 host words), 29 compiler error codes, 14 traps and 13 topics |
+| omega-mv commit | `35524fb178419a74e25da90d353ff37838bd0b24` |
+| `seed/out/omc` sha256 | `a5613368f427aacd73ebeee16d46f8b3203405711d4de5b860d0cbee11ce4533` |
+| reference data | `data/reference.tsv`: omega-mcp's `data/reference.json` for this pin, with 198 keyword-table entries (80 host words), 29 compiler error codes, 14 traps and 13 topics |
 <!-- /gen:pin -->
 
 The pin is written once, in this repository's `PIN` file; the table above is generated from it and from

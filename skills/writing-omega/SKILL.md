@@ -16,9 +16,9 @@ read [`skills/omega-encoding/SKILL.md`](../omega-encoding/SKILL.md).
 <!-- gen:pin -->
 | Pin (`PIN`) | Value |
 |---|---|
-| omega-mv commit | `83507124cafc45a3d1b5a82356e8b45a19aa0d93` |
-| `seed/out/omc` sha256 | `2495bc253c662dce362ac62393796a3579156dcfd5df7e3eba06df3436ae5d04` |
-| reference data | `data/reference.tsv`: omega-mcp's `data/reference.json` for this pin, with 197 keyword-table entries (80 host words), 29 compiler error codes, 14 traps and 13 topics |
+| omega-mv commit | `35524fb178419a74e25da90d353ff37838bd0b24` |
+| `seed/out/omc` sha256 | `a5613368f427aacd73ebeee16d46f8b3203405711d4de5b860d0cbee11ce4533` |
+| reference data | `data/reference.tsv`: omega-mcp's `data/reference.json` for this pin, with 198 keyword-table entries (80 host words), 29 compiler error codes, 14 traps and 13 topics |
 <!-- /gen:pin -->
 
 The pin is written once, in this repository's `PIN` file. The table above, the word, trap and error
@@ -169,7 +169,7 @@ Every declaration and statement form at the pin (OMEGESE sections 9 to 12 are th
 ## 4. Words
 
 <!-- gen:words -->
-The keyword table at the pin has 197 entries; the 80 host words are in the host-word table. The rest, by kind:
+The keyword table at the pin has 198 entries; the 80 host words are in the host-word table. The rest, by kind:
 
 | Kind | Words |
 |---|---|
@@ -178,7 +178,7 @@ The keyword table at the pin has 197 entries; the 80 host words are in the host-
 | operator | `add A B`, `sub A B`, `mul A B`, `div A B`, `rem A B`, `and A B`, `or A B`, `xor A B`, `shl A B`, `shr A B`, `eq A B`, `ne A B`, `lt A B`, `le A B`, `gt A B`, `ge A B`, `neg A`, `not A` |
 | data | `get A i \| get P field [i]`, `len A`, `read fd A off n`, `write fd A off n`, `true`, `false`, `NAME view T N \| NAME view T *  (parameter) \| view A  (argument)`, `NAME edit T N \| NAME edit T *  (parameter) \| edit A  (argument)` |
 | structure | `fn NAME (PARAM TYPE)* to TYPE\|void [inline]`, `fn ... to TYPE\|void`, `end`, `if COND / [else] / end`, `else`, `while COND [bound N] / end`, `while COND bound N \| for NAME TYPE COUNT bound N`, `for NAME TYPE COUNT [bound N] / end`, `ret [VALUE]`, `NAME = VALUE`, `( VALUE )`, `( VALUE )`, `fn ... to void` |
-| statement | `global NAME T N`, `text NAME "bytes"`, `put A i v \| put P field [i] v`, `free  (refused)`, `own  (refused)`, `exit v`, `note ...`, `NAME = new T N v \| NAME = new STRUCT v1 .. vn`, `break`, `trap N`, `continue`, `const NAME TYPE LITERAL` |
+| statement | `global NAME T N \| global NAME T *`, `r = enlarge NAME n`, `text NAME "bytes"`, `put A i v \| put P field [i] v`, `free  (refused)`, `own  (refused)`, `exit v`, `note ...`, `NAME = new T N v \| NAME = new STRUCT v1 .. vn`, `break`, `trap N`, `continue`, `const NAME TYPE LITERAL` |
 | struct | `struct Name field type [len] ... end`, `sizeof T \| sizeof STRUCT`, `offsetof STRUCT field` |
 | float | `f32 VALUE \| 1.5f32`, `f64 VALUE \| 1.5f64`, `bitcast T VALUE`, `fsqrt X`, `fabs X`, `fmin A B`, `fmax A B`, `fma A B C` |
 | OM-2 | `rotr X N`, `rotl X N`, `for i T K unroll`, `fn NAME ... to T inline`, `NAME edit T N fresh`, `abstract NAME T [ops W ...]`, `seal NAME v`, `open v`, `holds NAME dup32`, `abstract NAME T ops W ...`, `layout NAME SIZE / field ... / end`, `field F T [COUNT] at OFF little\|big`, `field F T at OFF ...`, `field ... at OFF little`, `field ... at OFF big`, `part A o k`, `NAME out T N`, `export fn NAME ...` |
