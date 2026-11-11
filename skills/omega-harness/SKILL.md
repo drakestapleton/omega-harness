@@ -1363,10 +1363,25 @@ Commands, in the repository root on a Linux AArch64 host with the omc that `PIN`
   data for the new pin, flattens it into `data/reference.tsv` and rewrites every block
   (`git ls-files | build/guides gen`).
 - `tools/install.sh` installs the skills, and on a machine with an overlay the instruction files, from
-  Radicle main at a recorded head; `--check` reports an installation that is behind or edited. After a
-  landing on main, the landing tools' `land-hooks.sh` `harness` hook (run by `desk-publish.sh` after the
-  records step) runs the landed head's own `tools/install.sh --omc auto --rev <landed head>`, detached
-  and one at a time; a nonzero exit is posted to the hive BOARD. Nothing runs on a clock.
+  Radicle main at a recorded head; `--check` reports an installation that is behind or edited. The
+  landing tools' `desk-publish.sh` runs, after its OK line, the records step and then `land-hooks.sh`:
+  - Record enrolment (records step, under `records.lock`): when the landed repository has no registry
+    row, it is added at the end of the first table of `RIDS.md` (name, RID, branch and head from
+    Radicle) only if Radicle says it is public, its sole delegate is Drake's node key and no deny rule
+    matches. Otherwise one `ALARM ENROLL_REFUSED` line naming the failed condition goes to the
+    landing's records receipt and the hive BOARD, and nothing is enrolled. The push stands either way.
+  - The `land-hooks.sh` hooks start detached, coalesced and one run at a time each; none can fail or
+    slow the landing, and each run is an OK or ALARM line in `~/handoffs/radicle/land-hooks/land-hooks.log`:
+    - `harness`: a landing of omega-harness on main runs the landed head's own
+      `tools/install.sh --omc auto --rev <landed head>`; a nonzero exit is posted to the hive BOARD.
+    - `hub`: every landing on a default branch brings the Pi hub's Radicle seed (the
+      `https://www.aienos.com/rad/<RID>.git` mirror) up to the public registry rows plus the landed
+      RID, checking visibility, delegates and refs before any hub change and again after the fetch,
+      then comparing what the public URL serves with the signed head. An ALARM also goes to the BOARD.
+    - `disk`: every landing, on any branch, runs `disk-alarm --quiet`, which samples the Spark's free
+      disk and writes its own ALARM line to the hive BOARD when space is low or falling fast; it never
+      deletes anything.
+  Nothing runs on a clock.
 
 **Written by people and agents** (the tools copy it byte for byte and never reword it): how the
 language, compiler and tools behave and why; method and workflow; rules and their reasons; and dated
