@@ -13,8 +13,8 @@ cannot express, and before encoding bytes, integers or host I/O in Omega.
 <!-- gen:pin -->
 | Pin (`PIN`) | Value |
 |---|---|
-| omega-mv commit | `3537baad90c6456f87be8911197bfea6d109b312` |
-| `seed/out/omc` sha256 | `c52e986ed693c241f0bbb5c673a81a4aef70b9b923c447004360ffd111383607` |
+| omega-mv commit | `d68409596f7b9f5756557621c385376e55f3ef17` |
+| `seed/out/omc` sha256 | `1e628c80d5bd2ad0b08eb46d8abff66eff284a74e5a302e589c2d61cfe9f7347` |
 | reference data | `data/reference.tsv`: omega-mcp's `data/reference.json` for this pin, with 197 keyword-table entries (80 host words), 29 compiler error codes, 14 traps and 13 topics |
 <!-- /gen:pin -->
 
