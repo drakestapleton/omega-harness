@@ -140,7 +140,7 @@ order 183
 | - **Keep orchestrator context small and sharp**: Soft target under 80k-100k tokens. A bloated context window leads to degraded accuracy, hallucinations, and stalling.
 | - **Do the work yourself first (Drake, 2026-10-03)**:
 |   - The orchestrator does the actual job itself: exploration, research, edits, builds, and tests. Spawning a subagent costs context too (brief, rules, report), so it is the exception, not the default.
-|   - You are the main agent (Drake 2026-10-18). The ONLY reason for subagents: several in parallel finish a repetitive or easy job faster than you would alone, counting the time to brief them and check their work. Chat size is never a reason to delegate. Hard or judgment work is never delegated.
+|   - You are the main agent (Drake 2026-10-18). The ONLY reason for subagents: several in parallel finish a repetitive or easy job faster than you would alone, counting the time to brief them and check their work. Chat size is never a reason to delegate. Hard or judgment work is never delegated. The one exception is the reviewer subagent that rule `own-review` requires.
 |   - When delegating, give a tight self-contained brief, take back a concise report (what was inspected, what changed, pass/fail), and verify its claims.
 |   - When Drake says "do it yourself", that is final for the task.
 | - **Zero raw log dumps in main chat**: Never dump multi-page terminal outputs into the conversation. Use `grep`, `head`, `tail`, or specific line ranges with `view_file`.
