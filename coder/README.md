@@ -10,7 +10,7 @@ scripts. "Only Omega" is enforced by the harness and the compiler, not by model 
 | `omega-guard.ts` | `omp` extension (load with `-e`). Refuses every write or edit except `.om` files and `NOTES.md` inside the session directory; refuses reads outside the session directory and the context pack; compiles each written `.om` with the pinned `omc` (sha256 checked before every compile) and appends the result, with the error meaning and offending line, to the tool result; adds the `omega_run` tool (compile, then run in a `bwrap` sandbox with no network); refuses to let the session finish while a touched `.om` fails to compile, or, with `OMEGA_CASES` set, until the om2 gate passes those cases. |
 | `omega-prompt-head.md` | Rules part of the system prompt (tools, check loop, `DONE <file>`). |
 | `omega-observed.md` | Compiler facts observed with the pinned `omc` that the skill does not state. |
-| `build-context.sh` | Builds the context pack: `OMEGA.md` = rules + `skills/omega-encoding` sections 2-11 (citation links stripped) + observed facts + eight examples that must each compile with the pinned `omc`; `CONTROL.md` = rules only. |
+| `build-context.sh` | Builds the context pack: `OMEGA.md` = rules + `skills/omega-encoding` sections 2-11 (citation links stripped) + observed facts + the examples it lists, each of which must compile with the pinned `omc`; `CONTROL.md` = rules only. |
 | `eval/` | Held-out eval: 27 tasks (`tasks/ID/{spec.md,stdin,expected.out,expected.exit}`), manifest `tasks.json`, runner `run.sh`. |
 
 ## Environment read by the guard

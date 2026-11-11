@@ -10,6 +10,18 @@ cannot express, and before encoding bytes, integers or host I/O in Omega.
 
 ## 0. Pin and how to re-check it
 
+<!-- gen:pin -->
+| Pin (`PIN`) | Value |
+|---|---|
+| omega-mv commit | `b2ad967e57146172c1bedf1eac98babb75baef65` |
+| `seed/out/omc` sha256 | `f4fa7951816bbd09c5eaaae6692852a70c3c305164b365027c5b683dec7d63e9` |
+| reference data | `data/reference.tsv`: omega-mcp's `data/reference.json` for this pin, with 197 keyword-table entries (80 host words), 29 compiler error codes, 14 traps and 13 topics |
+<!-- /gen:pin -->
+
+The pin is written once, in this repository's `PIN` file; the table above is generated from it and from
+the reference data for it (`omega-harness` section 6). `examples/gate.sh` refuses any other compiler. The
+rest of this section is dated history: how the pinned compiler was established and the earlier pins.
+
 Merge status, 2026-10-29: compiler batch #904 merged at `e2662fffbce1c21ef09da71c0d8808133a6af8ab`;
 x86 integration #923 merged at `bf54b19fa590e8ae925c0e80815516dbf41e7326`.
 Earlier pending labels describe the recorded pre-merge tests. Native x86
@@ -19,7 +31,7 @@ The quantity and diagnostic audit is merged through omega-mv #914 at main
 `d94a503f7aae57d09697046405da2e9a5895be6d`. The older candidate observations
 below remain dated history, not claims about the newer integration.
 
-### Example-gate pin: omega-mv main `c106bae0` (checked 2026-11-10T20:31Z)
+### How the pinned omc was established: omega-mv `c106bae0` (checked 2026-11-10T20:31Z)
 
 | Item | Value |
 |---|---|
@@ -29,7 +41,7 @@ below remain dated history, not claims about the newer integration.
 | Seed loader `seed/rung0/seed0.hex` | sha256 `baaf081fe6055a768485c5d25d7435681ce00b04cfa80b26c48169f78944e14d` (unchanged) |
 
 Long names (omc `564c5835…c999`) are on main since `12bdb787`. Three stacked omc heads then landed on main
-(merge --no-ff, 2026-11-10T16:29:17Z), in this order; each reseeded omc, and the last one is the pin:
+(merge --no-ff, 2026-11-10T16:29:17Z), in this order; each reseeded omc:
 
 | Head | Merge on main | Change | `seed/out/omc` sha256 | omc.om lines / `^fn ` |
 |---|---|---|---|---|
@@ -48,7 +60,7 @@ fail=0` (exit 0), after `err13_long_name` moved to a 64-byte name. The same gate
 omc `564c5835…` (omega-mv `0158ce88`) with exit 2. Earlier the same day each of the three heads above
 passed the gate in its own clean worktree (123 examples on omega-harness `af497dc`; ham lane OmcRebase).
 
-Radicle omega-mv main is `b2ad967e57146172c1bedf1eac98babb75baef65` (checked 2026-11-11), with the same
+On 2026-11-11 Radicle omega-mv main was `b2ad967e57146172c1bedf1eac98babb75baef65`, with the same
 compiler: `git diff --stat c106bae0 b2ad967e -- seed/out/omc seed/out/omc.sha256 seed/omc/omc.om
 seed/rung0/seed0.hex docs/one_layer/OMEGESE.md` prints nothing and `sha256sum seed/out/omc` prints
 `f4fa7951…63e9`. On 2026-11-11 `examples/gate.sh` with that omc printed `GATE PASS examples=126 pass=126
@@ -141,16 +153,13 @@ byte-identical to the ones `24caacf4` emits; `abc`, `a` and empty input gave `0b
 with exit 105. The same `fnv1a32.om` prefixed with `target x86linux` printed `0b e9 47 1a` for
 `abc` with exit 0 under `qemu-x86_64` 8.2.2: EMULATED, not native x86.
 
-The omega MCP tools (`compile`, `run`, `explain_error`, `lookup`): omega-mcp's source pins omega-mv
-`b2ad967e`, omc `f4fa7951…63e9` (the example-gate omc) since omega-mcp Radicle main `2e8e12a2`
-(`rad:z3e8UBQVfwEcESJrcTWEbyMAHWFBZ`, 2026-11-11). Before that its source pinned omega-mv `f4df8239`, omc
+The omega MCP tools (`compile`, `run`, `explain_error`, `lookup`) report the compiler they run as
+`compiler_sha256`: read it from a trivial `compile` and compare it with this repository's `PIN` before
+trusting any MCP result. omega-mcp records its own source pin in its `PIN` file (Radicle
+`rad:z3e8UBQVfwEcESJrcTWEbyMAHWFBZ`); before its 2026-11-11 repin it pinned omega-mv `f4df8239`, omc
 `3ad9f10f…3194` (omega-mcp [#6](https://github.com/aien-dev/omega-mcp/pull/6), frozen GitHub history).
-The servers on the Spark are a different matter (2026-11-11). omega-mcp's `build/omega-mcp`, the path
-agent configs name, reported `compiler_sha256` `2c82480596bb…029f` (omega-mv `e5b32567`) for a trivial
-`compile` at 12:34Z and 12:38Z; a switch at that path at 12:29Z was rolled back at 12:33Z. Its
-`build/current/omega-mcp` (release `b2ad967e-2e8e12a2`) reported `f4fa7951…` for the same compile at
-12:39Z. Each reports its own compiler as `compiler_sha256`, so read it from a trivial `compile` before
-trusting any MCP result. Whenever it reports
+On 2026-11-11 the server at the path agent configs named still reported omc `2c82480596bb…029f`
+(omega-mv `e5b32567`). Whenever a server reports
 `2c824805…`, that omc's limits apply: it predates #848, so `while ... bound 1000000` is `error 8`
 (1..999999) and `for ... bound` is error 5; names over 8 bytes are error 13; `out` is reserved in `om2`
 units (error 16); and it has the #775 empty-text defect (`len` of a `text e ""` passed as
@@ -2441,8 +2450,14 @@ are `seed/omc/omc.om` at `9920aab1`.
   traps of section 11b (exit 20, `omc: line 8: error 7`, `omc: line 5: error 12`).
 
 Each carries `.expect` (and `fnv1a32` also `.stdin` `abc` and the 4 expected bytes in `.stdout`) and
-runs in [`examples/gate.sh`](../../examples/gate.sh) with the 121 programs in the repository's
-`examples/` directory. The gate runs only under the section 0 example-gate compiler (omega-mv `c106bae0`, omc `f4fa7951…`); the observations
+runs in [`examples/gate.sh`](../../examples/gate.sh) with the programs in the repository's
+`examples/` directory:
+
+<!-- gen:examples -->
+`examples/gate.sh` reruns 126 programs: 121 in `examples/` and 5 in `skills/*/examples/`.
+<!-- /gen:examples -->
+
+The gate runs only under the pinned compiler (section 0); the observations
 below keep their own dates and compiler hashes. The portable guide
 for writing a first program is [`skills/writing-omega/SKILL.md`](../writing-omega/SKILL.md).
 

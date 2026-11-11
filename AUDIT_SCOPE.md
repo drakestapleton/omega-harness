@@ -8,8 +8,8 @@ this document.
 ## What this repository is
 
 Agent skills for working in Omega (the `.om` language of AienOS) and in the AIEN repositories.
-Eight skills live under `skills/<name>/SKILL.md` in the Agent Skills layout, and
-`skills/omega-encoding/examples/` holds two runnable `.om` programs. AGENTS.md states that the
+The skills live under `skills/<name>/SKILL.md` in the Agent Skills layout (`AGENTS.md` lists them), and
+`skills/omega-encoding/examples/` holds runnable `.om` programs. AGENTS.md states that the
 repository is documentation and procedure, not a compiler, a runtime, a gate, or evidence that any
 claim is true. Nothing here ships as executable code; the examples are teaching material compiled
 with the compiler from `aien-dev/omega-mv`. License: Apache 2.0.

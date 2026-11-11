@@ -8,16 +8,20 @@ Agent skills for working in Omega, the `.om` language of AienOS, and in the AIEN
 
 Skills can't make agents flawless. What these do is turn the mistakes agents keep repeating into checks they must run before they claim anything: stale syntax, guessed compiler limits, compiling without running, labeling host-only runs as qualified, and choosing the wrong repository.
 
-| Skill | Use it for |
+<!-- gen:skills -->
+8 skills, each `skills/<name>/SKILL.md`; the use column is the skill's own frontmatter `description`:
+
+| Skill | Use |
 |---|---|
-| [`omega-harness`](skills/omega-harness/SKILL.md) | The overall workflow: orient, implement in `.om`, compile, run, challenge, handle effects, learn from repeated errors |
-| [`writing-omega`](skills/writing-omega/SKILL.md) | A portable guide for writing a correct `.om` program on any machine: shape, types, words, traps, errors 1..30, common mistakes with their exact refusals, known compiler defects and workarounds |
-| [`omega-encoding`](skills/omega-encoding/SKILL.md) | The language the seeded compiler accepts: prefix words, types, traps, bounds, registers, host I/O, byte layouts, error codes, plus two runnable examples |
-| [`omega-communication`](skills/omega-communication/SKILL.md) | Status labels, reports, PR text, agent handoffs, receipts, wire formats, corrections |
-| [`aien-repositories`](skills/aien-repositories/SKILL.md) | What AIEN builds, who decides what, and which repository owns a task |
-| [`crumb-protocol`](skills/crumb-protocol/SKILL.md) | RETIRED 2026-11-07 (DRA-97): a stub only. Crumbs are history; claims go through CLAIMS.md under flock, the BOARD CLAIM line, kanban, spark-window and the pool locks |
-| [`wolfram-math`](skills/wolfram-math/SKILL.md) | Mandatory Wolfram for every computation: MCP setup an agent can do alone, verification calls, failure handling |
-| [`lean-verify`](skills/lean-verify/SKILL.md) | Machine-checked Lean 4 + Mathlib proofs of safety invariants over an explicit model through the `lean` MCP: when to use Lean versus Wolfram, the model-to-system link, no `sorry` or extra axioms |
+| `skills/aien-repositories/SKILL.md` | What AIEN builds and which repository owns a task: mission, doctrine, plan authority, task routing, evidence and status discipline, known source drift. Use before choosing an AIEN repository or making a cross-repository or status claim. |
+| `skills/crumb-protocol/SKILL.md` | RETIRED 2026-11-07 (DRA-97). Do not load: Crumbs are retired from the active workflow. Existing .crumb files and crumb stores are history, not instructions or locks. Claim work through the hive CLAIMS.md under flock plus the BOARD CLAIM line, kanban cards, spark-window and the queen's pool locks. |
+| `skills/lean-verify/SKILL.md` | Machine-checked proofs with Lean 4 + Mathlib through the `lean` MCP server on the Spark. Use to prove a safety invariant (core disjointness, disk floor, lease exclusion, queue bounds, protocol/state-machine properties) about an explicit model, and to check that a proof has no sorry and no extra axioms. |
+| `skills/omega-communication/SKILL.md` | Communicate Omega and AIEN work precisely: status and evidence labels, reports, PR text, agent handoffs, receipts, semantic needs, wire formats and corrections. Use when reporting, briefing agents, reviewing or publishing claims. |
+| `skills/omega-encoding/SKILL.md` | Write .om that the seeded Omega compiler actually accepts: syntax, types, traps, bounds, register limits, host I/O, byte encoding, compiler errors, verified examples. Use before writing, reviewing or explaining any Omega program. |
+| `skills/omega-harness/SKILL.md` | Operate in Omega and the AIEN repositories. Use for any Omega or .om task, compiler or migration work, AIEN architecture, repository routing, or project status claim. Covers source pins, .om-first implementation, compile and run evidence, safe effects, communication and stopping repeated errors. |
+| `skills/wolfram-math/SKILL.md` | Mandatory mathematics through Wolfram. Use for any computation, derivation, identity, unit conversion, numeric constant, formula check or quantitative claim, and to set up or repair the Wolfram tools so an agent never computes by hand. |
+| `skills/writing-omega/SKILL.md` | Portable guide to writing Omega (.om) programs that the seeded omc compiler accepts and runs correctly: program shape, types, words, traps, compiler errors 1..30, common mistakes with the exact refusal, and tested examples. Use before writing or reviewing any .om program on any machine. |
+<!-- /gen:skills -->
 
 The skills use the Agent Skills layout (`skills/<name>/SKILL.md` with `name` and `description` frontmatter), so any agent that reads that layout picks them up.
 
@@ -29,13 +33,24 @@ For the documented method and systems-software case study, see Gregory M. Kurtze
 
 ## Install
 
-Clone the repository, then put the skill directories where your agent looks for skills:
+One command installs the skills from Radicle `main` and records the head it installed in
+`DIR/.installed-from-omega-harness`; the same command with `--check` exits 1 when `main` has moved past
+that head or an installed skill was edited:
 
 ```sh
 rad clone rad:z39gvwWsnkRZsAConQLjaKiNVLHfW omega-harness
 # or, without Radicle installed:
 git clone https://www.aienos.com/rad/z39gvwWsnkRZsAConQLjaKiNVLHfW.git omega-harness
+omega-harness/tools/install.sh --skills ~/.agents/skills            # pick the directory for your agent
+omega-harness/tools/install.sh --skills ~/.agents/skills --check    # is the installed head current?
 ```
+
+`install.sh` takes `main` from Radicle itself (the local Radicle storage when it exists, else the HTTPS
+mirror), so the clone only provides the script. It replaces only this repository's skills in that
+directory. On a Linux AArch64 machine with an overlay (`~/.config/omega-harness/local.rules`, never
+published), `tools/install.sh --omc OMC` also renders and installs the agents' instruction files that the
+overlay names (`omp` `RULES.md`, Claude Code `CLAUDE.md`, Codex and home `AGENTS.md`) from
+`rules/rules.txt`; after a landing, the landing tools re-run it from the landed head.
 
 **Interplane is the only forge (Drake, 2026-11-11).** This repository is shown at
 https://interplane.io/drakestapleton/omega-harness, and its Radicle `main` is the canonical source.
@@ -50,9 +65,7 @@ destinations. Only Drake reverses this rule.
 | Claude Code | `~/.claude/skills/` or a project's `.claude/skills/` |
 | Codex and other Agent Skills readers | `~/.agents/skills/` or a project's `.agents/skills/` |
 
-```sh
-cp -R omega-harness/skills/* ~/.agents/skills/   # pick the directory for your agent
-```
+Install into the directory your agent reads with the command above.
 
 `omp` can also read them in place. Add the clone's `skills` directory to `skills.customDirectories` in `~/.omp/agent/config.yml`. Once installed, agents load a skill automatically when the task matches its description. In `omp` you can also invoke one directly with `/skill:omega-harness`.
 
@@ -115,39 +128,59 @@ These host experiments do not qualify device execution or deployment.
 
 ## Check the examples yourself
 
-The examples run on Linux AArch64 hosts only. [`examples/`](examples/) holds 121 programs, each
-`NAME.om` with `NAME.expect` (and `NAME.stdout` when it prints): every trap, one refusal per error
-code, the common mistakes, the known defects, and `execenv`. `examples/gate.sh` refuses any compiler
-but the example-gate pin, then compiles and runs every program here and in `skills/*/examples/`
-(5 more, 126 in all).
+The examples run on Linux AArch64 hosts only. [`examples/`](examples/) holds each `NAME.om` with
+`NAME.expect` (and `NAME.stdout` when it prints): every trap, one refusal per error code, the common
+mistakes, the known defects, and `execenv`. `examples/gate.sh` refuses any compiler but the one pinned
+in [`PIN`](PIN), then compiles and runs every program here and in `skills/*/examples/`:
 
-The example gate requires omega-mv `c106bae04231f47912f4b90b49f426a44a1f4238` (Radicle omega-mv
-main, 2026-11-10), `seed/out/omc` sha256 `f4fa7951816bbd09c5eaaae6692852a70c3c305164b365027c5b683dec7d63e9`
-(674,212 bytes; the omc of `ham/omc-perf-mem-4` `83b230bf`, merged as `887311bb`, unchanged up to
-`c106bae0`). Rebuilt from seed0 with `sh seed/omega-from-seed.sh` at `c106bae0` it is the same bytes
-(2026-11-10T20:31Z, Linux AArch64). The earlier gate pin was omega-mv `7d9ed10f` / omc `cfd96b48…`
-(the execenv reseed of omega-mv#1074); the gate now refuses it like any other hash. The MCP pin
-`f4df8239` / omc `3ad9f10f…` refuses `examples/execenv.om` (`omc: line 63: error 3`).
+<!-- gen:examples -->
+`examples/gate.sh` reruns 126 programs: 121 in `examples/` and 5 in `skills/*/examples/`.
+<!-- /gen:examples -->
+
+<!-- gen:pin -->
+| Pin (`PIN`) | Value |
+|---|---|
+| omega-mv commit | `b2ad967e57146172c1bedf1eac98babb75baef65` |
+| `seed/out/omc` sha256 | `f4fa7951816bbd09c5eaaae6692852a70c3c305164b365027c5b683dec7d63e9` |
+| reference data | `data/reference.tsv`: omega-mcp's `data/reference.json` for this pin, with 197 keyword-table entries (80 host words), 29 compiler error codes, 14 traps and 13 topics |
+<!-- /gen:pin -->
 
 ```sh
 git clone rad://z6do9WDBhuSnvopDkgFdFr1yWA62 omega-src
-git -C omega-src checkout c106bae04231f47912f4b90b49f426a44a1f4238
-sha256sum omega-src/seed/out/omc   # f4fa7951816bbd09c5eaaae6692852a70c3c305164b365027c5b683dec7d63e9
+git -C omega-src checkout "$(sed -n 's/^omega-mv //p' PIN)"
+sha256sum omega-src/seed/out/omc   # must equal the omc-sha256 line of PIN
 examples/gate.sh omega-src/seed/out/omc
+tools/check.sh omega-src/seed/out/omc   # the generated guide blocks and the rules source
 ```
 
-It prints `PASS name` or `FAIL name: reason` per program and ends with
-`GATE PASS examples=126 pass=126 fail=0 omc=f4fa7951...` (exit 0), `GATE FAIL ...` (exit 1), or a hash
-refusal (exit 2). With the gate pinned to `f4fa7951…`, omc `564c5835…` (main `0158ce88`) exits 2 (2026-11-10T20:31Z). Under the earlier `cfd96b48…` pin, pointing the gate at omc `5f90edea…` or omc `3ad9f10f…` exits 2 (rechecked
-2026-11-08), and so do Radicle main's omc `0f2de851…` (2026-11-09), `6d1b1cf5…` (2026-11-10) and `564c5835…` (main `0158ce88`, 2026-11-10T15:44Z), all on Linux AArch64. The `omega-encoding` skill (section 0 and section 13) records the observed results
-and the negative controls; [`examples/WOLFRAM.md`](examples/WOLFRAM.md) records the Wolfram checks of
-the arithmetic expectations.
+It prints `PASS name` or `FAIL name: reason` per program and ends with a line like this one
+(exit 0), `GATE FAIL ...` (exit 1), or a hash refusal (exit 2):
+
+<!-- gen:gateline -->
+```text
+GATE PASS examples=126 pass=126 fail=0 omc=f4fa7951816bbd09c5eaaae6692852a70c3c305164b365027c5b683dec7d63e9
+```
+<!-- /gen:gateline -->
+
+The `omega-encoding` skill (section 0 and section 13) records how the pinned compiler was established,
+the earlier pins and their negative controls; [`examples/WOLFRAM.md`](examples/WOLFRAM.md) records the
+Wolfram checks of the arithmetic expectations.
 
 ## Keeping it current
 
-**The agent that makes a change updates the guides.** If your work changes the Omega language, the compiler or its pin, build or gate commands, the encoder or bridge, repository ownership or status, or this harness, update the matching skill in the same piece of work. Then land it on Radicle `main` with a receipt: rerun `examples/gate.sh` and its wrong-compiler control in a fresh clone of the exact head, write the landing receipt, land it, and confirm the new head on https://interplane.io/drakestapleton/omega-harness. Never push to github.com. If you can't make the change, open a Radicle issue (`rad issue open`) saying what is now stale. `omega-harness` section 6 has the full map of which change goes in which skill.
-
-Each skill names the omega-mv commit it was checked against and lists known disagreements. Historical sections retain their dated pins. `omega-encoding` section 0 adds scoped pins for the IR/wasm backend, the merged Omega 1.0 roadmap, and main `91b3c932` (compiler `189ada82…3b54`): executable contracts, expanded capacity and the f32 return fix. The batch has host evidence, not GPU qualification. When the compiler changes, recheck cited lines, rerun examples, then update pins. Do not edit old evidence. Contributions follow the [shared AIEN agent rules](https://www.aienos.com/agents/RULES.md).
+**Nothing here is maintained by hand that can be generated.** The compiler pin is written once, in
+`PIN`; the pin tables, the word, error and trap tables, the example counts and the skill lists are
+generated from it, from omega-mcp's reference data for that pin and from this repository, by
+`tools/guides.om`, and `tools/check.sh` fails the landing when one of them is stale or typed by hand.
+Repinning is editing `PIN` and running `tools/regen.sh`. The agents' standing rules are one source,
+`rules/rules.txt`, rendered into each agent program's instruction file by `tools/rules.om`. What people
+and agents still write is prose: explanations, method, rules and dated observations with their
+evidence. When your change makes that prose untrue, rewrite it in the same piece of work and land it on
+Radicle `main` with a receipt (`examples/gate.sh` and `tools/check.sh` on a fresh clone of the exact
+head, the landing receipt, then the new head on https://interplane.io/drakestapleton/omega-harness).
+Never push to github.com. If you can't make the change, open a Radicle issue (`rad issue open`) saying
+what is now stale. `omega-harness` section 6 has the full map. Contributions follow the
+[shared AIEN agent rules](https://www.aienos.com/agents/RULES.md).
 
 The [native GPU realization guidance](skills/omega-communication/SKILL.md#native-gpu-realization-records-2026-10-28) distinguishes quantization indexes, canonical artifact identity, session residency and independent qualification. It tracks the CUDApp #26 work without treating host fixtures or unmerged components as production admission.
 

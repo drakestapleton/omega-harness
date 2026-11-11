@@ -9,38 +9,39 @@ This guide is for any agent or person writing `.om` on any machine. It needs onl
 omega-mv (`rad clone rad:z6do9WDBhuSnvopDkgFdFr1yWA62`, or `git clone
 https://www.aienos.com/rad/z6do9WDBhuSnvopDkgFdFr1yWA62.git`; browse it at
 https://interplane.io/drakestapleton/omega-mv) and of this repository. The worked
-examples are rerun by [`examples/gate.sh`](../../examples/gate.sh), which accepts only the
-example-gate compiler below. `execenv` needs that compiler. The other rules were recorded at the
-language-reference pin; those programs still pass at the example-gate compiler.
-For compiler internals, register rules, wire formats and the reasons behind each rule, read
-[`skills/omega-encoding/SKILL.md`](../omega-encoding/SKILL.md).
+examples are rerun by [`examples/gate.sh`](../../examples/gate.sh), which accepts only the pinned
+compiler below. For compiler internals, register rules, wire formats and the reasons behind each rule,
+read [`skills/omega-encoding/SKILL.md`](../omega-encoding/SKILL.md).
 
-| Pin | Value |
+<!-- gen:pin -->
+| Pin (`PIN`) | Value |
 |---|---|
-| example-gate omega-mv commit | `c106bae04231f47912f4b90b49f426a44a1f4238` (Radicle main, 2026-11-10; the earlier pin `7d9ed10f`, omc `cfd96b48…`, is history) |
-| example-gate `seed/out/omc` | sha256 `f4fa7951816bbd09c5eaaae6692852a70c3c305164b365027c5b683dec7d63e9` (674,212 bytes; rebuilt from seed0 to the same bytes, 2026-11-10T20:31Z) |
-| omega-mv Radicle main | `b2ad967e57146172c1bedf1eac98babb75baef65` (checked 2026-11-11) with the same `seed/out/omc` `f4fa7951…`: no commit in `c106bae0..b2ad967e` changes `seed/out/omc`, `seed/omc/omc.om`, `seed/rung0/seed0.hex` or `docs/one_layer/OMEGESE.md`; those 22 commits are ng work (`omega-harness` section 3, "ng additions") |
-| language-reference pin (refuses `execenv`; omega-mcp's source pin until `2e8e12a2`) | `f4df82394e35893dcf1354dda69a2fe028d94bc1`, omc `3ad9f10f64309e7acf8a725082b28e23a2a4aeb07e98322fb4dc0fcd8fc93194` |
-| omega-mcp source pin | omega-mv `b2ad967e`, omc `f4fa7951…` (the example-gate omc), omega-mcp Radicle main `2e8e12a2` (2026-11-11) |
-| omega MCP servers (Spark, 2026-11-11T12:39Z) | omega-mcp's `build/omega-mcp`, the path agent configs name, reports omc `2c82480596bbdc50cda9626866209ef662d5834f278f839ff4ce0250c495029f` (omega-mv `e5b32567`); `build/current/omega-mcp` (release `b2ad967e-2e8e12a2`) reports `f4fa7951…` |
-| language reference | `docs/one_layer/OMEGESE.md` at the language-reference pin; `execenv` contract is `seed/host/execenv/README.md` at `c106bae0` |
-| host | Linux AArch64 only; omc writes a static AArch64 Linux ELF |
+| omega-mv commit | `b2ad967e57146172c1bedf1eac98babb75baef65` |
+| `seed/out/omc` sha256 | `f4fa7951816bbd09c5eaaae6692852a70c3c305164b365027c5b683dec7d63e9` |
+| reference data | `data/reference.tsv`: omega-mcp's `data/reference.json` for this pin, with 197 keyword-table entries (80 host words), 29 compiler error codes, 14 traps and 13 topics |
+<!-- /gen:pin -->
 
-The language reference is normative. Where this guide and OMEGESE disagree, the compiler at the pin
-decides; this guide records the known disagreements.
+The pin is written once, in this repository's `PIN` file. The table above, the word, trap and error
+tables and the example counts are generated from `PIN`, its reference data and this repository
+(`omega-harness` section 6); do not edit them by hand. The language reference is
+`docs/one_layer/OMEGESE.md` in omega-mv and it is normative. Rules that no example in `examples/`
+exercises were recorded at omega-mv `f4df8239` (omc `3ad9f10f…`, 2026-11-05) or later and carry the date
+they were checked; the examples are rerun at the pin. Where this guide and OMEGESE disagree, the compiler
+at the pin decides; this guide records the known disagreements. `execenv` needs the pinned compiler
+(the older `3ad9f10f…` refuses it); its contract is `seed/host/execenv/README.md` in omega-mv. Host:
+Linux AArch64 only; omc writes a static AArch64 Linux ELF.
 
-The omega MCP server your agent runs may not be on the example-gate compiler. omega-mcp's source
-(`2e8e12a2`) pins `f4fa7951…`, and on the Spark at 2026-11-11T12:39Z `build/current/omega-mcp` reported
-that `compiler_sha256`. The path agent configs name, `build/omega-mcp`, still reported `2c824805…`
-(omega-mv `e5b32567`) until those configs change; a switch at that path at 12:29Z was rolled back at 12:33Z.
-Before trusting an MCP result, run a trivial `compile` and read its `compiler_sha256`. Whenever it
-reports `2c824805…`, that compiler's limits apply, all observed with it on 2026-11-11: a 9-byte name is
-error 13 (8 bytes is the limit), `for ... bound` is error 5, `bound 1000000` is error 8 (999999
-compiles), and in an `om2` unit `out` is a reserved word (`out = ulong 1` is error 16). New first-party
-code is compiled with the pinned omc of the repository that owns it (Drake's pure-Omega directive,
-2026-11-07). The two older compilers accept different loop bounds:
+The omega MCP server your agent runs may not be on the pinned compiler. Before trusting an MCP result,
+run a trivial `compile` and compare its `compiler_sha256` with the `omc-sha256` line of `PIN`; when they
+differ, that server's compiler sets the limits, not this guide. New first-party code is compiled with the
+pinned omc of the repository that owns it (Drake's pure-Omega directive, 2026-11-07).
 
-| Program | omc `2c824805` (e5b32567, running MCP) | omc `3ad9f10f` (f4df8239) |
+Two older compilers that omega MCP servers have run, observed on 2026-11-11: with omc `2c824805…`
+(omega-mv `e5b32567`) a 9-byte name is error 13 (8 bytes is the limit), `for ... bound` is error 5,
+`bound 1000000` is error 8 (999999 compiles), and in an `om2` unit `out` is a reserved word
+(`out = ulong 1` is error 16). The two accept different loop bounds:
+
+| Program | omc `2c824805` (e5b32567) | omc `3ad9f10f` (f4df8239) |
 |---|---|---|
 | `while C bound 999999` | compiles | compiles |
 | `while C bound 1000000`, `2000000`, `9223372036854775807` | error 8 | compiles |
@@ -56,8 +57,8 @@ At `e5b32567`, write `while C bound N` with N at most 999999 and no `for ... bou
 
 ```sh
 git clone rad://z6do9WDBhuSnvopDkgFdFr1yWA62 omega-mv && cd omega-mv
-git checkout c106bae04231f47912f4b90b49f426a44a1f4238
-sha256sum seed/out/omc      # must print f4fa7951…; any other omc (the old pin cfd96b48…, 564c5835… at 0158ce88, later reseeds) is refused by the gate
+git checkout "$(sed -n 's/^omega-mv //p' path/to/omega-harness/PIN)"
+sha256sum seed/out/omc      # must equal the omc-sha256 line of PIN; any other omc is refused by the gate
 sh seed/omega-from-seed.sh  # optional: rebuild omc from the 408-byte loader
 seed/out/omc < prog.om > prog; echo "compile $?"
 chmod +x prog && ./prog; echo "exit $?"
@@ -167,17 +168,27 @@ Every declaration and statement form at the pin (OMEGESE sections 9 to 12 are th
 
 ## 4. Words
 
+<!-- gen:words -->
+The keyword table at the pin has 197 entries; the 80 host words are in the host-word table. The rest, by kind:
+
 | Kind | Words |
 |---|---|
-| arithmetic | `add sub mul div rem neg` |
-| bits | `and or xor not shl shr` (`rotr rotl` in OM-2) |
-| compare (give `bool`) | `eq ne lt le gt ge` |
-| float | `add sub mul div neg`, `fsqrt fabs fmin fmax`, `fma a b c` (one rounding; all three the same f32 or f64 type, else error 7; the example-gate omc `f4fa7951…` and the earlier `cfd96b48…`, `6d1b1cf5…` and `564c5835…` compile it, the language-reference omc `3ad9f10f…` refuses it with error 3) |
-| arrays | `new`, `get A i`, `put A i v`, `len A` |
-| structs | `new S v1 v2 ...`, `get p f`, `put p f v` |
-| control | `if` / `else` / `end`, `while COND bound N`, `for i T K`, `break`, `continue`, `ret`, `exit`, `trap N` |
-| conversion | the type words, `bitcast T v` |
-| I/O | `read fd A off n`, `write fd A off n`, `pread` / `pwrite fd A off n pos`, and the host-word table in section 10 |
+| device | `devctl fd request A off n`, `mapnew fd offset bytes access mode`, `mapdrop handle`, `mapread handle offset A off n`, `mapwrite handle offset A off n`, `devcall fd request H hoff 32 P poff n`, `uvmctl fd command A off n`, `mapaddr handle`, `mapget handle offset width`, `mapset handle offset width value`, `maphold address bytes`, `vfioctl fd request A off n`, `vfiomap fd A off 32`, `vfiomapw fd A off 32`, `eventfd initial`, `vfioirq fd request A off n`, `mapbind handle fd offset access`, `cpufence`, `cpurelax` |
+| type | `bool VALUE  (conversion) \| NAME bool  (parameter) \| to bool  (result)`, `uchar VALUE  (conversion) \| NAME uchar  (parameter) \| to uchar  (result)`, `u8 VALUE  (conversion) \| NAME u8  (parameter) \| to u8  (result)`, `ushort VALUE  (conversion) \| NAME ushort  (parameter) \| to ushort  (result)`, `u16 VALUE  (conversion) \| NAME u16  (parameter) \| to u16  (result)`, `uint VALUE  (conversion) \| NAME uint  (parameter) \| to uint  (result)`, `u32 VALUE  (conversion) \| NAME u32  (parameter) \| to u32  (result)`, `ulong VALUE  (conversion) \| NAME ulong  (parameter) \| to ulong  (result)`, `u64 VALUE  (conversion) \| NAME u64  (parameter) \| to u64  (result)`, `byte VALUE  (conversion) \| NAME byte  (parameter) \| to byte  (result)`, `i8 VALUE  (conversion) \| NAME i8  (parameter) \| to i8  (result)`, `short VALUE  (conversion) \| NAME short  (parameter) \| to short  (result)`, `i16 VALUE  (conversion) \| NAME i16  (parameter) \| to i16  (result)`, `int VALUE  (conversion) \| NAME int  (parameter) \| to int  (result)`, `i32 VALUE  (conversion) \| NAME i32  (parameter) \| to i32  (result)`, `long VALUE  (conversion) \| NAME long  (parameter) \| to long  (result)`, `i64 VALUE  (conversion) \| NAME i64  (parameter) \| to i64  (result)`, `qty VALUE  (conversion) \| NAME qty  (parameter) \| to qty  (result)` |
+| operator | `add A B`, `sub A B`, `mul A B`, `div A B`, `rem A B`, `and A B`, `or A B`, `xor A B`, `shl A B`, `shr A B`, `eq A B`, `ne A B`, `lt A B`, `le A B`, `gt A B`, `ge A B`, `neg A`, `not A` |
+| data | `get A i \| get P field [i]`, `len A`, `read fd A off n`, `write fd A off n`, `true`, `false`, `NAME view T N \| NAME view T *  (parameter) \| view A  (argument)`, `NAME edit T N \| NAME edit T *  (parameter) \| edit A  (argument)` |
+| structure | `fn NAME (PARAM TYPE)* to TYPE\|void [inline]`, `fn ... to TYPE\|void`, `end`, `if COND / [else] / end`, `else`, `while COND [bound N] / end`, `while COND bound N \| for NAME TYPE COUNT bound N`, `for NAME TYPE COUNT [bound N] / end`, `ret [VALUE]`, `NAME = VALUE`, `( VALUE )`, `( VALUE )`, `fn ... to void` |
+| statement | `global NAME T N`, `text NAME "bytes"`, `put A i v \| put P field [i] v`, `free  (refused)`, `own  (refused)`, `exit v`, `note ...`, `NAME = new T N v \| NAME = new STRUCT v1 .. vn`, `break`, `trap N`, `continue`, `const NAME TYPE LITERAL` |
+| struct | `struct Name field type [len] ... end`, `sizeof T \| sizeof STRUCT`, `offsetof STRUCT field` |
+| float | `f32 VALUE \| 1.5f32`, `f64 VALUE \| 1.5f64`, `bitcast T VALUE`, `fsqrt X`, `fabs X`, `fmin A B`, `fmax A B`, `fma A B C` |
+| OM-2 | `rotr X N`, `rotl X N`, `for i T K unroll`, `fn NAME ... to T inline`, `NAME edit T N fresh`, `abstract NAME T [ops W ...]`, `seal NAME v`, `open v`, `holds NAME dup32`, `abstract NAME T ops W ...`, `layout NAME SIZE / field ... / end`, `field F T [COUNT] at OFF little\|big`, `field F T at OFF ...`, `field ... at OFF little`, `field ... at OFF big`, `part A o k`, `NAME out T N`, `export fn NAME ...` |
+<!-- /gen:words -->
+
+Bit words `rotr rotl` and hex literals are OM-2 only (section 9); the host words are in section 10.
+
+- `fma a b c` rounds once; all three values have the same f32 or f64 type, else error 7. It is in the
+  keyword table at the pin; the older omc `3ad9f10f…` (omega-mv `f4df8239`) refuses it with error 3,
+  while `cfd96b48…`, `6d1b1cf5…` and `564c5835…` compile it.
 
 - `and`, `or`, `xor` on integers of any width are bitwise, not logical: `and ulong 12 ulong 10` is 8
   ([`examples/int_bits_and.om`](../../examples/int_bits_and.om)). Compare first when you want a bool.
@@ -195,17 +206,28 @@ Every declaration and statement form at the pin (OMEGESE sections 9 to 12 are th
 
 A trap ends the process with exit status 100 + N. Output already written stays written.
 
-| Cause | Trap | Exit | Example |
-|---|---|---|---|
-| signed overflow in `add sub mul neg`, and signed minimum `div` -1 | 1 | 101 | `examples/trap1_overflow.om`, `trap1_divmin.om` |
-| `div` or `rem` by zero | 2 | 102 | `trap2_div0.om` |
-| array index or I/O slice out of bounds | 3 | 103 | `trap3_bounds.om` |
-| a loop past its bound | 4 | 104 | `trap4_loop.om` |
-| an integer conversion whose value does not fit | 5 | 105 | `trap5_conv.om` |
-| stack exhausted (8 MiB) by calls or local arrays | 6 | 106 | `trap6_stack.om` |
-| shift or rotate amount outside 0..width-1 | 7 | 107 | `trap7_shift.om` |
-| a contract check that fails (OM-2) | 9, 10 | 109, 110 | `contract_requires.om`, `contract_ensures.om` |
-| `trap N`, N 1..14 | N | 100+N | `trap_code.om` (`trap 14`, exit 114) |
+<!-- gen:traps -->
+| Trap | Name | Cause | Exit status | Examples in `examples/` |
+|---|---|---|---|---|
+| 1 | OVERFLOW | Signed add/sub/mul/neg/div/shl produced a value outside the type. | 101 | `trap1_divmin`, `trap1_overflow` |
+| 2 | DIV0 | div or rem with a divisor of 0. | 102 | `trap2_div0` |
+| 3 | BOUNDS | A run-time index is not below the length, or a host/read/write slice is outside its array. | 103 | `trap3_bounds` |
+| 4 | LOOP_BOUND | A while or for ran past its bound N; with no bound a while, and a for whose count is not a number, stop at 1000000 passes. | 104 | `trap4_for_bound`, `trap4_loop` |
+| 5 | CAST | A conversion `T v` got a value outside T. | 105 | `trap5_conv` |
+| 6 | OOM | A call or local array would go below the fixed 8 MiB stack (deep recursion). | 106 | `trap6_stack` |
+| 7 | SHIFT | A shift or rotate amount is outside 0..width-1. | 107 | `trap7_shift` |
+| 8 | RUNTIME | A runtime invariant (double release, bad handle) failed; checked native code raises it only through `trap 8`. | 108 | none |
+| 9 | REQUIRES | A requires clause was false on entry. | 109 | none |
+| 10 | ENSURES | An ensures, invariant or holds check was false. | 110 | none |
+| 11 | ARENA_FULL | An OSC arena allocation exceeded the arena's capacity; native program mode raises it only through `trap 11`. | 111 | none |
+| 12 | STALE | A handle whose generation no longer matches its slot; native program mode raises it only through `trap 12`. | 112 | none |
+| 13 | POOL_FULL | An OSC pool allocation found no free slot; native program mode raises it only through `trap 13`. | 113 | none |
+| 14 | RETIRED | An OSC pool allocation found only retired slots; native program mode raises it only through `trap 14`. | 114 | none |
+<!-- /gen:traps -->
+
+- A failing OM-2 contract check traps 9 (`requires`, `contract_requires.om` exits 109) or 10
+  (`ensures` or `invariant`, `contract_ensures.om` exits 110). `trap N` with N 1..14 exits 100+N
+  (`trap_code.om`: `trap 14`, exit 114). The stack is 8 MiB.
 
 - Unsigned arithmetic wraps modulo 2^width and never traps
   ([`examples/unsigned_wrap.om`](../../examples/unsigned_wrap.om)).
@@ -221,16 +243,14 @@ A trap ends the process with exit status 100 + N. Output already written stays w
 ## 6. Loops and bounds
 
 - `while COND bound N` runs the body at most N times, N 1..9223372036854775807 (error 8 outside;
-  IR mode 1..1000000). At `e5b32567` (omc `2c824805…`, the installed MCP compiler observed on
-  2026-11-11) N is 1..999999 and `bound 1000000` is error 8. Without `bound` the limit is 1000000. One more pass traps 4. Choose N from
+  IR mode 1..1000000). Without `bound` the limit is 1000000. One more pass traps 4. Older compilers
+  differ (top of this guide). Choose N from
   an argument you can write down in a `note`, for example "every pass consumes at least one byte of
   a 65536-byte input".
 - `for i T K` runs i from 0 to K-1. A number K is unguarded. Any other K (a name or value) with no
   `bound` traps 4 (exit 104) after 1000000 passes, as a `while` with no bound. `for i T K bound N`
   takes the same N as `while`, caps every count and traps 4 when K exceeds N (`for_bound.om`,
-  `trap4_for_bound.om`). At `e5b32567` (omc `2c824805…`, the installed MCP compiler observed on
-  2026-11-11) `for ... bound` is error 5. omega-mcp `2e8e12a2` pins `f4fa7951…`, but check
-  `compiler_sha256` in a trivial `compile` result before relying on the server.
+  `trap4_for_bound.om`).
 - `break` and `continue` work in both loops. There is no `else if`: nest an `if` inside `else`.
 - A bound is a trap, not a clamp. When the pass count follows outside input (a request, a file, a
   database row), check the length before the loop or exit early below N; one long input otherwise
@@ -337,23 +357,29 @@ Examples: [`om2_tour.om`](../../examples/om2_tour.om), [`om2_views.om`](../../ex
   `envread` ([`examples/env_read.om`](../../examples/env_read.om)). Short capacity returns -105.
 - Host words carry the process's own permissions; they are not a sandbox.
 
-The table below lists 68 words. `execenv` is in that table and in compilers from omega-mv#1074 on
-(omc `cfd96b48…`, and Radicle main's later omcs `0f2de851…`, `6d1b1cf5…`, `564c5835…` and the example-gate `f4fa7951…`). A call is error 3 on the language-reference pin `3ad9f10f…`. Inside
-`fn main`, `execenv = int 1` compiles on the language-reference pin and is error 16 on `cfd96b48…`, `0f2de851…`, `6d1b1cf5…`, `564c5835…` and `f4fa7951…`.
 OMEGESE section 10 has each contract.
 `A` and `B` are `uchar` arrays, `off`, `n` and `capacity` are `ulong`, and descriptors, flags, modes
 and ids are `int`. A path is the slice `A off n`; a packed list is a `u16` count, then `u16`-length
-records. A reserved word used as a name inside `fn main` is error 16. `execenv` is not reserved at the
-language-reference pin. An unreserved name in the same program compiles.
+records. A reserved word used as a name inside `fn main` is error 16. An unreserved name in the same
+program compiles.
 
-| Area | Words |
+<!-- gen:hostwords -->
+The keyword table at the pin has 80 host words, each shown with its values:
+
+| Kind | Words |
 |---|---|
-| files | `fopen A off n flags mode`, `fclose fd`, `fsync fd`, `fdsync fd`, `syncfs fd`, `memfd A off n flags`, `fseek fd offset whence`, `ftrunc fd length`, `flock fd op`, `fstat fd A off n`, `getdnts fd A off n` |
-| paths | `chmod A off n mode`, `fchmod fd mode`, `chown A off n uid gid`, `faccess A off n mode`, `truncate A off n length`, `unlink A off n`, `makedir A off n mode`, `rmdir A off n`, `cwd A off capacity`, `chdir A off n`, `fchdir fd`, `readlnk A off n B off capacity`, `stat A off n B off capacity`, `lstat A off n B off capacity`, `renames A off n flags`, `link A off n`, `symlnk A off n`, `umask mask` |
-| processes | `getpid`, `getppid`, `getuid`, `geteuid`, `getgid`, `getegid`, `setsid`, `getpgid pid`, `getsid pid`, `setpgid pid pgid`, `fork`, `killpid pid signal`, `waitpid pid A off n options`, `pipefds A off n flags`, `dupfd fd target flags`, `execprog A off n`, `execenv A off n B off m` |
-| arguments, environment, randomness | `argcnt`, `argread index A off capacity`, `envcnt`, `envread index A off capacity`, `random A off n flags` |
-| time | `monons`, `realns`, `sleepns interval` |
-| sockets | `socknew domain kind protocol`, `bind fd A off n`, `connect fd A off n`, `listen fd backlog`, `accept fd flags`, `sockname fd A off n`, `sockopt fd level option A off n`, `recv fd A off n flags`, `send fd A off n flags`, `sendmsg fd A off n flags`, `shutdown fd how`, `waitio fd events interval`, `pollfds A off n interval`, `peercred fd A off capacity` |
+| host-file | `fopen A off n flags mode`, `fclose fd`, `fsync fd`, `fdsync fd`, `memfd A off n flags`, `fchmod fd mode`, `chmod A off n mode`, `faccess A off n mode`, `syncfs fd`, `flock fd op`, `umask mask`, `fseek fd offset whence`, `ftrunc fd length`, `truncate A off n length`, `unlink A off n`, `fstat fd A off n`, `stat A off n B off capacity`, `lstat A off n B off capacity`, `pread fd A off n pos`, `pwrite fd A off n pos` |
+| host-dir | `chown A off n uid gid`, `fchdir fd`, `makedir A off n mode`, `rmdir A off n`, `cwd A off capacity`, `chdir A off n`, `readlnk PATH off n OUT off capacity`, `getdnts fd A off n`, `renames A off n flags`, `link A off n`, `symlnk A off n` |
+| host-process | `getuid`, `geteuid`, `getgid`, `getegid`, `getppid`, `setsid`, `getpgid pid`, `getsid pid`, `setpgid pid pgid`, `fork`, `getpid`, `killpid pid signal`, `waitpid pid A off n options`, `pipefds A off n flags`, `dupfd fd target flags`, `execprog A off n`, `argcnt`, `argread index A off capacity`, `envcnt`, `envread index A off capacity`, `execenv A off n B off m`, `prlimit pid res A off n`, `cpuset pid A off n`, `cpuget pid A off n`, `cpunow`, `setprio which who priority`, `getprio which who`, `execpure A off n` |
+| host-net | `shutdown fd how`, `socknew domain kind protocol`, `bind fd A off n`, `connect fd A off n`, `listen fd backlog`, `accept fd flags`, `sockname fd A off n`, `sockopt fd level option A off n`, `recv fd A off n flags`, `send fd A off n flags`, `waitio fd events interval`, `peercred fd A off capacity`, `pollfds A off n interval`, `sendmsg fd A off n flags`, `peername fd A off n` |
+| host-time | `monons`, `realns`, `sleepns interval`, `random A off n flags` |
+| host-cpu | `dit v`, `scrub n` |
+<!-- /gen:hostwords -->
+
+`execenv` is in compilers from omega-mv#1074 on (omc `cfd96b48…` and later); a call is error 3 at
+omega-mv `f4df8239` (omc `3ad9f10f…`), where `execenv` is not reserved: inside `fn main`,
+`execenv = int 1` compiles there and is error 16 on `cfd96b48…`, `0f2de851…`, `6d1b1cf5…`,
+`564c5835…` and at the pin.
 
 ## 11. Compiler errors
 
@@ -361,41 +387,53 @@ Exit status = error number. The only message is the one stderr line `omc: line N
 is the line being read (0 when no line was read). One refusal per code is in `examples/errNN_*.om`
 with its exact stderr line in the matching `.expect`, except 24, which needs a generated program.
 
-| Code | Meaning | Example | Fix |
+<!-- gen:errors -->
+| Code | Meaning | Fix | Example in `examples/` |
 |---|---|---|---|
-| 1 | omc could not read its input | `err01_input` (stdin is a directory) | give omc a readable file on stdin |
-| 2 | omc could not write its output | `err02_output` (stdout is `/dev/full`) | send stdout to a writable file with space |
-| 3 | unknown name, field or function | `err03_unknown_name` | assign the name before use; check the spelling |
-| 4 | the line ends before the statement is complete | `err04_line_ends` | give every word all of its values |
-| 5 | words left after a complete statement | `err05_extra_words` | count each word's values; there is no infix |
-| 6 | malformed number | `err06_bad_number` | decimal digits; hex only in OM-2, lowercase |
-| 7 | type mismatch | `err07_type_mismatch` | convert with a type word: `add int 1 int u` |
-| 8 | number out of range | `err08_out_of_range` | a literal that fits its type; a bound 1..9223372036854775807 (IR mode 1..1000000; 1..999999 at `e5b32567`); a trap code 1..14 |
-| 9 | a word in a place where it is not allowed | `err09_disallowed` | move it: `new` only in a function's outermost block, `struct` before the first `fn` |
-| 10 | duplicate name | `err10_duplicate` | choose a name that is not visible, not a function, not a struct |
-| 11 | a number with nothing to give it a type | `err11_ambiguous` | `x = uint 5` |
-| 12 | register pool exhausted (16 per function) | `err12_registers` | fewer live names, a helper function, shorter expressions (section 8) |
-| 13 | name too long | `err13_long_name` | at most 63 bytes, function names included; IR-mode names, `abstract`/`layout` names and layout fields at most 8 (section 8) |
-| 14 | compiler capacity: names, functions, exports, expansion | `err14_capacity` | split the function or the unit. At omc `f4fa7951`: 8192 names (texts and globals together), 8192 trap sites per function (one per call), 256 KiB of code per OM-2 function (section 8) |
-| 15 | the input ends inside an open block | `err15_missing_end` | close every block with `end` |
-| 16 | syntax: unknown word or misplaced form | `err16_syntax` | start each line with a statement word; comments are `note` lines |
-| 17 | a line after `ret`, `break`, `continue`, `trap` or `exit` in the same block | `err17_after_path` | delete the line or move it above |
-| 18 | a function with a result whose `end` is reachable | `err18_missing_ret` | end every path with `ret v` |
-| 19 | a global as an argument, or one array twice in a call | `err19_global_arg` | name the global inside the function; pass distinct arrays |
-| 20 | writing to a text or a view | `err20_readonly` | an `edit` parameter, or a local copy |
-| 21 | a literal index outside the array | `err21_const_index` | an index 0..N-1 |
-| 22 | a text escape other than `\n \t \\ \"` | `err22_text_escape` | build other bytes with `put` |
-| 23 | array or pool size limit | `err23_size` | smaller arrays (section 8 limits) |
-| 24 | a conditional branch farther than 1 MiB of code | generated, below | move long bodies into functions |
-| 25 | unknown `target` name, an AArch64-only path on another target, or (with omega-mv#1015) an x86efi refusal | `err25_target` | omit `target` for AArch64, or name a target the unit fits (`target x86linux` and `target x86efi` with `fn main` compile). omega-mv#1015 (head `19ee7e99`, merged as `d3d1b1bc`, the pin, omc `b4f45121…`) adds the x86efi backend; its error 25 is a bare unit (no `fn main`), a Linux host word, or an `efi` OP literal outside 0..13 (0..14 with omega-mv#1022, open); a non-literal OP is error 16 and `efi` under `target x86linux` is error 3. See `omega-encoding` |
-| 26 | never emitted at the pin | none | none |
-| 27 | OM-2 `fresh` element read before it is written | `err27_fresh` | `put` every element before the `get` |
-| 28 | OM-2 `seal` outside the constructor | `err28_seal` | `seal` only as the whole body of `fn NAMEmk ... to NAME` |
-| 29 | OM-2 `layout` refused (omc.om `s_layout`, `ly_num`, `ly_field`, `ly_mark`): a `layout` line after the first `fn`; a SIZE outside 1..4096; a field COUNT outside 1..4096 (a written 0 included); a field that starts or ends past SIZE; two fields sharing a byte. A SIZE, COUNT or OFF written as 2^64 or more is error 8 instead | `err29_layout`, `mistake_om2_layout_late`, `mistake_om2_layout_zero_count` | put every `layout` above the first `fn`; SIZE 1..4096; leave COUNT out for one element or give 1..4096; keep every field inside SIZE and apart |
-| 30 | OM-2 contract clause not allowed | `err30_contract` | integer words on parameters only (and `result` in `ensures`); no calls, floats or host words |
+| 1 | stdin read failed | Give omc a readable source file on stdin. | `err01_input` |
+| 2 | stdout write failed | Write omc's stdout to a regular file with space. | `err02_output` |
+| 3 | unknown name or field | Declare the name first, or fix its spelling. | `err03_unknown_name` |
+| 4 | line ends early | Supply the missing operand (see the word's form). | `err04_line_ends` |
+| 5 | extra words | Remove the extra words or split the line. | `err05_extra_words` |
+| 6 | malformed number | Write a plain decimal (or OM-2 lowercase 0x hex) number. | `err06_bad_number` |
+| 7 | type mismatch | Convert explicitly with a type word, e.g. `add int a int b`. | `err07_type_mismatch` |
+| 8 | out of range | Use a value inside the type's range or a wider type. | `err08_out_of_range` |
+| 9 | word not allowed here | Move the statement to a valid position or use the documented alternative. | `err09_disallowed` |
+| 10 | duplicate name | Choose a new name. | `err10_duplicate` |
+| 11 | ambiguous bare number | Prefix it with a type word, e.g. `x = int 5`. | `err11_ambiguous` |
+| 12 | register pool exhausted | Split the function or reuse names so fewer values are live. | `err12_registers` |
+| 13 | name too long | Shorten the name: at most 63 characters, 8 for abstract, layout and layout-field names and in IR mode. | `err13_long_name` |
+| 14 | capacity exceeded | Reduce the count below the documented capacity. | `err14_capacity` |
+| 15 | missing end | Add the missing `end`. | `err15_missing_end` |
+| 16 | syntax error or unknown word | Check the word's spelling and form with lookup. | `err16_syntax` |
+| 17 | line after a path end | Delete the unreachable line or move it before the path end. | `err17_after_path` |
+| 18 | missing ret | Add a ret on every path (or make the function void). | `err18_missing_ret` |
+| 19 | global passed or same array twice | Copy the global into a local array (new) or pass distinct arrays. | `err19_global_arg` |
+| 20 | write to a read-only array | Write into a local, global or edit array instead. | `err20_readonly` |
+| 21 | constant index out of range | Use an index below the length. | `err21_const_index` |
+| 22 | bad text literal | Use only \n \t \\ \" escapes and close the quote. | `err22_text_escape` |
+| 23 | size capacity | Use a smaller array. | `err23_size` |
+| 24 | branch displacement out of range | Split very large functions or programs; this is reached only by programs with about 1 MiB of code between a conditional branch and its target. | none |
+| 25 | not available on this target | Use the default AArch64 target for that construct, or write it with words the target supports. | `err25_target` |
+| 27 | fresh element read before write (OM-2 init) | Write every element before reading it (put with a number index). | `err27_fresh` |
+| 28 | abstract constructor violation (OM-2 ctor) | Seal only inside the function named NAME followed by mk. | `err28_seal` |
+| 29 | layout violation (OM-2 layout) | Put every layout above the first fn, keep SIZE and COUNT in 1..4096 (leave COUNT out for one element), and keep every field inside SIZE and apart from the others. | `err29_layout` |
+| 30 | contract syntax (OM-2) | Put contracts first in the function or loop body and use only pure integer/bool operations. | `err30_contract` |
+<!-- /gen:errors -->
 
-How the emitted set was established at the pin: in `seed/omc/omc.om`, `fn fail` (line 324) writes
-the stderr line and exits with the code (`exit int code`, line 356). The only other exits are
+- 1 and 2: `err01_input` gives omc a directory on stdin; `err02_output` sends stdout to `/dev/full`.
+- 25: `target x86linux` and `target x86efi` units with `fn main` compile. Under `target x86efi`
+  (omega-mv#1015) a bare unit (no `fn main`), a Linux host word or an `efi` OP literal outside 0..13
+  is error 25 (0..14 with omega-mv#1022); a non-literal OP is error 16, and `efi` under
+  `target x86linux` is error 3. See `omega-encoding`.
+- 29 also covers a `layout` line after the first `fn`, a SIZE or field COUNT outside 1..4096 (a
+  written 0 included), a field that starts or ends past SIZE, and two fields sharing a byte; a SIZE,
+  COUNT or OFF written as 2^64 or more is error 8 instead (`mistake_om2_layout_late`,
+  `mistake_om2_layout_zero_count`).
+- 26 is never emitted, and 24 needs a generated program (both below).
+
+How the emitted set was established: in `seed/omc/omc.om`, `fn fail` writes the stderr line and
+exits with the code (`exit int code`). The only other exits are
 `exit int 0` and `exit 0`, so every refusal goes through `fail`. Its callers pass the literals 1..25
 and 27..30, or forward a literal 3, 4, 6, 8, 13 or 16 through `lenval`, `nfail` and `unkfail`. No
 caller passes 26, so that code is never emitted (the registry `seed/omc/error-codes.reg` lists it as
@@ -456,7 +494,8 @@ Each row is a program in `examples/` with its observed refusal.
 
 ## 13. Known compiler defects at the pin
 
-- **`bitcast` across signedness below 64 bits:** at this pin, `uint 4294967295` to `int` compares
+- **`bitcast` across signedness below 64 bits:** rechecked 2026-11-11 with omc `f4fa7951…` (exit 7
+  from one program testing all three): `uint 4294967295` to `int` compares
   equal to -1 and adding 2 returns 1, and `int -1` to `uint` compares equal to 4294967295. Those
   two cases were wrong at omc `2c824805` (not equal; adding 2 trapped 1). `ushort`/`short`,
   `uchar`/`byte` and `f32` to `int` were not retested on 2026-10-29. Do not assume they are fixed.

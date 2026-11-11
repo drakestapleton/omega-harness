@@ -12,12 +12,19 @@
 # Every program runs with `env -i` plus NAME.env, in an empty scratch directory, under a 20 s
 # timeout, and must write nothing to stderr. A compile that is not expected to succeed is never run.
 #
-# The compiler must match the pinned sha256 below; a different binary is refused, not tolerated.
+# The compiler must match the omc sha256 in the repository's PIN file (the one place the pin is
+# written); a different binary is refused, not tolerated.
 # Exit 0 only when every example passes; 1 on any failure; 2 on a usage or pin error.
 set -u
 
-PIN_REV=c106bae04231f47912f4b90b49f426a44a1f4238
-PIN_SHA=f4fa7951816bbd09c5eaaae6692852a70c3c305164b365027c5b683dec7d63e9
+here=$(cd "$(dirname "$0")" && pwd)
+root=$(dirname "$here")
+PIN_REV=$(sed -n 's/^omega-mv //p' "$root/PIN" 2>/dev/null)
+PIN_SHA=$(sed -n 's/^omc-sha256 //p' "$root/PIN" 2>/dev/null)
+if [ -z "$PIN_REV" ] || [ -z "$PIN_SHA" ]; then
+    echo "GATE FAIL $root/PIN must hold 'omega-mv <commit>' and 'omc-sha256 <sha256>'" >&2
+    exit 2
+fi
 
 if [ "$#" -ne 1 ]; then
     echo "usage: $0 /path/to/omc   (omega-mv $PIN_REV seed/out/omc)" >&2
@@ -34,8 +41,6 @@ if [ "$got" != "$PIN_SHA" ]; then
     exit 2
 fi
 
-here=$(cd "$(dirname "$0")" && pwd)
-root=$(dirname "$here")
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 

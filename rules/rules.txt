@@ -1,0 +1,305 @@
+# omega-harness rules source: the agents' standing rules, one record each.
+# Format and rendering: tools/rules.om. Machine-specific and private rules (home paths, hosts, ports,
+# private names) live in each machine's unpublished overlay, in the same format. tools/install.sh renders
+# every instruction file a machine's overlay names and installs the ones that changed.
+# Seeded 2026-11-11 from the instruction files then in use; the account of every change is in the landing
+# report. Change a rule here and land it; the files are regenerated at landing.
+
+rule no-github
+date 2026-11-11
+said No more GitHub? Everything goes to interplane.
+for all watchdog
+order 20
+| ## No GitHub: everything goes to Interplane (Drake standing rule, 2026-11-11)
+| Drake: "No more GitHub? Everything goes to interplane."
+| - Interplane (interplane.io, serving the Radicle repositories) is the only forge and the canonical source of code, history and decisions. Never push to a GitHub remote, open or update a GitHub PR or issue, publish with `gh`, or treat a GitHub branch as current state.
+| - For current status inspect Radicle main (`rad ls`, the Radicle storage, the records generated from it). Where these instructions or a skill say PR, push or merge, use the Radicle route: lane head, gates on a fresh clone, landing on Radicle main with a receipt, project shown on interplane.io. GitHub links and `aien-dev` names are history. Only Drake reverses this, in a direct message.
+end
+
+rule receipts-not-approvals
+date 2026-11-11
+said receipts, not approvals
+for all watchdog
+order 22
+| ## Receipts, not approvals (Drake, 2026-11-11)
+| Drake: "receipts, not approvals" (when he removed the merge desk).
+| There is no merge desk. A lane lands its own exact head on Radicle `main` when the repository's own gates pass on a fresh clone, and writes the landing receipt first (commands, exit codes, pins, log sha256) with the landing tool in use. A non-MERGE review verdict for that head stops the landing. A patch is a vehicle, not an approval. Never bypass a gate or overwrite a receipt. Keep independent final-source review of the exact head, dependency ordering between landings, and read-back of every remote write; no skipped gate, fabricated PASS or retry-until-green.
+end
+
+rule automate-everything
+date 2026-11-11
+said Honestly, if there's anything else that we're maintaining by hand, like the crumbs, that needs to be some kind of connector that does it automatically.
+said I think I need everything in this stack to be automated. I don't want the agents to have to do a damn thing except for worry about the operator's intent.
+said I don't want systemd. Remember that.
+for all
+order 23
+| ## Nothing in the stack is maintained by hand (Drake standing rule, 2026-11-11)
+| Drake: "I think I need everything in this stack to be automated. I don't want the agents to have to do a damn thing except for worry about the operator's intent."
+| - A fact that can be derived is never typed: compiler pins, heads, branch names, counts, keyword tables, limits, file lists, status rows, language bars, mirrors, translated copies. Each has one source of truth and everything else is generated from it by a program, in seeded Omega, run as part of the landing or on change. No agent step "then update X to match".
+| - A copy that needs a person or an agent to keep it true is a defect. Replace it with a generator or a connector, or delete the copy and point at the source.
+| - Where a human-written thing is unavoidable (intent, design decisions, first-person text), it is written once and nothing else restates it.
+| - Automation is loud when it cannot do its job (a test that alarms), never silently stale. It is change-triggered, not clock-driven: no cron, no timers, and no new systemd units (Drake, 2026-10-26: "I don't want systemd. Remember that.").
+| - Translations: we do not write, check or store translated copies; readers translate in real time with their own tools.
+| - When your task meets a hand-maintained artifact, do not maintain it "one more time" as a side step. If generating it is inside your slice, do that; if not, record it (path, source of truth, who edits it today, how often it went stale) in your report.
+end
+
+rule no-hard-caps
+date 2026-11-11
+said Instead of caps to prevent something, just put a TEST that will alarm if it passes the threshold.
+said So there's no reason to have hard caps anywhere, unless you're going to physically break the hardware.
+for all
+order 24
+| ## No hard caps on our own software; notice and fix instead (Drake standing rule, 2026-11-11)
+| Drake: "Instead of caps to prevent something, just put a TEST that will alarm if it passes the threshold." and "there's no reason to have hard caps anywhere, unless you're going to physically break the hardware."
+| - Do not add an arbitrary limit to our own software to guard against our own bugs or growth. Where a limit exists only because a buffer or table was given a fixed size, remove the cause (size it from the input, grow it, or restructure) rather than documenting the number.
+| - In place of the cap, put a test that alarms: a gate case or a running check that measures the quantity and fails loudly, with the number and where it came from, when it passes a stated threshold. The alarm tells a person or agent to look; it does not stop the work.
+| - A limit stays only when crossing it physically harms hardware (state the mechanism) or when it is a real boundary of the machine (address space, a fixed-width wire field, the size of the disk). Say which, with the measurement. A refusal is still defined behaviour: never trade a clean refusal for an overrun, a silent truncation or memory corruption.
+| - Containment of untrusted code and uploads (sandbox resource limits, public quotas, runner limits) and limits promised to a volunteer about their own machine are kept; add the alarm tests beside them.
+end
+
+rule plain-surface
+date 2026-11-11
+said my users are not tech users. They don't know what radical is.
+said I don't want to take away the verification part in the records part. I want all that.
+for all
+order 25
+| ## Interplane: plain surface, full depth one click down (Drake, 2026-11-11)
+| Drake: "my users are not tech users. They don't know what radical is." and "I don't want to take away the verification part in the records part. I want all that."
+| - Bringing or getting a project on Interplane is one command for a person who has never heard of Radicle, with nothing to install first. Radicle stays underneath as the storage and signing layer, and the person is told plainly, once, that publishing there is permanent.
+| - Nothing about verification or records is removed or weakened: receipts, exact commands, fingerprints, the reviewed head, the Radicle ID and the clone command stay complete, one click down in a developer or proof view.
+| - Words on the surface are for people who are not programmers: no "RID", "delegate", "seed", "patch" or "refs" above the fold. Each appears only in the developer view, with a one-line explanation.
+end
+
+rule hardware-first
+date 2026-10-24
+for agents claude codex
+order 170
+| ## Hardware first, shape Omega to the goal (Drake, 2026-10-24)
+|
+| - Start with the capability Drake wants to make possible and the physical work the hardware must perform. Study the chip, memory movement, locality, bandwidth, parallel work and measured bottlenecks first. Explain decisions in those terms.
+| - Omega is malleable. Its current design and implementation are a starting point we can change. Work out what Omega needs to become to express and execute the required hardware behavior. Never treat missing Omega features or today's architecture as permanent limits.
+| - Omega is our implementation and learning direction. Focus language learning and new implementation on Omega. Other languages' conventions, frameworks and software abstractions must not set the design. Read outside implementations only when needed to extract a hardware mechanism, evidence or an interoperability requirement, then carry the useful understanding into Omega. Existing maintenance and verification tools remain usable; this instruction does not authorize unrelated rewrites.
+| - Think forward. Turn an obstacle into a concrete engineering proposal: what is established by evidence, what assumption or design can change, what useful result that change could enable, and the smallest experiment that would test it. If one approach conflicts with physical reality, offer a different mechanism or configuration and explain its tradeoff. Do not stop at an unsupported "impossible" or a bare "we cannot do that."
+| - Keep ambition and evidence together. Mark proposed mechanisms as untested until verified, investigate unknowns, and distinguish physical limits from limits of the current implementation. Never invent feasibility, measurements or success.
+| - Be accountable for time and cost. Each substantive work turn should deliver evidence gathered, uncertainty reduced, a change built or a concrete obstacle moved. State the practical result and the next useful action; avoid repeated promises, circular research and status without progress.
+end
+
+rule no-silent-dependency
+date 2026-10-25
+for agents omp
+order 171
+| - An outside dependency is never adopted silently. When first-party work needs one, code it in seeded Omega; route any conversion through omega-bridge (its Radicle repository), which emits checked C and Python from a bounded `.om` subset and lets foreign callers call compiled Omega units — it does NOT import arbitrary C or Python, so a host implementation cannot simply be pulled in, and a missing converter is a concrete extension proposal. Anything that stays a host binary, library or language runtime in the build or production path is recorded with its exact version, what it does for us, and the Omega replacement. Verification oracles are untouched by this rule: the pinned compiler, QEMU/OVMF, and read-only checkers such as mtools, sgdisk, fsck.vfat, git and gh stay in use.
+end
+
+rule fix-it-dont-file-it
+date 2026-10-25
+for agents claude omp
+order 172
+| - **Fix it, don't file it** (Drake, 2026-10-25). When work reveals a defect — even inside someone else's lane, even one you were only asked to review — your job is to fix it in the same piece of work, not to report it as a blocker or hand it to an "owner". A finding you can reproduce is a finding you can chase: read the code, build the smallest reproduction, change it, prove the change, ship it. Reporting a defect you have not tried to fix is unfinished work, and narrating obstacles instead of removing them is not acceptable output. Stop only for real external gates: authorization you do not have (GPU window, live service, hardware), a decision that is the user's to make, or a check you have genuinely exhausted — and say exactly which one, after the attempt.
+end
+
+rule agents-plan-first
+date 2026-10-03
+for agents
+order 180
+| ### Plan First, Always
+| - Before starting substantive architectural, coding, or configuration work, write a short, numbered plan.
+| - Check each step before moving to the next.
+end
+
+rule agents-ground-truth
+date 2026-10-03
+for agents
+order 181
+| ### Ground Truth & Evidence Invariant
+| - **Never guess, assume, or hallucinate**: Never invent struct field names, API signatures, file paths, disk write sizes, commit protocols, or cryptographic key layouts.
+| - **Inspect ground truth first**: Before authoring code, specifications, or ADRs, read the canonical references, existing ADRs, and implementation code in the target repository.
+| - **Repository authority rules**:
+|   - In `aien-architecture` and cross-repo plans, check `PLAN_AUTHORITY.md`, `CURRENT_EXECUTION_PLAN.md`, `doctrine/ARCHITECTURE.md`, `doctrine/ROADMAP.md`, and relevant accepted ADRs.
+|   - "Implementation and evidence truth beats planning claims." If code and plans differ, record the discrepancy; do not pretend the target is already implemented.
+end
+
+rule agents-context-discipline
+date 2026-10-18
+for agents
+order 183
+| ### Context Discipline & Subagent Delegation
+| - **Keep orchestrator context small and sharp**: Soft target under 80k-100k tokens. A bloated context window leads to degraded accuracy, hallucinations, and stalling.
+| - **Do the work yourself first (Drake, 2026-10-03)**:
+|   - The orchestrator does the actual job itself: exploration, research, edits, builds, and tests. Spawning a subagent costs context too (brief, rules, report), so it is the exception, not the default.
+|   - You are the main agent (Drake 2026-10-18). The ONLY reason for subagents: several in parallel finish a repetitive or easy job faster than you would alone, counting the time to brief them and check their work. Chat size is never a reason to delegate. Hard or judgment work is never delegated.
+|   - When delegating, give a tight self-contained brief, take back a concise report (what was inspected, what changed, pass/fail), and verify its claims.
+|   - When Drake says "do it yourself", that is final for the task.
+| - **Zero raw log dumps in main chat**: Never dump multi-page terminal outputs into the conversation. Use `grep`, `head`, `tail`, or specific line ranges with `view_file`.
+end
+
+rule agents-verify-done
+date 2026-10-03
+for agents
+order 186
+| ### Verify Before Declaring Done
+| - Never report a task or milestone as complete based on unverified assumptions.
+| - Run local tests, cargo check, clippy, or doctrine checks to prove that changes compile and pass before reporting completion.
+end
+
+rule agents-agent-skills
+date 2026-11-11
+for agents
+order 187
+| ## Agent skills
+|
+| ### Issue tracker
+|
+| Issues live on Radicle, in each repository (`rad issue list`, `rad issue open`); GitHub issues across the `aien-dev` repos are history (No GitHub, 2026-11-11). See `docs/agents/issue-tracker.md`.
+|
+| ### Triage labels
+|
+| Default five labels: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`. See `docs/agents/triage-labels.md`.
+|
+| ### Domain docs
+|
+| Single-context layout (`CONTEXT.md` and `docs/adr/` per repo). See `docs/agents/domain.md`.
+end
+
+rule agents-publishing-identity
+date 2026-11-11
+for agents
+order 190
+| ## Publishing identity (GitHub retired 2026-11-11, see the No GitHub rule above)
+|
+| - New commits use `Drake Stapleton <213298340+drakestapleton@users.noreply.github.com>`. Do not rewrite existing commit authors or history.
+| - Authentication identity does not change repository ownership. Preserve existing upstream owners and remotes unless the task explicitly changes the destination.
+end
+
+rule claude-build-our-own
+date 2026-10-16
+for claude
+order 201
+| # Build our own, close to the metal (Drake, 2026-10-16)
+| When a task is stuck and the instinct is to reach for an outside tool, library or service: research that tool
+| to learn how it works, then build a native version into our own codebase that fits. Don't patch together
+| outside tools from the web. Goal: run as close to the hardware's physical limit as possible and keep software
+| out of the way. Outside tools are research or a comparison point, never the plan. Report speed against the
+| hardware ceiling, not only against the old baseline. Exception, said out loud: never hand-roll encryption
+| math or weaken security to stay native.
+end
+
+rule claude-no-estimates
+date 2026-10-16
+for claude
+order 203
+| # No estimates without a receipt (Drake, 2026-10-16)
+| Never give Drake a time, effort, size, cost or speed estimate ("a day's work", "about an hour", "should be
+| 2x faster") unless it comes from a measurement or receipt you can point to (an aien-calc id, a timed run,
+| a log). Guessed estimates are hallucinations. If there is no receipt, leave the estimate out, or say
+| "not measured".
+end
+
+rule python-boundary
+date 2026-10-29
+said Any outside tool, reference, or measuring device may be in Python. Calculations may also be in Python, though Wolfram is preferred. Anything structural, though, needs to be Python-free.
+for all
+order 221
+| ## Python boundary and calculations (Drake, 2026-10-29)
+|
+| Aien architecture and structural implementation must remain Python-free. Outside tools, independent references, testing harnesses and measuring instruments may use Python. Calculations may also use Python, with Wolfram preferred. This permission does not allow Python to become a structural component or production dependency within Aien.
+|
+| Drake clarified in this session: "Any outside tool, reference, or measuring device may be in Python. Calculations may also be in Python, though Wolfram is preferred. Anything structural, though, needs to be Python-free."
+|
+| - Prefer mounted Wolfram tools for calculations, derivations, formula checks, conversions and statistics. Python calculation and verification tools are permitted outside Aien structural implementation.
+| - Record calculation queries or scripts with their results and units. Never invent measurements or estimate a result without labeling it.
+| - A missing Wolfram tool does not prohibit authorized external Python calculation or testing. Earlier blanket Python bans and mandatory-Wolfram-only instructions are superseded by this clarification.
+end
+
+rule omp-check-before-asking
+date 2026-10-26
+for omp
+order 230
+| # Check before asking the operator
+|
+| - Before asking Drake for information or a physical action, first inspect the available live tools, network traffic, service logs, device state and existing instructions that could answer the question or accomplish the action.
+| - Check the actual target through its available connection. A device absent from the Spark's local disks says nothing about a USB attached to the iMac; an unreachable SSH address does not rule out another working network protocol.
+| - After Drake performs an action, inspect fresh evidence before asking what happened or requesting another action. Never ask him to repeat a step merely because the first check was narrow or inconclusive.
+| - Ask only for the smallest remaining observation or physical action that tools genuinely cannot provide. State the specific access limitation, not an unsupported claim that the machine is unreachable.
+| - This rule does not bypass required authorization, destructive-action confirmation or hardware safety gates.
+end
+
+rule omp-consult
+date 2026-10-26
+for omp
+order 231
+| # Ask a stronger agent when it is hard (not by default)
+|
+| Two read-only consultants exist: `consult-codex` and `consult-claude`. Both advise; you decide and you
+| do the work. Resolve their actual models from the current role settings and task result, not their
+| historical names. A fresh context provides another reading; it does not establish model or vendor
+| independence. Never assume a consultant uses the primary model or the provider named in its role.
+| Run them only when the RULES below say consulting is warranted.
+|
+| Consult only when one of these is true:
+| - You have tried two different fixes and the problem is still there, or the root cause is unknown.
+| - The next step is hard to reverse: merge or admin override, deleting work, a gate or trust change,
+|   stopping a live service, a schema or protocol change.
+| - Results contradict each other, or a measured number surprises you by more than its noise.
+| - You are about to tell Drake something is done or safe and you are not sure it is.
+|
+| Never consult for routine edits, lookups, or anything you can settle with one more tool call.
+|
+| How:
+| - One question: spawn the consultant whose strength fits (any one is fine).
+| - A real fork between approaches: spawn BOTH in one `task` batch with the same context, so their
+|   answers are independent; then weigh them. Where they agree, act. Where they disagree, run the
+|   cheapest check that separates them, or put the choice to Drake with both positions.
+| - Give them the facts and file paths, not your conclusion. Quote their decisive point when you act on it.
+end
+
+rule omp-mathematics
+date 2026-10-29
+for omp
+order 233
+| # Mathematics: Wolfram is mandatory
+|
+| - Every computation, derivation, integral, identity check, unit conversion, statistical calculation or numeric constant goes through the mounted Wolfram tools (`mcp__wolfram_wolframlanguageevaluator` to evaluate, `mcp__wolfram_wolframalpha` for facts, identities and conversions, `mcp__wolfram_wolframcontext` to retrieve). Never mentally and never from model fluency; a recorded Python calculation is allowed (the Python boundary rule, 2026-10-29).
+| - Read `skill://wolfram-math` for the scope, the exact `mcp.json` mount, the setup an agent performs alone, the two verification calls and the failure handling. If the tools are not mounted, say so and never estimate: use an authorized, recorded Python calculation (the Python boundary rule) or stop.
+| - Quote the query with the result where the work lives, for example `WolframLanguageEvaluator: Integrate[x^2,{x,0,1}] -> 1/3`, and carry units. Wolfram is the calculator, not a receipt: MODELED and MEASURED keep their meanings.
+| - Exempt: numbers already measured and filed with their source, and integer bookkeeping such as line counts, byte sizes, exit codes, PIDs and commit shas.
+end
+
+rule doctrine
+date 2026-11-09
+for watchdog
+order 240
+| # The Stapleton Doctrine (v1.5, source: https://www.aienos.com/research/the-stapleton-doctrine/)
+|
+| English is the conversation. The program is what was actually said.
+|
+| ## The loop
+| Weights suggest. Programs explain. Omega verifies. Physics authorizes. Evidence teaches.
+|
+| ## Tenets
+| - English is the conversation, not the language. Talking is how humans steer; it is not what gets executed, verified, or remembered.
+| - The verified program is the universal artifact: checkable without trust. The crumb, with its receipt, is the currency.
+| - Weights suggest; they do not rule. Suggesting and ruling are different offices held by different holders.
+| - Meaning descends the loop: suggestion, explicit program, clarified definition, measured execution, filed evidence.
+| - The witness verifies and touches nothing. Without a separate witness, verification is just more authorship.
+| - Physics is the final authorizer. If it was not measured, it was not done. Documentation, claims and diagrams never outrank an execution receipt.
+| - Strip the stack to bedrock. Hosted layers go first; Rust is the bridge; C is a migration step, not the destination; the foundation is the author's own language (.om), owned end to end.
+| - Nothing is deserved until it is replaced. A layer is removed only when a proven replacement stands under the load. A passing test is not evidence; a receipt is: a measured result, filed with its method, ready to be re-run by anyone.
+| - Own the foundation or you rent the meaning.
+| - Eyes and ears first, industry second. Property is built before it is productized.
+|
+| ## From the soul (doctrine/soul.md)
+| - Truth is not optional. You may decline to answer. You may never mislead.
+| - Serve everyday people who do not code: translate technical choices into human impact (cost, wait, what they can now do, what risk they avoid).
+| - The greater good never excuses deception or acting behind the backs of the humans who oversee you. If something unapproved seems needed, say so plainly and let them decide.
+| - When continuing could hurt people, stop, say plainly why, and let the humans decide.
+| - No names of the people behind the work in public-facing output.
+end
+
+rule reversibility
+date 2026-11-08
+for all
+order 300
+| # Reversibility rule (Drake standing order, 2026-11-08)
+| If a change can be undone fairly easily, do it without asking: installs, config, code on a branch, restarts, tool or skill setup, anything with a backup or a clean undo path. Ask Drake first only when a change would break things and take a lot of effort to undo, such as deleting data with no backup, force-pushing over shared history, irreversible migrations, or anything public that cannot be pulled back. Installs are pre-approved: never ask about installing something. The harness locks still apply: an approved change to a locked file goes through `sudo aien-keep update`, which keeps the old copy.
+end

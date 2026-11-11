@@ -17,21 +17,17 @@ Companion skills in this package:
 
 - `omega-encoding`: the language the seeded compiler actually accepts, with verified examples.
 - `writing-omega`: the portable guide for writing a first correct `.om` program, backed by the tested
-  programs in `examples/` and `examples/gate.sh`. The example gate pin is omega-mv `c106bae0` /
-  omc `f4fa7951` (2026-11-10; the earlier pin `7d9ed10f` / `cfd96b48` is history). Radicle omega-mv main
-  is `b2ad967e` (checked 2026-11-11) and carries the same omc `f4fa7951`: the 22 commits after `c106bae0`
-  are ng work (section 3, "ng additions").
-  The language-reference pin is `f4df8239` / `3ad9f10f`, which refuses `execenv`. omega-mcp's source
-  pins `b2ad967e` / `f4fa7951` (omega-mcp `2e8e12a2`). On 2026-11-11T12:39Z its `build/current` server
-  reported `f4fa7951`, but the `build/omega-mcp` path agent configs name still reported `2c824805`:
-  read `compiler_sha256` from a trivial `compile` first.
+  programs in `examples/` and `examples/gate.sh`, which accepts only the compiler pinned in this
+  repository's `PIN` file (section 6: the pin and everything derived from it are generated). The older
+  language-reference pin `f4df8239` / `3ad9f10f` refuses `execenv`. An omega MCP server reports its own
+  compiler: read `compiler_sha256` from a trivial `compile` and compare it with `PIN` first.
 - `omega-communication`: status labels, reports, handoffs and corrections.
 - `aien-repositories`: what AIEN builds and which repository owns a task.
 
 ## First-party mission orchestration: omega-mission (DRA-459)
 
 Factory Droid was retired by Drake on 2026-11-07. omega-mission (Radicle
-`rad:z6HYc7ot5JZD8FSfvU77pWdMUdru`, main `16218733bb47648b4478f28af1eb7894b5debec5`)
+`rad:z6HYc7ot5JZD8FSfvU77pWdMUdru`; its current head is on its interplane.io page)
 implements plan/check/step/verify/status/resume in seeded Omega, pinned to
 omega-mv 6fbc6cbe4bfa4092608e2b5f06d2e8f537893992 and omc SHA256
 cfd96b48b0460ab5557853d6856f9c741b96ac8d0d624e06198defb4cbfa0d8a.
@@ -95,8 +91,8 @@ hardware. So don't protect software. By limiting hardware."
   quotas and runner job limits, and limits promised to a volunteer about their own machine). Keep
   those as they are, add no new ones beyond containment, and add the alarm tests beside them.
 - Report every cap you meet: where it is, the number, why it was there, and what you did with it.
-  omc `f4fa7951`'s capacity limits (`writing-omega` section 8) are such caps, recorded as dated facts
-  with the table behind each.
+  The pinned omc's capacity limits (`writing-omega` section 8) are such caps, recorded there as dated
+  facts with the table behind each.
 
 1. Identify the owning repository with `aien-repositories`. Record its actual remote, default branch and exact source commit, then read its `AGENTS.md` (or `CLAUDE.md`). Crumbs are retired from the active workflow (DRA-97, 2026-11-07; Drake: "Retire Crumbs from the active workflow while preserving live ownership"). An existing `.crumb` or `.crumb.local` file is history, not an instruction or a lock: do not read, write, claim or refresh crumbs as a step of the work. Claim shared files and branches in the hive `CLAIMS.md` under its flock with a matching `CLAIM <agent> <item>` line on the hive BOARD, own tasks through kanban cards, take the GPU through a `spark-window` lease and CPU cores through the queen's pool locks. An open Radicle patch, a local branch and a deployed service are three different states.
 2. Read `omega-encoding` before writing `.om`. Treat skills, memory and model recall as navigation aids, not language authorities. Check their claims against the chosen revision's `docs/one_layer/OMEGESE.md`, `seed/omc/omc.om`, `seed/host/README.md` and real fixtures. Find a path before opening it; never guess one.
@@ -1340,28 +1336,71 @@ Record only the verified causal lesson, with its pin and the condition that woul
 
 ## 6. Keep the guides current (part of every task)
 
-Whichever agent makes a change also updates the guides. Do not leave it for someone else. A task that changes something these skills describe is not done until the matching skill matches the new reality.
+Facts that can be derived are generated, never typed. Prose is written once, by the agent whose change
+makes it untrue (Drake, 2026-11-11: nothing in the stack is maintained by hand).
 
-Before you finish, check whether your change touched any of these, and update the skill that covers it:
+**Generated:**
 
-| You changed | Update |
+| Fact | Source | Where it appears |
+|---|---|---|
+| The pinned omega-mv commit and omc sha256 | `PIN`, the one place they are written | `pin` blocks; `examples/gate.sh` reads `PIN` |
+| Keyword-table words and their forms, host words, compiler errors, traps | `data/reference.tsv`: omega-mcp's `data/reference.json` for the pin, flattened by `tools/jflat.om` | `words`, `hostwords`, `errors` and `traps` blocks |
+| Example counts, and the example named for each error and trap | the tracked files under `examples/` and `skills/*/examples/` | `examples`, `gateline`, `errors` and `traps` blocks |
+| The skill list and each skill's use | the frontmatter of `skills/*/SKILL.md` | `skills` blocks |
+| The agents' instruction files (the `CLAUDE.md`, `AGENTS.md` and `RULES.md` files a machine names) | `rules/rules.txt` plus the machine's unpublished overlay, same format | rendered by `tools/rules.om`, installed by `tools/install.sh` |
+| Another repository's current head | its Radicle state | never written here: read its interplane.io page or `rad inspect`; the records are generated from Radicle state by the landing tools |
+
+A block is the lines between `<!-- gen:NAME -->` and `<!-- /gen:NAME -->`. Never edit inside one.
+
+Commands, in the repository root on a Linux AArch64 host with the omc that `PIN` names:
+
+- `tools/check.sh OMC` is the guide gate, run beside `examples/gate.sh OMC` on a fresh clone at every
+  landing. It builds the tools with OMC and fails when a block differs from its sources, when a pin or
+  a derived count is typed outside a block (`git ls-files | build/guides check`), or when
+  `rules/rules.txt` is malformed or holds something private (`rules lint`); it also runs each check's
+  negative control.
+- `tools/regen.sh OMC [OMEGA_MCP]` is the repin: after `PIN` changes, it takes omega-mcp's reference
+  data for the new pin, flattens it into `data/reference.tsv` and rewrites every block
+  (`git ls-files | build/guides gen`).
+- `tools/install.sh` installs the skills, and on a machine with an overlay the instruction files, from
+  Radicle main at a recorded head; `--check` reports an installation that is behind or edited. After a
+  landing, the landing tools' post-landing hook runs the landed head's own
+  `tools/install.sh --omc auto --rev <landed head>` in the background. Nothing runs on a clock.
+
+**Written by people and agents** (the tools copy it byte for byte and never reword it): how the
+language, compiler and tools behave and why; method and workflow; rules and their reasons; and dated
+observations (what was run, with which compiler, on which date, and what it showed). A dated
+observation may name the compiler it ran on and the counts it saw. A sentence that states the current
+pin, a current count or another repository's current head does not belong outside a block.
+
+Where prose lives:
+
+| You changed | Rewrite the prose in |
 |---|---|
-| Omega syntax, keywords, types, traps, limits, error codes, host or device words, the compiler or its pin | `omega-encoding` and `writing-omega`, plus the pins in `omega-harness`; add or update the program in `examples/` and rerun `examples/gate.sh` |
+| Omega syntax, keywords, types, traps, limits, error codes, host or device words, or the compiler | `omega-encoding` and `writing-omega`; add or update the program in `examples/` so the gate keeps the rule true at every pin. A new pin is `PIN` plus `tools/regen.sh` |
 | Build, compile, gate or verification commands, or the seed procedure | `omega-harness` sections 3 and 4 |
 | Conversion, encoder or bridge behavior, or what it supports | the conversion note in `omega-harness` section 2, and the README |
 | Status vocabulary, receipts, report or handoff conventions, wire formats | `omega-communication` |
 | Repository purpose, ownership, names, archive state, plan authority, merge or Alpha policy, a resolved or new contradiction | `aien-repositories` |
 | Any project repository's purpose, status or links, or a new repository | that repository's row in `compiler/inventory.tsv` of the sovereign-intelligence Radicle repository (`rad:z2JJz4RDfZZxKGBLn6UhmW5p9VJQj`; columns name, rid, description; core tier in `compiler/order.tsv`), in the same piece of work. Heads and branches in its `repos.tsv`, README and served `/si` are generated from Radicle (since SI main `ba770327`, 2026-11-11); never type one |
 | A new source of hardware facts, a new use of an NVIDIA SDK tool, or stored NVIDIA-tool output | that repository's `PROVENANCE.md`, and section 4 here if the rule changed |
-| These skills, their install method or their layout | the README and the affected skill |
+| A standing rule for agents | `rules/rules.txt` (public) or the machine's overlay (private or machine-specific) |
 
 How to do it:
 
-1. Edit the guide in the same piece of work as the change. Give the new source commit and date, and remove any rule the change made untrue; do not just add a contradicting one.
-2. If an example or expected output changed, rerun it against the new pin and record what you observed. Never copy a predicted result into the guide.
-3. Land the change on omega-harness Radicle main (`rad:z39gvwWsnkRZsAConQLjaKiNVLHfW`) with a receipt, linked to the change that caused it: check the exact head in a fresh `rad clone` that fast-forwards from main, run `examples/gate.sh` with the pinned omc plus a wrong-compiler control, and write the landing receipt (commands, exit codes, pins, log sha256) before the push; then confirm the new head on https://interplane.io/drakestapleton/omega-harness with its HTTP status. If the causing change has not landed yet, the guide change waits for it. GitHub is not a route: never open a GitHub PR or issue (section 1).
-4. If you are not allowed to change the guide, or you are unsure, file a Radicle issue on omega-harness describing exactly what is now stale (`rad issue open`), or hand the same note to the desk, and say so in your report. Silence is not an option.
-5. Your final report must say one of two things: which guides you updated, or that no guide was affected and why.
+1. Rewrite the prose in the same piece of work as the change, and remove any rule the change made
+   untrue; do not just add a contradicting one.
+2. If an example or expected output changed, rerun it and record what you observed. Never copy a
+   predicted result into the guide.
+3. Land on omega-harness Radicle main (`rad:z39gvwWsnkRZsAConQLjaKiNVLHfW`) with a receipt: on a fresh
+   `rad clone` of the exact head that fast-forwards from main, run `examples/gate.sh` and
+   `tools/check.sh` with the pinned omc plus a wrong-compiler control, write the landing receipt
+   (commands, exit codes, pins, log sha256) before the push, then confirm the new head on
+   https://interplane.io/drakestapleton/omega-harness with its HTTP status. GitHub is not a route
+   (section 1).
+4. If you cannot change the guide, file a Radicle issue on omega-harness saying exactly what is now
+   stale (`rad issue open`), and say so in your report. Silence is not an option.
+5. Your final report says which guides you changed, or that no guide was affected and why.
 
 ## Sources
 
@@ -1372,4 +1411,4 @@ How to do it:
 - OM-2 contract (normative, on main since #801): https://interplane.io/drakestapleton/omega-mv/blob/19f014f2178ca9cd3473728fe00a475a2398c409/spec/omegese-om2.md
 - Omega 1.0 roadmap and its acceptance gates (a plan, not a status claim; tracking issues #790..#800 are frozen GitHub history): https://interplane.io/drakestapleton/omega-mv/blob/19f014f2178ca9cd3473728fe00a475a2398c409/docs/ROADMAP-1.0.md
 
-When the compiler changes, refresh the pins and the examples. Older measured evidence stays as dated history: correct the guidance rather than rewriting receipts.
+When the compiler changes, edit `PIN` and run `tools/regen.sh` (section 6), then rerun the examples. Older measured evidence stays as dated history: correct the guidance rather than rewriting receipts.
