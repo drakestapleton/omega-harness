@@ -26,6 +26,19 @@ order 22
 | There is no merge desk. A lane lands its own exact head on Radicle `main` when the repository's own gates pass on a fresh clone, and writes the landing receipt first (commands, exit codes, pins, log sha256) with the landing tool in use. A non-MERGE review verdict for that head stops the landing. A patch is a vehicle, not an approval. Never bypass a gate or overwrite a receipt. Keep independent final-source review of the exact head, dependency ordering between landings, and read-back of every remote write; no skipped gate, fabricated PASS or retry-until-green.
 end
 
+rule own-review
+date 2026-11-11
+said get rid of review desk and we should ALL be doing our own reviews and spinning up subagents of a different provider to do the review to keep it honest.
+for all watchdog
+order 23
+| ## No review desk: review your own work with another provider's model (Drake, 2026-11-11)
+| Drake: "we no longer have a review desk assignment. Anyone can take acting control of review desk at any time to match with the decentralized nature now that we are out of github." and "get rid of review desk and we should ALL be doing our own reviews and spinning up subagents of a different provider to do the review to keep it honest."
+| - There is no review desk and no reviewer assignment. Nothing waits for a desk, a queue or a named reviewer, and no file, tool or ledger line may require one. Any agent may review or land any ready head at any time.
+| - The lane that wrote a change gets it reviewed itself, before landing. It starts a reviewer subagent on a model from a different provider than the model that wrote the change (work written by a Claude model is reviewed through Codex or Gemini, and the other way round). The reviewer gets the exact head, the base, the task in the operator's words and these rules, never the author's conclusions.
+| - The verdict is a file that names the exact head, the reviewer's program and model, and each finding. The author fixes each finding or answers it in writing in that file's reply; a changed head is reviewed again. The landing receipt names the verdict file. A REJECT, or a finding neither fixed nor answered, stops the landing.
+| - A review by the author, or by a model of the author's own provider, is not the independent review.
+end
+
 rule automate-everything
 date 2026-11-11
 said Honestly, if there's anything else that we're maintaining by hand, like the crumbs, that needs to be some kind of connector that does it automatically.
