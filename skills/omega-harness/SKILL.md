@@ -17,8 +17,10 @@ Companion skills in this package:
 
 - `omega-encoding`: the language the seeded compiler actually accepts, with verified examples.
 - `writing-omega`: the portable guide for writing a first correct `.om` program, backed by the tested
-  programs in `examples/` and `examples/gate.sh`. The example gate pin is omega-mv main `c106bae0` /
-  omc `f4fa7951` (2026-11-10; the earlier pin `7d9ed10f` / `cfd96b48` is history).
+  programs in `examples/` and `examples/gate.sh`. The example gate pin is omega-mv `c106bae0` /
+  omc `f4fa7951` (2026-11-10; the earlier pin `7d9ed10f` / `cfd96b48` is history). Radicle omega-mv main
+  is `b2ad967e` (checked 2026-11-11) and carries the same omc `f4fa7951`: the 22 commits after `c106bae0`
+  are ng work (section 3, "ng additions").
   The MCP pin is `f4df8239` / `3ad9f10f`, which refuses `execenv`.
 - `omega-communication`: status labels, reports, handoffs and corrections.
 - `aien-repositories`: what AIEN builds and which repository owns a task.
@@ -1188,6 +1190,32 @@ up to `2d2ce8f9` on base `943d955531b9`; `0f2de851…` once main `408c76b7` is m
   `ng/a64-m2` and `ng/slice-m1`, 27th on `ng/a64-rand`. Widening the spill scan to x15 is an equivalent
   mutant (identical ELFs), documented, not gated. HOST_TESTED on a fresh clone of `5720a78a` with
   seven negative controls, core 1, 2026-11-07; CI NOT_RUN.
+
+### ng additions on omega-mv main `c106bae0..b2ad967e` (checked 2026-11-11)
+
+Radicle omega-mv main is `b2ad967e57146172c1bedf1eac98babb75baef65` with omc `f4fa7951…` unchanged (no
+commit in the range touches `seed/out/omc`, `seed/omc/omc.om`, `seed/rung0/seed0.hex` or
+`docs/one_layer/OMEGESE.md`). Everything below is in `seed/ng/` and every commit is an ancestor of
+`b2ad967e`: MERGED. The gates ran on 2026-11-11 on the Spark (Linux AArch64) in a fresh clone at
+`b2ad967e`, from the omega-mv root, one core each, with omc `f4fa7951…`. The tree was clean after each run.
+ng itself came from `seed/out/omc < seed/ng/tests/ngbuild/gate.om > G && chmod +x G && G seed/out/omc BIRTH`
+(`NGBUILDGATE PASS`, 19 cases) and `BIRTH/ngbuild build seed/out/omc seed/ng/ng.units NG`
+(`ngbuild: OK units=5 bytes=393568 sha256=5ed20188ba85…170c`).
+
+| Change (commit) | What it is | Gate and observed result | Status |
+|---|---|---|---|
+| Mach-O mode (`3f71977099c5`) | `@ng a64 macho` writes a dynamic arm64 Mach-O from the same code generator; `@ng a64` output is unchanged (`seed/ng/a64/DESIGN.md` s11) | `sh seed/ng/a64/tests/macho/run.sh bundle NG DIR`: `NG-A64-MACHO-BUNDLE OK 23 (21 refused by both targets; 8 library fixtures)`, exit 0. `file` reads `DIR/m/badfd` as `Mach-O 64-bit arm64 executable`, and the six mutant compilers were built. The bundle step only compiles and checks the ELF side; `run.sh run DIR` must run on a Mac | MERGED; bundle EXERCISED on host; Mach-O execution NOT_RUN on a Mac (the commit records a MacBook run by its author, not repeated here) |
+| Mac system library calls (`737a72f31583`) | In a unit whose first line is `target macos`, the ng front end reads `libfn k` (dlopen/dlsym address), `libptr A off n` and `libcall F A off n` (C call with a 128-byte register-file slice), ids 241..243 (`seed/ng/IR.md` s7.11, DESIGN.md s13). `@ng a64` refuses them (`a64: unsupported 24x`, exit 5) and ngrun refuses them as class 117. omc refuses `target macos` (error 25); in other units the three are ordinary names (IR.md s7.11; observed with omc for `libfn` and `libcall`) | The same bundle run: each library fixture is refused by the ELF target with exit 5 and the expected stderr, and its Mach-O is written | MERGED; refusals EXERCISED on host; library calls NOT_RUN on a Mac |
+| libback callbacks (`3fc1d9a1ffb9`) | In a `target macos` unit, a function `libback` (six `ulong` parameters, `ulong` result) makes `libfn 2`..`libfn 17` callback entries that library code (for example `qsort`) can call (DESIGN.md s14) | The same bundle run includes `libback` and `libbackobjc` (8 library fixtures) | MERGED; bundle EXERCISED on host; callbacks NOT_RUN on a Mac |
+| 128-bit packed vectors (`05d7df814713`) | ng-a64 lowers the ΩIR types `vec f32 4` and `vec f64 2` to Advanced SIMD (Q registers, FADD/FSUB/FMUL/FMLA, DUP, 128-bit spills), and ngrun interprets them (DESIGN.md s12). ng-front has no vector lowering, so no `.om` source reaches them | `seed/out/omc < seed/ng/a64/gate.om > gate && chmod +x gate && echo SCRATCH \| ./gate`: `cases 263 / match 263 / words 263`, `mutant mismatches 3`, `refusal cases 37 / refused as written 37`, `mutant M-A refusal failures 19`, `PASS`. `seed/out/omc < seed/ng/a64/rgate.om > rgate && chmod +x rgate && echo SCRATCH \| ./rgate`: `ngrun fixtures ok 90/90` (the `v-*` fixtures among them), `refusal fixtures ok 8/8`, vector mutants 80..85 caught 1, 3, 1, 3, 5, 1 times, `PASS`, exit 0 | MERGED; EXERCISED on host |
+| Scalar float and fill in ng-a64 (`7838633fb30a`, `a86e35682b2d`; merges `c4f9fdef1c30`, `713c9c079c2d`) | Scalar f32/f64 in V registers (AAPCS64 float bank, FCSEL, FPCR), and `fill` (op 51) as 16-byte DUP/STR Q blocks | The same rgate run: `float edges ok 66/66`, `float seeds ok 1000/1000`, `float control differs 1`, `fixtures ok 14/14`, `random seeds ok 1000/1000`, `mutants caught 85/85`. The same `gate.om` run covers the DUP and STR Q encodings | MERGED; EXERCISED on host |
+| fmin/fmax lowering (`1a32ee308d72`) | ng-front lowers fmin/fmax to ΩIR min 24 / max 25 (FMINNM/FMAXNM meaning) | `cat seed/ng/sha256.om seed/ng/front/gate-front-ir.om \| seed/out/omc > gfi && chmod +x gfi && ./gfi seed/out/omc f4fa7951…63e9 SCRATCH seed/ng/front/cases-front-ir.txt`: `ok fmm_mix exit=0`, `ok lsc_fmin exit=1`, `ok lsc_fmax exit=2`, `mutant 8: killed by fmm_mix` (min and max swapped) | MERGED; EXERCISED on host |
+| front-ir names of 9..63 bytes (`b2ad967e5714`) | `@ng front-ir` lowers variables, arrays, texts and constants with names over 8 bytes; before this commit it exited 64 (`not lowered`) | The same front-ir run: `ok longnames exit=57`, `ok p-longtext exit=8`; whole run `FRONTIRGATE PASS cases=339 run=206 refuse=39 host=94 classed=55 fail=0 mutants=8 killed=8 controls=2 tripped=2 notrun=0`, exit 0. Control: ng built the same way at the parent `3fc1d9a1` gives `ng: front-ir: line 8: not lowered` (exit 64) on `seed/ng/front/runs/longnames.om` and `line 7` on `p-longtext.om`, while `b2ad967e` exits 0 on both. omc runs `longnames.om` to exit 57 | MERGED; EXERCISED on host |
+
+Negative control for the front-ir gate: the same command with an all-zero omc sha256 prints
+`FRONTIRGATE INVALID: oracle sha256 differs from OMC_SHA256` and exits 2. The macOS words are ng-only:
+writing `target macos` for omc is error 25, so keep them out of units that omc compiles
+(`omega-encoding` section 0).
 
 ## 4. Effects and authority
 

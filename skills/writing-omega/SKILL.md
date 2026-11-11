@@ -17,6 +17,7 @@ For compiler internals, register rules, wire formats and the reasons behind each
 |---|---|
 | example-gate omega-mv commit | `c106bae04231f47912f4b90b49f426a44a1f4238` (Radicle main, 2026-11-10; the earlier pin `7d9ed10f`, omc `cfd96b48…`, is history) |
 | example-gate `seed/out/omc` | sha256 `f4fa7951816bbd09c5eaaae6692852a70c3c305164b365027c5b683dec7d63e9` (674,212 bytes; rebuilt from seed0 to the same bytes, 2026-11-10T20:31Z) |
+| omega-mv Radicle main | `b2ad967e57146172c1bedf1eac98babb75baef65` (checked 2026-11-11) with the same `seed/out/omc` `f4fa7951…`: no commit in `c106bae0..b2ad967e` changes `seed/out/omc`, `seed/omc/omc.om`, `seed/rung0/seed0.hex` or `docs/one_layer/OMEGESE.md`; those 22 commits are ng work (`omega-harness` section 3, "ng additions") |
 | MCP pin (refuses `execenv`) | `f4df82394e35893dcf1354dda69a2fe028d94bc1`, omc `3ad9f10f64309e7acf8a725082b28e23a2a4aeb07e98322fb4dc0fcd8fc93194` |
 | language reference | `docs/one_layer/OMEGESE.md` at the MCP pin; `execenv` contract is `seed/host/execenv/README.md` at `c106bae0` |
 | host | Linux AArch64 only; omc writes a static AArch64 Linux ELF |
@@ -252,6 +253,10 @@ A trap ends the process with exit status 100 + N. Output already written stays w
 - Variable, parameter, global, text, const, struct and field names: at most 63 bytes (error 13; since omc
   `564c5835`, omega-mv main `12bdb787`). IR-mode names, `abstract`/`layout` names and layout fields stay at 8.
   Function names: at most 63, but see section 13 for names that start with an 8-letter keyword.
+  Rechecked 2026-11-11 with omc `f4fa7951…` (omega-mv main `b2ad967e`, Linux AArch64): a 63-byte variable
+  compiles and runs (exit 0) and a 64-byte one is `omc: line 2: error 13`; a 63-byte function compiles and
+  returns 7 and a 64-byte one is `omc: line 1: error 13`; an IR-mode local or parameter, an `abstract` name,
+  a `layout` name and a layout field each compile at 8 bytes and are error 13 at 9.
 - A new name may not repeat a visible name, a function or a struct (error 10). A name first assigned
   inside a block ends at that block's `end`; assign it before the block to keep it.
 - Reserved words cannot be names, including `len read write text new free view edit global note
@@ -338,7 +343,7 @@ with its exact stderr line in the matching `.expect`, except 24, which needs a g
 | 10 | duplicate name | `err10_duplicate` | choose a name that is not visible, not a function, not a struct |
 | 11 | a number with nothing to give it a type | `err11_ambiguous` | `x = uint 5` |
 | 12 | register pool exhausted (16 per function) | `err12_registers` | fewer live names, a helper function, shorter expressions (section 8) |
-| 13 | name too long | `err13_long_name` | at most 8 characters (function names 63) |
+| 13 | name too long | `err13_long_name` | at most 63 bytes, function names included; IR-mode names, `abstract`/`layout` names and layout fields at most 8 (section 8) |
 | 14 | compiler capacity: names, functions, exports, expansion | `err14_capacity` | split the function or the unit |
 | 15 | the input ends inside an open block | `err15_missing_end` | close every block with `end` |
 | 16 | syntax: unknown word or misplaced form | `err16_syntax` | start each line with a statement word; comments are `note` lines |

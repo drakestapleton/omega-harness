@@ -48,6 +48,21 @@ fail=0` (exit 0), after `err13_long_name` moved to a 64-byte name. The same gate
 omc `564c5835…` (omega-mv `0158ce88`) with exit 2. Earlier the same day each of the three heads above
 passed the gate in its own clean worktree (123 examples on omega-harness `af497dc`; ham lane OmcRebase).
 
+Radicle omega-mv main is `b2ad967e57146172c1bedf1eac98babb75baef65` (checked 2026-11-11), with the same
+compiler: `git diff --stat c106bae0 b2ad967e -- seed/out/omc seed/out/omc.sha256 seed/omc/omc.om
+seed/rung0/seed0.hex docs/one_layer/OMEGESE.md` prints nothing and `sha256sum seed/out/omc` prints
+`f4fa7951…63e9`. On 2026-11-11 `examples/gate.sh` with that omc printed `GATE PASS examples=126 pass=126
+fail=0` (exit 0), and omc `564c5835…` (omega-mv `0158ce88`) exited 2. The 22 commits after `c106bae0` are
+ng work (`omega-harness` section 3, "ng additions"). They add no omc syntax:
+
+- `target macos`, `libfn`, `libptr`, `libcall` and `libback` are words of ng's front end for its Mach-O
+  target only. omc `f4fa7951…` refuses a unit whose first line is `target macos` with
+  `omc: line 1: error 25` (observed 2026-11-11 on `seed/ng/a64/tests/macho/lib/libmath.om` and
+  `libback.om`). In any other unit they are ordinary names (`seed/ng/IR.md` s7.11); observed for two of
+  them: `libfn = int 3`, `libcall = int 4`, `ret add libfn libcall` compiles and exits 7.
+- `vec f32 4` and `vec f64 2` are ΩIR types that ng-a64 lowers. `seed/ng/src/front.om` has no vector
+  lowering at `b2ad967e`, so no Omega source form reaches them yet.
+
 ### Language-reference and MCP pin `f4df8239` (omega-mv main on 2026-11-05, checked then; no longer main's head)
 
 | Item | Value |
@@ -546,8 +561,9 @@ Changes and confirmations against the rules below, each observed with a program:
   9223372036854775808` are error 8 (`mistake_bound_range.om`), and in IR mode it is 1..1000000
   (`mistake_ir_bound.om`). `trap` takes 1..14 (`trap 15` and `trap 0` are error 8; `trap 14` exits
   114).
-- **Names:** an 8-character variable compiles and 9 is error 13; a 63-character function name
-  compiles and 64 is error 13. `len` or `stat` as a variable is error 16, `free` is error 9, and
+- **Names (at `e5b32567`; since `12bdb787` the limit is 63 bytes, section 6):** an 8-character variable
+  compiled and 9 was error 13; a 63-character function name
+  compiled and 64 was error 13. `len` or `stat` as a variable is error 16, `free` is error 9, and
   `bits` is an ordinary name.
 - **Placement:** a `struct` line after the first `fn` is error 9; `new` inside a block is error 9; a
   variable `new` length is error 16; `main` with a parameter is error 9. A `const` in function mode
@@ -1175,19 +1191,20 @@ the target's limits, and a NaN gives 0, with no trap (observed at `e5b32567`,
 
 ## 6. Names, scope, registers
 
-- Function names: up to 63 characters. Every other name (variable, parameter, global, text, const,
-  struct, field): **at most 8 characters**, else error 13 ([#L423](https://github.com/aien-dev/omega-mv/blob/55f9b0af47de70a3d06357985cf99ae3e45c016f/docs/one_layer/OMEGESE.md#L423), gate15 `e13_long_variable`).
-  Rechecked 2026-11-04 (Linux AArch64): `counter_a = int 20` is `omc: line 2: error 13` with both the
-  harness pin omc `be8c5130…` (omega-mv `9920aab1`) and omega-mv main `d3d1b1bc`'s omc `b4f45121…`.
-- PENDING, not merged or pinned: draft [omega-mv #837](https://github.com/aien-dev/omega-mv/pull/837)
-  (head `f1b9ecb5d13f3b7303c055a187fff06e802eb952`, base `integ/omc-batch3`, source-only: its committed
-  `seed/out/omc` is still the old `2c824805…`) raises every such name to 63 bytes, compared in full.
-  Rebuilt from that head with `sh seed/omega-from-seed.sh` on 2026-10-30 (`RC=0`, `PASS omc fixpoint
-  21d34e12eb6516a2c5f3fc160ccb0feca5054786c57def055056c04270c302fa`); with that compiler
-  `counter_a = int 20`, `counter_b = int 1`, `ret add counter_a counter_b` ran with exit 21, a 63-byte
-  local compiled and ran, a 64-byte local is error 13, and an IR-mode parameter `counter_a` is still
-  error 13. IR-mode locals and parameters, `abstract`/`layout` names and layout fields stay at 8, and so
-  does om4. Until #837 lands and is pinned, keep names at 8.
+- Function names and every other name (variable, parameter, global, text, const, struct, field): **at
+  most 63 bytes**, compared in full, else error 13 (OMEGESE lines 477-481 and 947 at `b2ad967e`). The
+  limit rose from 8 on omega-mv main with omc `564c5835…` at `12bdb787`; draft
+  [omega-mv #837](https://github.com/aien-dev/omega-mv/pull/837) first proposed it. Observed 2026-11-11
+  with omc `f4fa7951…` (omega-mv main `b2ad967e`, Linux AArch64): a 63-byte local compiles and runs
+  (exit 0), a 64-byte local is `omc: line 2: error 13`; a 63-byte function compiles and returns 7, a
+  64-byte function is `omc: line 1: error 13`. `examples/err13_long_name.om` (a 64-byte local) is
+  `omc: line 3: error 13` in `examples/gate.sh`.
+- IR-mode locals and parameters, `abstract` names, `layout` names and layout fields stay at **8 bytes**:
+  with the same omc each of the four compiles at 8 bytes and is error 13 at 9. OMEGESE line 481 keeps om4
+  names other than functions at 8 (not rechecked 2026-11-11).
+- History: on 2026-11-04 `counter_a = int 20` was `omc: line 2: error 13` with omc `be8c5130…` (omega-mv
+  `9920aab1`) and `b4f45121…` (`d3d1b1bc`). A rebuild of the #837 head on 2026-10-30 (omc fixpoint
+  `21d34e12…`) first ran a 63-byte local.
 - A new name may not equal a visible name, a function or a struct (error 10). A name first written
   inside `if` / `else` / `while` / `for` dies at its `end`; assign it before the block to carry it out.
 - **Declaration order.** Only functions may be named before their line. A `text`, `const` or
@@ -2132,7 +2149,7 @@ separate namespace in the same registry (OMEGESE section 11.1). The message form
 
 | Code | Meaning | Code | Meaning |
 |---|---|---|---|
-| 1, 2 | compiler input / output (stdin a directory: 1; stdout `/dev/full`: 2; both observed) | 13 | non-function name over 8 characters (over 63 once #837 is pinned) |
+| 1, 2 | compiler input / output (stdin a directory: 1; stdout `/dev/full`: 2; both observed) | 13 | name over 63 bytes (IR-mode names, `abstract`/`layout` names and layout fields: over 8) |
 | 3 | unknown name or field | 14 | capacity at `91b3c932`: 8192 names, 4096 functions, 512 nested blocks, 1024 nesting depth, 8 MiB input/output |
 | 4 | line ends too early | 15 | missing `end` |
 | 5 | extra words on the line | 16 | syntax / unknown word |
