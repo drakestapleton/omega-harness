@@ -6,7 +6,8 @@
 #       that the head recorded in DIR shipped and main no longer ships, and record the head in
 #       DIR/.installed-from-omega-harness. With --check, change nothing: exit 1 when the recorded head
 #       is not main's head (a skill main no longer ships then still sits there) or an installed skill
-#       differs from main's copy.
+#       differs from main's copy. A DIR with no recorded head is cleaned of retired skills only after
+#       one install has recorded its head there.
 #   tools/install.sh --omc OMC|auto [--check] [--source URL] [--rev SHA] [--overlay FILE]
 #       On a Linux AArch64 host: build tools/rules with OMC (its sha256 must be PIN's; `auto` takes
 #       seed/out/omc at PIN's omega-mv commit from omega-mv's Radicle storage or mirror), then install
@@ -15,10 +16,11 @@
 #       instruction file is rendered from rules/rules.txt plus FILE. A file kept by aien-keep (its
 #       path resolves under /srv/aien-keep/) is replaced only through `sudo aien-keep update` (the
 #       keeper keeps the old copy); any other through a rename, after a dated backup under
-#       ~/.local/state/omega-harness/backups/. The landing trigger is the landing tools' post-landing
-#       hook, which runs the landed head's own `tools/install.sh --omc auto --rev <landed head>` in
-#       the background. A failed install (exit 2) is written to the overlay's `alarm` file by this
-#       script; nothing runs on a clock and nothing is hooked inside Radicle storage.
+#       ~/.local/state/omega-harness/backups/. The landing trigger is the landing tools' `land-hooks.sh`
+#       `harness` hook, which runs the landed head's own `tools/install.sh --omc auto --rev <landed head>`
+#       detached, one at a time, and posts any nonzero exit to the hive BOARD. This script itself writes
+#       a failure inside its install loop to the overlay's `alarm` file; earlier failures (clone, PIN,
+#       omc, overlay) are alarmed by the hook. Nothing runs on a clock or inside Radicle storage.
 #
 # SOURCE is the local Radicle storage of omega-harness when it exists, else the HTTPS mirror. --rev
 # installs that commit instead of main's head (the post-landing hook passes the landed head).
@@ -37,11 +39,11 @@ while [ $# -gt 0 ]; do
         --omc) omc=${2:?}; shift ;;
         --overlay) overlay=${2:?}; shift ;;
         --source) source=${2:?}; shift ;;
-        *) sed -n '2,26s/^# \{0,1\}//p' "$0" >&2; exit 2 ;;
+        *) sed -n '2,28s/^# \{0,1\}//p' "$0" >&2; exit 2 ;;
     esac
     shift
 done
-[ -n "$sdir$omc" ] || { sed -n '2,26s/^# \{0,1\}//p' "$0" >&2; exit 2; }
+[ -n "$sdir$omc" ] || { sed -n '2,28s/^# \{0,1\}//p' "$0" >&2; exit 2; }
 if [ -z "$source" ]; then
     if [ -d "$STORE" ]; then source=$STORE; else source=https://www.aienos.com/rad/$RID.git; fi
 fi

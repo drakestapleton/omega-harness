@@ -1364,8 +1364,9 @@ Commands, in the repository root on a Linux AArch64 host with the omc that `PIN`
   (`git ls-files | build/guides gen`).
 - `tools/install.sh` installs the skills, and on a machine with an overlay the instruction files, from
   Radicle main at a recorded head; `--check` reports an installation that is behind or edited. After a
-  landing, the landing tools' post-landing hook runs the landed head's own
-  `tools/install.sh --omc auto --rev <landed head>` in the background. Nothing runs on a clock.
+  landing on main, the landing tools' `land-hooks.sh` `harness` hook (run by `desk-publish.sh` after the
+  records step) runs the landed head's own `tools/install.sh --omc auto --rev <landed head>`, detached
+  and one at a time; a nonzero exit is posted to the hive BOARD. Nothing runs on a clock.
 
 **Written by people and agents** (the tools copy it byte for byte and never reword it): how the
 language, compiler and tools behave and why; method and workflow; rules and their reasons; and dated

@@ -45,7 +45,8 @@ mirror), so the clone only provides the script. It replaces only this repository
 directory. On a Linux AArch64 machine with an overlay (`~/.config/omega-harness/local.rules`, never
 published), `tools/install.sh --omc OMC` also renders and installs the agents' instruction files that the
 overlay names (`omp` `RULES.md`, Claude Code `CLAUDE.md`, Codex and home `AGENTS.md`) from
-`rules/rules.txt`; after a landing, the landing tools re-run it from the landed head.
+`rules/rules.txt`; after a landing on main, the landing tools' `land-hooks.sh` `harness` hook re-runs it
+from the landed head.
 
 **Interplane is the only forge (Drake, 2026-11-11).** This repository is shown at
 https://interplane.io/drakestapleton/omega-harness, and its Radicle `main` is the canonical source.

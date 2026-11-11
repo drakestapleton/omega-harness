@@ -132,8 +132,8 @@ approvals, 2026-11-11): rerun `examples/gate.sh` and `tools/check.sh` with the p
 wrong-compiler control in a fresh `rad clone` of the exact head, write the landing receipt (commands,
 exit codes, pins, log sha256), land it with the hive landing tools, then confirm the head on the
 interplane.io page. A non-MERGE review verdict on that head stops the landing. After the landing, the
-landing tools' post-landing hook re-installs the skills and the instruction files from the landed head
-(`tools/install.sh --omc auto --rev <head>`; see its header). To report something stale without
+landing tools' `land-hooks.sh` `harness` hook re-installs the skills and the instruction files from the
+landed head (`tools/install.sh --omc auto --rev <head>`; see its header). To report something stale without
 changing it, open a Radicle issue (`rad issue open`).
 
 Keep the attribution in `README.md` and `LICENSE` intact. Contributions follow the shared AIEN agent
