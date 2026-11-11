@@ -1099,13 +1099,13 @@ gate is the separate workflow branch `ng/ir-ci`), both on Radicle main `408c76b7
 ### ng arena and no-caps gate (source checked 2026-11-11)
 
 At omega-mv `229f77bc`, ng has no fixed table capacities of its own. Input, names, functions,
-calls, blocks, nesting cells, the ΩIR payload, output and globals, and a64's per-function tables
-(including fixups) are regions of one 128 MiB arena, as in omc's arena implementation. Regions grow
+calls, blocks, nesting cells, the ΩIR payload, output and globals, and a64's input-sized per-function
+tables (including fixups) are regions of one 128 MiB arena, as in omc's arena implementation. Regions grow
 and the arena compacts; a full arena is a defined refusal with an `ng-use` record, never truncation
 or a table overrun (`seed/ng/src/ir.om` `ar_*`, `seed/ng/src/a64.om`'s per-function tables).
 The record names the arena groups and what each held. Value nesting is still bounded by ng's own
 stack at 32768 (`front.om` `fe_rdval`, error 14 on the value's line). a64 still needs ten arena
-words per wire per function, plus liveness bitsets sized by blocks times wires; those costs can fill
+words per wire per function, plus liveness bitsets sized by blocks times wires divided by 64 (rounded up per bitset row); those costs can fill
 the shared arena even when the front end accepts the source. ΩIR's own format limits remain
 (`seed/ng/IR.md` sections 12 and 14); `ngcheck`'s separate reader is not ng's arena reader.
 
@@ -1132,7 +1132,8 @@ control). An incorrect oracle hash or existing scratch directory is INVALID, not
 
 Gate-ir's `G over n/x` rows now expect TRAILING (14) at byte 16777216, not the old capacity refusal:
 the arena reader reads the whole unit and sees the extra byte. The `M a-fib 31` row keeps ngcheck's
-LIMIT `23@28` but expects ng's NONCANONICAL `13@42` (the third global's class is 5); the optional
+LIMIT `23@28`, while ng lifts the globals-count cap and reads past it to NONCANONICAL `13@42`
+(the third global's class is 5); the optional
 NGEXIT/NGOFF fields pin that distinct verdict. These are reader contracts, not weakened checks
 (`seed/ng/tests/ir/cases`, `IR.md` section 14).
 
