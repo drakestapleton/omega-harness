@@ -13,14 +13,17 @@ cannot express, and before encoding bytes, integers or host I/O in Omega.
 <!-- gen:pin -->
 | Pin (`PIN`) | Value |
 |---|---|
-| omega-mv commit | `b2ad967e57146172c1bedf1eac98babb75baef65` |
-| `seed/out/omc` sha256 | `f4fa7951816bbd09c5eaaae6692852a70c3c305164b365027c5b683dec7d63e9` |
+| omega-mv commit | `3537baad90c6456f87be8911197bfea6d109b312` |
+| `seed/out/omc` sha256 | `c52e986ed693c241f0bbb5c673a81a4aef70b9b923c447004360ffd111383607` |
 | reference data | `data/reference.tsv`: omega-mcp's `data/reference.json` for this pin, with 197 keyword-table entries (80 host words), 29 compiler error codes, 14 traps and 13 topics |
 <!-- /gen:pin -->
 
 The pin is written once, in this repository's `PIN` file; the table above is generated from it and from
 the reference data for it (`omega-harness` section 6). `examples/gate.sh` refuses any other compiler. The
-rest of this section is dated history: how the pinned compiler was established and the earlier pins.
+rest of this section is dated history: how earlier pinned compilers were established, and those pins.
+omc `c52e986e…` (omega-mv `3537baad`, landed 2026-11-11) replaced the fixed capacity tables of omc
+`f4fa7951…` with one arena (OMEGESE 9.6; section 11 error 14); with it `examples/gate.sh` printed
+`GATE PASS` for every program on 2026-11-11.
 
 Merge status, 2026-10-29: compiler batch #904 merged at `e2662fffbce1c21ef09da71c0d8808133a6af8ab`;
 x86 integration #923 merged at `bf54b19fa590e8ae925c0e80815516dbf41e7326`.
@@ -31,7 +34,7 @@ The quantity and diagnostic audit is merged through omega-mv #914 at main
 `d94a503f7aae57d09697046405da2e9a5895be6d`. The older candidate observations
 below remain dated history, not claims about the newer integration.
 
-### How the pinned omc was established: omega-mv `c106bae0` (checked 2026-11-10T20:31Z)
+### How omc `f4fa7951…` was established: omega-mv `c106bae0` (checked 2026-11-10T20:31Z)
 
 | Item | Value |
 |---|---|
@@ -625,7 +628,7 @@ Changes and confirmations against the rules below, each observed with a program:
   program then exits 0). At `e5b32567`, codes 25 and 26 are not emitted by any `fail` call. Since
   #948 (`dc0d06e95`, in the pin since `3a163bc5`) every B.cond/CBZ/CBNZ imm19 and every B/BL imm26 site goes
   through one checked `bdisp` ([omc.om#L2982-L2992](https://github.com/aien-dev/omega-mv/blob/3a163bc5eafa5be4b9ca97b7f17046c33f0d9032/seed/omc/omc.om#L2982-L2992));
-  the 8 MiB output ceiling (error 14) keeps every B/BL inside its 128 MiB reach, so imm26 error 24
+  the 8 MiB output ceiling of that omc (error 14) kept every B/BL inside its 128 MiB reach (since omc `c52e986e…`, 2026-11-11, output stops at the 134217728-byte reach itself, OMEGESE 9.6), so imm26 error 24
   is a defence no legal program reaches (`seed/qualification/security673/README.md`). Observed
   2026-10-31 at `3a163bc5e`: that directory's `gate669.om`, built with omc `24caacf4…`, ended
   `GATE669 PASS bounded Linux AArch64 execution and independent decoding only` (exit 0, host only);
@@ -817,7 +820,7 @@ units separately. Do not claim the frozen manifest itself passes or rewrite it.
 | Fixtures | `seed/omc/contracts/contracts.cases` (44 rows), `mutant.cases` (2 mutants, both must FAIL) |
 | Size ledger | `seed/omc/size-history.tsv`, row `RM2-capacity-f32` with that sha256 |
 
-The capacity is 4096 functions, 8192 names and 524288 call sites per unit. Native `to f32`
+At that commit the capacity was 4096 functions, 8192 names and 524288 call sites per unit (omc has no fixed table capacity since 2026-11-11, section 11). Native `to f32`
 returns now work: internal void return code 12 is distinct from f32 value type 10 and f64 11.
 `gate8.sh` exercises f32 values and rejects void-as-value (7) and f32 fallthrough (18).
 Consumers must explicitly migrate and qualify their own pins; a main merge does not deploy them.
@@ -1539,12 +1542,15 @@ fixed limit (section 4).
   Check before every compiler PR: `grep -c '^fn ' seed/omc/omc.om` must print at most 512. To
   measure the headroom, append k three-line functions (`fn zqN to ulong`, `ret 0`, `end`, N unique;
   never `fN`, because `f32`/`f64` are type words) and run `seed/rung4/om4.bin < omc.om > /dev/null`.
-- **Do not confuse it with omc's cap on user programs.** The compiled `omc` holds 4096 functions per
-  program ([omc.om#L116-L118](https://github.com/aien-dev/omega-mv/blob/62d1d0d668f897386a0e311374f8dbcc5c32dde8/seed/omc/omc.om#L116-L118),
+- **Do not confuse it with omc's capacity for user programs.** Since omc `c52e986e…` (omega-mv
+  `3537baad`, 2026-11-11) omc has no table capacity of its own: its tables share one 128 MiB arena and
+  a full arena is error 14 with an `omc-use` record (OMEGESE 9.6); om4 keeps its own limits. Before
+  that, the compiled `omc` held 4096 functions per program
+  ([omc.om#L116-L118](https://github.com/aien-dev/omega-mv/blob/62d1d0d668f897386a0e311374f8dbcc5c32dde8/seed/omc/omc.om#L116-L118),
   refusal [#L7809-L7810](https://github.com/aien-dev/omega-mv/blob/62d1d0d668f897386a0e311374f8dbcc5c32dde8/seed/omc/omc.om#L7809-L7810);
-  gated by `seed/omc/gate12.sh`, 4095 helpers plus `main` accepted, 4096 plus `main` error 14). The
-  "1024 functions" in omega-harness issue #9 described omc on branch `feat/allen-imac-competition`
-  (`7eca2ac3f`, 2026-10-25), not om4 and not current main.
+  gated by `seed/omc/gate12.sh` at that commit, 4095 helpers plus `main` accepted, 4096 plus `main`
+  error 14). The "1024 functions" in omega-harness issue #9 described omc on branch
+  `feat/allen-imac-competition` (`7eca2ac3f`, 2026-10-25), not om4.
 - **IR-mode capacity and nested call arguments: PENDING, not on omega-mv main**
   ([omega-mv#889](https://github.com/aien-dev/omega-mv/pull/889), draft, rechecked 2026-10-30 at head
   `916a082a90e09de4df04cbeb57dadc84939954ec`, committed omc sha256
@@ -2167,7 +2173,7 @@ separate namespace in the same registry (OMEGESE section 11.1). The message form
 | Code | Meaning | Code | Meaning |
 |---|---|---|---|
 | 1, 2 | compiler input / output (stdin a directory: 1; stdout `/dev/full`: 2; both observed) | 13 | name over 63 bytes (IR-mode names, `abstract`/`layout` names and layout fields: over 8) |
-| 3 | unknown name or field | 14 | capacity at `91b3c932`: 8192 names, 4096 functions, 512 nested blocks, 1024 nesting depth, 8 MiB input/output. Dated facts of omc `f4fa7951…` (omega-mv `b2ad967e`), bisected 2026-11-11; each comes from a fixed table in omc and is not a rule of Omega (no-hard-caps rule, `omega-harness` section 1). Name table (8192, `nm_*`, omc.om line 107): 8192 `text` lines plus a bare main compile, 8193 are `omc: line 8193: error 14`, and texts and globals share it (8191 + 1 global compile, 8192 + 1 refused). Trap-site list (8192 per function, `tsite`, line 2613): one entry per call, so 8192 calls of `fn f to void` compile and 8193 are `omc: line 8196: error 14` (same for `g 1`, `r = h`, `r = add r h`). OM-2 code budget (262144 bytes per function, lines 610 and 628): an `om2` call with one unsized view argument is 40 bytes, so 6552 compile and 6553 are error 14 (`g 1 2`: 36 bytes, 7281) |
+| 3 | unknown name or field | 14 | capacity: at the pin (omc `c52e986e…`, OMEGESE 9.6, 2026-11-11) a unit whose tables no longer fit the one 128 MiB arena (that refusal is followed on stderr by an `omc-use` record saying what held the arena), a value nested deeper than 32768 (error 14 on the value's own line, no record), or AArch64 output past 134217728 bytes. History: omc `f4fa7951…` (omega-mv `b2ad967e`, bisected 2026-11-11) had fixed tables of 8192 names (texts and globals share it; `omc: line 8193: error 14`), 8192 trap sites per function (one per call; `omc: line 8196: error 14`) and a 262144-byte code budget per `om2` function (6552 calls with one unsized view argument compiled, 6553 did not); at `91b3c932`: 8192 names, 4096 functions, 512 nested blocks, 1024 nesting depth, 8 MiB input/output |
 | 4 | line ends too early | 15 | missing `end` |
 | 5 | extra words on the line | 16 | syntax / unknown word |
 | 6 | malformed number | 17 | line after `ret`/`break`/`continue`/`trap`/`exit` |

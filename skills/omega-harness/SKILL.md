@@ -91,8 +91,8 @@ hardware. So don't protect software. By limiting hardware."
   quotas and runner job limits, and limits promised to a volunteer about their own machine). Keep
   those as they are, add no new ones beyond containment, and add the alarm tests beside them.
 - Report every cap you meet: where it is, the number, why it was there, and what you did with it.
-  The pinned omc's capacity limits (`writing-omega` section 8) are such caps, recorded there as dated
-  facts with the table behind each.
+  The fixed capacity tables of the previous pinned omc (`writing-omega` section 8) were such caps; the
+  pinned omc replaced them with one arena and an `omc-use` record (OMEGESE 9.6).
 
 1. Identify the owning repository with `aien-repositories`. Record its actual remote, default branch and exact source commit, then read its `AGENTS.md` (or `CLAUDE.md`). Crumbs are retired from the active workflow (DRA-97, 2026-11-07; Drake: "Retire Crumbs from the active workflow while preserving live ownership"). An existing `.crumb` or `.crumb.local` file is history, not an instruction or a lock: do not read, write, claim or refresh crumbs as a step of the work. Claim shared files and branches in the hive `CLAIMS.md` under its flock with a matching `CLAIM <agent> <item>` line on the hive BOARD, own tasks through kanban cards, take the GPU through a `spark-window` lease and CPU cores through the queen's pool locks. An open Radicle patch, a local branch and a deployed service are three different states.
 2. Read `omega-encoding` before writing `.om`. Treat skills, memory and model recall as navigation aids, not language authorities. Check their claims against the chosen revision's `docs/one_layer/OMEGESE.md`, `seed/omc/omc.om`, `seed/host/README.md` and real fixtures. Find a path before opening it; never guess one.

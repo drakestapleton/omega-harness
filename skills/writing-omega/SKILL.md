@@ -16,8 +16,8 @@ read [`skills/omega-encoding/SKILL.md`](../omega-encoding/SKILL.md).
 <!-- gen:pin -->
 | Pin (`PIN`) | Value |
 |---|---|
-| omega-mv commit | `b2ad967e57146172c1bedf1eac98babb75baef65` |
-| `seed/out/omc` sha256 | `f4fa7951816bbd09c5eaaae6692852a70c3c305164b365027c5b683dec7d63e9` |
+| omega-mv commit | `3537baad90c6456f87be8911197bfea6d109b312` |
+| `seed/out/omc` sha256 | `c52e986ed693c241f0bbb5c673a81a4aef70b9b923c447004360ffd111383607` |
 | reference data | `data/reference.tsv`: omega-mcp's `data/reference.json` for this pin, with 197 keyword-table entries (80 host words), 29 compiler error codes, 14 traps and 13 topics |
 <!-- /gen:pin -->
 
@@ -298,29 +298,22 @@ A trap ends the process with exit status 100 + N. Output already written stays w
   expression into several assignments of one or two words each.
 - Size limits: an array up to 16777216 elements, 4 MiB of local arrays per function, 1 GiB of
   globals (error 23).
-- Capacity of omc `f4fa7951…` (error 14). These are dated facts of this compiler, each caused by a
-  fixed-size table or budget inside omc. They are not rules of Omega: Drake's standing rule of
-  2026-11-11 is no hard caps on our own software (`omega-harness` section 1), and a next omc without
-  these caps is being built. Bisected 2026-11-11 with omc `f4fa7951…` (omega-mv main `b2ad967e`, Linux
-  AArch64):
-  - Names: omc's name table holds 8192 entries (`nm_*` globals, `seed/omc/omc.om` line 107; `addname`
-    fails at line 3080), and `text` records and globals share it. 8192 `text t0 "a"` .. `text t8191 "a"`
-    lines plus a bare `fn main` compile and run (exit 0), and 8193 are `omc: line 8193: error 14`.
-    8191 texts plus one global compile, while 8192 texts plus one global, or 4096 texts plus 4097
-    globals, are error 14.
-  - Trap sites: each function has an 8192-entry trap-site list (`tsite`, omc.om lines 2613 and 3126),
-    and each call takes one entry. `main` with 8192 calls to `fn f to void` compiles and runs (exit 0),
-    and 8193 calls are `omc: line 8196: error 14`. The bound is the same for `g 1`, `r = h` and
-    `r = add r h`, and with 4096 `r = add r 1` lines before the calls (those take no entry: 20000 of
-    them compile).
-  - OM-2 code budget: in a unit whose first line is `om2`, one function's emitted code must stay under
-    262144 bytes (omc.om `emitb`/`emit`, lines 610 and 628). This is reached before the trap-site list
-    when calls are larger: a call passing one unsized `view uchar *` is 40 bytes, so 6552 such calls
-    compile and run and 6553 are error 14. A call `g 1 2` is 36 bytes (7281 compile, 7282 refused),
-    and a bare void call is 28 bytes (8192, the trap-site bound). The same lists in a unit without `om2`
-    stop at 8192.
-  - Until the next omc lands, split long call lists or long generated `main` bodies across helper
-    functions.
+- Capacity (error 14) at the pin: omc has no fixed table capacity of its own. Every table that grows
+  with the unit (input, output, names, functions, call sites, trap sites, blocks) lives in one arena
+  of 16777216 8-byte words (128 MiB) and doubles as it fills; a unit whose tables need more than the
+  arena is error 14, followed on stderr by an `omc-use` record that says what held the arena. Values
+  nest at most 32768 deep, and AArch64 output stops at 134217728 bytes, the reach of B and BL
+  (OMEGESE 9.6 at omega-mv `3537baad`, 2026-11-11). Checked 2026-11-11 with omc `c52e986e…`: 10000
+  `text` lines, 20000 calls in one `main` and, in an `om2` unit, 7000 calls passing an unsized
+  `view uchar *` each compile and run (exit 0); omc `f4fa7951…` refuses the same three units with
+  error 14 (`omc: line 8193`, `8196` and `5962`). `export fn` (32) and the per-construct limits of
+  section 9 remain.
+- The fixed capacities of the previous pin, omc `f4fa7951…` (omega-mv `b2ad967e`), bisected
+  2026-11-11 and kept as history: an 8192-entry name table shared by `text` records and globals
+  (`omc: line 8193: error 14`), an 8192-entry trap-site list per function (each call takes one
+  entry), and a 262144-byte emitted-code budget per `om2` function (6552 calls passing one unsized
+  view compiled, 6553 did not). A server or toolchain still on that omc keeps those limits: split long
+  call lists or generated `main` bodies across helper functions there.
 
 ## 9. OM-2 units
 
@@ -403,7 +396,7 @@ with its exact stderr line in the matching `.expect`, except 24, which needs a g
 | 11 | ambiguous bare number | Prefix it with a type word, e.g. `x = int 5`. | `err11_ambiguous` |
 | 12 | register pool exhausted | Split the function or reuse names so fewer values are live. | `err12_registers` |
 | 13 | name too long | Shorten the name: at most 63 characters, 8 for abstract, layout and layout-field names and in IR mode. | `err13_long_name` |
-| 14 | capacity exceeded | Reduce the count below the documented capacity. | `err14_capacity` |
+| 14 | capacity exceeded | Bring the construct under the bound OMEGESE 9.6 names, or split the unit. A unit whose first line is `usage` compiles as usual and prints its `omc-use` record (what each arena group holds) instead of the binary. | `err14_capacity` |
 | 15 | missing end | Add the missing `end`. | `err15_missing_end` |
 | 16 | syntax error or unknown word | Check the word's spelling and form with lookup. | `err16_syntax` |
 | 17 | line after a path end | Delete the unreachable line or move it before the path end. | `err17_after_path` |
@@ -494,8 +487,8 @@ Each row is a program in `examples/` with its observed refusal.
 
 ## 13. Known compiler defects at the pin
 
-- **`bitcast` across signedness below 64 bits:** rechecked 2026-11-11 with omc `f4fa7951…` (exit 7
-  from one program testing all three): `uint 4294967295` to `int` compares
+- **`bitcast` across signedness below 64 bits:** rechecked 2026-11-11 with omc `f4fa7951…` and again
+  with omc `c52e986e…` (exit 7 both times, from one program testing all three): `uint 4294967295` to `int` compares
   equal to -1 and adding 2 returns 1, and `int -1` to `uint` compares equal to 4294967295. Those
   two cases were wrong at omc `2c824805` (not equal; adding 2 trapped 1). `ushort`/`short`,
   `uchar`/`byte` and `f32` to `int` were not retested on 2026-10-29. Do not assume they are fixed.
