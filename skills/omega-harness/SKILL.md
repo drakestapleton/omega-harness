@@ -22,8 +22,9 @@ Companion skills in this package:
   is `b2ad967e` (checked 2026-11-11) and carries the same omc `f4fa7951`: the 22 commits after `c106bae0`
   are ng work (section 3, "ng additions").
   The language-reference pin is `f4df8239` / `3ad9f10f`, which refuses `execenv`. omega-mcp's source
-  pins `b2ad967e` / `f4fa7951` (omega-mcp `2e8e12a2`), but the installed MCP server reported omc
-  `2c824805` on 2026-11-11T12:34Z: read `compiler_sha256` from a trivial `compile` first.
+  pins `b2ad967e` / `f4fa7951` (omega-mcp `2e8e12a2`). On 2026-11-11T12:39Z its `build/current` server
+  reported `f4fa7951`, but the `build/omega-mcp` path agent configs name still reported `2c824805`:
+  read `compiler_sha256` from a trivial `compile` first.
 - `omega-communication`: status labels, reports, handoffs and corrections.
 - `aien-repositories`: what AIEN builds and which repository owns a task.
 

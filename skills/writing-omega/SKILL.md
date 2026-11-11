@@ -22,16 +22,17 @@ For compiler internals, register rules, wire formats and the reasons behind each
 | omega-mv Radicle main | `b2ad967e57146172c1bedf1eac98babb75baef65` (checked 2026-11-11) with the same `seed/out/omc` `f4fa7951…`: no commit in `c106bae0..b2ad967e` changes `seed/out/omc`, `seed/omc/omc.om`, `seed/rung0/seed0.hex` or `docs/one_layer/OMEGESE.md`; those 22 commits are ng work (`omega-harness` section 3, "ng additions") |
 | language-reference pin (refuses `execenv`; omega-mcp's source pin until `2e8e12a2`) | `f4df82394e35893dcf1354dda69a2fe028d94bc1`, omc `3ad9f10f64309e7acf8a725082b28e23a2a4aeb07e98322fb4dc0fcd8fc93194` |
 | omega-mcp source pin | omega-mv `b2ad967e`, omc `f4fa7951…` (the example-gate omc), omega-mcp Radicle main `2e8e12a2` (2026-11-11) |
-| installed omega MCP server (Spark) | omc `2c82480596bbdc50cda9626866209ef662d5834f278f839ff4ce0250c495029f` (omega-mv `e5b32567`), the `compiler_sha256` of a trivial `compile` at 2026-11-11T12:34Z |
+| omega MCP servers (Spark, 2026-11-11T12:39Z) | omega-mcp's `build/omega-mcp`, the path agent configs name, reports omc `2c82480596bbdc50cda9626866209ef662d5834f278f839ff4ce0250c495029f` (omega-mv `e5b32567`); `build/current/omega-mcp` (release `b2ad967e-2e8e12a2`) reports `f4fa7951…` |
 | language reference | `docs/one_layer/OMEGESE.md` at the language-reference pin; `execenv` contract is `seed/host/execenv/README.md` at `c106bae0` |
 | host | Linux AArch64 only; omc writes a static AArch64 Linux ELF |
 
 The language reference is normative. Where this guide and OMEGESE disagree, the compiler at the pin
 decides; this guide records the known disagreements.
 
-The omega MCP server is not on the example-gate compiler. Its source (omega-mcp `2e8e12a2`) pins
-`f4fa7951…`, but on 2026-11-11T12:34Z the installed server on the Spark still compiled with omc
-`2c824805…` (omega-mv `e5b32567`); a switch to the new build at 12:29Z was rolled back at 12:33Z.
+The omega MCP server your agent runs may not be on the example-gate compiler. omega-mcp's source
+(`2e8e12a2`) pins `f4fa7951…`, and on the Spark at 2026-11-11T12:39Z `build/current/omega-mcp` reported
+that `compiler_sha256`. The path agent configs name, `build/omega-mcp`, still reported `2c824805…`
+(omega-mv `e5b32567`) until those configs change; a switch at that path at 12:29Z was rolled back at 12:33Z.
 Before trusting an MCP result, run a trivial `compile` and read its `compiler_sha256`. Whenever it
 reports `2c824805…`, that compiler's limits apply, all observed with it on 2026-11-11: a 9-byte name is
 error 13 (8 bytes is the limit), `for ... bound` is error 5, `bound 1000000` is error 8 (999999

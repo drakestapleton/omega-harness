@@ -145,10 +145,12 @@ The omega MCP tools (`compile`, `run`, `explain_error`, `lookup`): omega-mcp's s
 `b2ad967e`, omc `f4fa7951…63e9` (the example-gate omc) since omega-mcp Radicle main `2e8e12a2`
 (`rad:z3e8UBQVfwEcESJrcTWEbyMAHWFBZ`, 2026-11-11). Before that its source pinned omega-mv `f4df8239`, omc
 `3ad9f10f…3194` (omega-mcp [#6](https://github.com/aien-dev/omega-mcp/pull/6), frozen GitHub history).
-The installed server on the Spark is a different matter: at 2026-11-11T12:34Z a trivial `compile`
-reported `compiler_sha256` `2c82480596bb…029f` (omega-mv `e5b32567`), and all its running processes ran
-the October build. A switch to the new build at 12:29Z was rolled back at 12:33Z. So read
-`compiler_sha256` from a trivial `compile` before trusting any MCP result. Whenever it reports
+The servers on the Spark are a different matter (2026-11-11). omega-mcp's `build/omega-mcp`, the path
+agent configs name, reported `compiler_sha256` `2c82480596bb…029f` (omega-mv `e5b32567`) for a trivial
+`compile` at 12:34Z and 12:38Z; a switch at that path at 12:29Z was rolled back at 12:33Z. Its
+`build/current/omega-mcp` (release `b2ad967e-2e8e12a2`) reported `f4fa7951…` for the same compile at
+12:39Z. Each reports its own compiler as `compiler_sha256`, so read it from a trivial `compile` before
+trusting any MCP result. Whenever it reports
 `2c824805…`, that omc's limits apply: it predates #848, so `while ... bound 1000000` is `error 8`
 (1..999999) and `for ... bound` is error 5; names over 8 bytes are error 13; `out` is reserved in `om2`
 units (error 16); and it has the #775 empty-text defect (`len` of a `text e ""` passed as
