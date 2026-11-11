@@ -9,7 +9,10 @@
 #   rules     `rules lint rules/rules.txt` exits 0, and rendering is deterministic
 # and that every check fails its negative control, on a scratch copy of the tracked files:
 #   a stale block, a typed pin, a typed count, reference data for another pin, an unknown block,
-#   a private path in the public rules, an unterminated rule, malformed JSON.
+#   a private path in the public rules, an unterminated rule, malformed JSON;
+# and that the pin rule compares words against PIN's values: with a fixture PIN whose revision and
+# sha256 start with 8 digits, 8-, 12- and 16-character, upper-case and full restatements are refused
+# while dates, counts and near misses are not, and five mutants of that comparison are each caught.
 # Prints one line per step and ends `CHECK PASS steps=N` (exit 0) or `CHECK FAIL ...` (exit 1);
 # exit 2 on a usage, pin or build error. This file is invocation glue around the Omega programs.
 set -u
@@ -77,6 +80,40 @@ expect "control: a stale block in $blockfile is refused" 1 $r
 copy && printf '\nThe compiler is omc `%s`.\n' "$short" >> "$tmp/c/README.md"
 gcheck; r=$?; grep -q "restates PIN outside a generated block: $short" "$tmp/c.out" || r=99
 expect "control: a typed pin is refused" 1 $r
+
+# the pin rule on a fixture PIN whose revision and sha256 start with 8 digits (values built from short
+# pieces, so this file names no 7-character word of them); data/reference.tsv's first two lines follow it
+d8=$((2718 * 10000 + 2818))
+s8=$((3141 * 10000 + 5926))
+drev=$d8$(printf %s 0a1b 2c3d 4e5f 6a7b 8c9d 0e1f 2a3b 4c5d)
+dsha=$s8$(printf %s 5e6f 7a8b 9c0d 1e2f 3a4b 5c6d 7e8f 9a0b 1c2d 3e4f 5a6b 7c8d 9e0f 1a2b)
+r12=$(echo "$drev" | cut -c1-12)
+fyes="$d8 $s8 $r12 $(echo "$dsha" | cut -c1-16) $drev $dsha $(echo "$r12" | tr a-f A-F)"
+fno="$((2026 * 10000 + 1111)) $((1000 * 10000)) $((d8 + 1)) $((s8 + 1))"
+copy && printf 'omega-mv %s\nomc-sha256 %s\n' "$drev" "$dsha" > "$tmp/c/PIN" &&
+    { printf '/pin/omega_mv\t%s\n/pin/omc_sha256\t%s\n' "$drev" "$dsha"; sed 1,2d data/reference.tsv; } > "$tmp/c/data/reference.tsv" &&
+    { printf '\n## Pin fixture\n\n'; for w in $fyes $fno; do printf 'The word `%s` is here.\n' "$w"; done; } >> "$tmp/c/README.md"
+pinfix() { # pinfix GUIDES: the fixture words GUIDES judges wrongly (each of fyes refused, none of fno)
+    (cd "$tmp/c" && "$1" check < "$tmp/c.list" > "$tmp/f.out" 2>&1)
+    for w in $fyes; do grep -q "restates PIN outside a generated block: $w\$" "$tmp/f.out" || printf '%s ' "$w"; done
+    for w in $fno; do grep -q "restates PIN outside a generated block: $w\$" "$tmp/f.out" && printf '%s ' "$w"; done
+}
+bad=$(pinfix "$tmp/guides"); [ -z "$bad" ]
+expect "control: fixture pin with an all-digit start: 8-, 12-, 16-character, upper-case and full restatements refused, dates, counts and near misses not${bad:+ (wrong: $bad)}" 0 $?
+gmut() { # gmut NAME SED-ARGS...: tools/guides.om edited by sed must judge a fixture word wrongly
+    m=$1; shift
+    sed "$@" tools/guides.om > "$tmp/$m.om"
+    if cmp -s tools/guides.om "$tmp/$m.om"; then no "control: mutant $m: the edit did not apply"; return; fi
+    if ! "$omc" < "$tmp/$m.om" > "$tmp/$m" 2> "$tmp/$m.err" || [ -s "$tmp/$m.err" ]; then no "control: mutant $m does not compile: $(head -c 200 "$tmp/$m.err")"; return; fi
+    chmod +x "$tmp/$m"
+    bad=$(pinfix "$tmp/$m"); [ -n "$bad" ]
+    expect "control: mutant $m of the pin rule is caught${bad:+ by $bad}" 0 $?
+}
+gmut m-letter -e 's/^if pinpre s t$/if and ishexw s t pinpre s t/'
+gmut m-floor -e 's/^if ge sub t s 7$/if ge sub t s 9/'
+gmut m-revfirst -e 's/^for i ulong n bound 40$/for i ulong 1 bound 40/'
+gmut m-shafirst -e 's/^for j ulong n bound 64$/for j ulong 1 bound 64/'
+gmut m-nofold -e '/^fn fold c uchar to uchar$/,/^end$/s/^ret add c 32$/ret c/'
 
 n=$(git ls-files 'examples/*.om' | wc -l | tr -d ' ')
 copy && printf '\nThe gate runs %s examples.\n' "$n" >> "$tmp/c/README.md"
