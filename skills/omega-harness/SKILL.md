@@ -1129,6 +1129,10 @@ cat seed/ng/sha256.om seed/ng/tests/nocaps/gate.om | seed/out/omc > nocaps-gate 
 optional ng binary, not literal brackets. Without it the gate builds ng through `ng.units` and runs
 the mutants; with it the gate judges that binary and omits mutant builds (the old-ng negative
 control). An incorrect oracle hash or existing scratch directory is INVALID, not PASS.
+Observed 2026-11-11 on the Spark (Linux AArch64), fresh clone of omega-mv `e42a452a` with its committed
+`seed/out/omc`, no NG argument: last line
+`NOCAPSGATE PASS cases=31 fail=0 mutants=32 killed=32 controls=2 tripped=2 notrun=0`, exit 0. In the
+same run, front-check printed `ngcap=0`.
 
 Gate-ir's `G over n/x` rows now expect TRAILING (14) at byte 16777216, not the old capacity refusal:
 the arena reader reads the whole unit and sees the extra byte. The `M a-fib 31` row keeps ngcheck's
