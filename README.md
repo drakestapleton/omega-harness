@@ -136,7 +136,7 @@ in [`PIN`](PIN), then compiles and runs every program here and in `skills/*/exam
 <!-- gen:pin -->
 | Pin (`PIN`) | Value |
 |---|---|
-| omega-mv commit | `35524fb178419a74e25da90d353ff37838bd0b24` |
+| omega-mv commit | `229f77bca799b649aebd3e93c4b9247907bcf2bc` |
 | `seed/out/omc` sha256 | `a5613368f427aacd73ebeee16d46f8b3203405711d4de5b860d0cbee11ce4533` |
 | reference data | `data/reference.tsv`: omega-mcp's `data/reference.json` for this pin, with 198 keyword-table entries (80 host words), 29 compiler error codes, 14 traps and 13 topics |
 <!-- /gen:pin -->
