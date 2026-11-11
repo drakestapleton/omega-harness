@@ -5,12 +5,11 @@ Agent skills for working in Omega, the `.om` language of AienOS, and in the AIEN
 Skills can't make agents flawless. What these do is turn the mistakes agents keep repeating into checks they must run before they claim anything: stale syntax, guessed compiler limits, compiling without running, labeling host-only runs as qualified, and choosing the wrong repository.
 
 <!-- gen:skills -->
-8 skills, each `skills/<name>/SKILL.md`; the use column is the skill's own frontmatter `description`:
+7 skills, each `skills/<name>/SKILL.md`; the use column is the skill's own frontmatter `description`:
 
 | Skill | Use |
 |---|---|
 | `skills/aien-repositories/SKILL.md` | What AIEN builds and which repository owns a task: mission, doctrine, plan authority, task routing, evidence and status discipline, known source drift. Use before choosing an AIEN repository or making a cross-repository or status claim. |
-| `skills/crumb-protocol/SKILL.md` | RETIRED 2026-11-07 (DRA-97). Do not load: Crumbs are retired from the active workflow. Existing .crumb files and crumb stores are history, not instructions or locks. Claim work through the hive CLAIMS.md under flock plus the BOARD CLAIM line, kanban cards, spark-window and the queen's pool locks. |
 | `skills/lean-verify/SKILL.md` | Machine-checked proofs with Lean 4 + Mathlib through the `lean` MCP server on the Spark. Use to prove a safety invariant (core disjointness, disk floor, lease exclusion, queue bounds, protocol/state-machine properties) about an explicit model, and to check that a proof has no sorry and no extra axioms. |
 | `skills/omega-communication/SKILL.md` | Communicate Omega and AIEN work precisely: status and evidence labels, reports, PR text, agent handoffs, receipts, semantic needs, wire formats and corrections. Use when reporting, briefing agents, reviewing or publishing claims. |
 | `skills/omega-encoding/SKILL.md` | Write .om that the seeded Omega compiler actually accepts: syntax, types, traps, bounds, register limits, host I/O, byte encoding, compiler errors, verified examples. Use before writing, reviewing or explaining any Omega program. |

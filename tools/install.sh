@@ -2,9 +2,11 @@
 # install.sh: install omega-harness from Radicle main at a recorded head, or check an installation.
 #
 #   tools/install.sh --skills DIR [--check] [--source URL] [--rev SHA]
-#       Copy every skills/<name>/ of main into DIR (other skills in DIR are left alone) and record
-#       the head in DIR/.installed-from-omega-harness. With --check, change nothing: exit 1 when the
-#       recorded head is not main's head or an installed skill differs from main's copy.
+#       Copy every skills/<name>/ of main into DIR (other skills in DIR are left alone), remove a skill
+#       that the head recorded in DIR shipped and main no longer ships, and record the head in
+#       DIR/.installed-from-omega-harness. With --check, change nothing: exit 1 when the recorded head
+#       is not main's head (a skill main no longer ships then still sits there) or an installed skill
+#       differs from main's copy.
 #   tools/install.sh --omc OMC|auto [--check] [--source URL] [--rev SHA] [--overlay FILE]
 #       On a Linux AArch64 host: build tools/rules with OMC (its sha256 must be PIN's; `auto` takes
 #       seed/out/omc at PIN's omega-mv commit from omega-mv's Radicle storage or mirror), then install
@@ -35,11 +37,11 @@ while [ $# -gt 0 ]; do
         --omc) omc=${2:?}; shift ;;
         --overlay) overlay=${2:?}; shift ;;
         --source) source=${2:?}; shift ;;
-        *) sed -n '2,24s/^# \{0,1\}//p' "$0" >&2; exit 2 ;;
+        *) sed -n '2,26s/^# \{0,1\}//p' "$0" >&2; exit 2 ;;
     esac
     shift
 done
-[ -n "$sdir$omc" ] || { sed -n '2,24s/^# \{0,1\}//p' "$0" >&2; exit 2; }
+[ -n "$sdir$omc" ] || { sed -n '2,26s/^# \{0,1\}//p' "$0" >&2; exit 2; }
 if [ -z "$source" ]; then
     if [ -d "$STORE" ]; then source=$STORE; else source=https://www.aienos.com/rad/$RID.git; fi
 fi
@@ -57,8 +59,23 @@ head=$(git -C "$tmp/h" rev-parse HEAD)
 mark="rad:$RID@$head"
 rc=0
 
-# skills DIR: copy the repository's skills into DIR (or a staged copy of DIR) and mark the head
+# retired DIR: the skills this repository shipped at DIR's recorded head that it no longer ships (what
+# an earlier install put there and nobody else did); nothing when no head is recorded or it is unknown
+retired() {
+    p=$(head -n 1 "$1/.installed-from-omega-harness" 2>/dev/null | sed -n "s/^rad:$RID@\([0-9a-f]\{40\}\)\$/\1/p")
+    [ -n "$p" ] && git -C "$tmp/h" cat-file -e "$p^{commit}" 2>/dev/null || return 0
+    git -C "$tmp/h" ls-tree -d --name-only "$p" skills/ | while read -r o; do
+        n=$(basename "$o")
+        [ -d "$tmp/h/skills/$n" ] || echo "$n"
+    done
+}
+
+# skills DIR: copy the repository's skills into DIR (or a staged copy of DIR), remove the skills an
+# earlier install put there that the repository no longer ships, and mark the head
 put_skills() {
+    for n in $(retired "$1"); do
+        rm -rf "${1:?}/$n" && echo "REMOVED $1/$n (no longer in the repository)"
+    done
     for s in "$tmp/h"/skills/*/; do
         n=$(basename "$s")
         rm -rf "$1/.$n.new" && cp -R "$s" "$1/.$n.new" || return 1
