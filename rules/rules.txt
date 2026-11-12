@@ -56,6 +56,19 @@ order 23
 | - When your task meets a hand-maintained artifact, do not maintain it "one more time" as a side step. If generating it is inside your slice, do that; if not, record it (path, source of truth, who edits it today, how often it went stale) in your report.
 end
 
+rule installed-from-main
+date 2026-11-12
+said btw that should be the standing rule
+for all
+order 24
+| ## What is installed is built from Radicle main (Drake standing rule, 2026-11-12)
+| Drake was running an app built from a branch that had not landed, while main had newer work. Asked whether to install main over it, or to rebase that branch onto main, get it reviewed, land it and install the result, he chose the second and said: "btw that should be the standing rule".
+| - A first-party program (one built from these Radicle repositories) that is installed on Drake's machines is built from Radicle `main`. Nothing of ours is installed from an unlanded or unreviewed branch.
+| - When you are installing or updating such a program and the copy now installed came from an unlanded branch, do not install main over it: that loses the work. Rebase that branch onto the current main, get it reviewed by another provider's model, land it with a receipt, then install the landed result, so that the installed program, Radicle main and Interplane agree.
+| - Take what the installed program was really built from, uncommitted changes included, as a copy; another lane's worktree is never changed. If the lane that owns the branch is still working on it, agree with it first who rebases and lands, and do not rebase or land its work until that is settled. If the lane's session has ended, say on the board that you are taking the branch over, before you start. What the copy holds passes the same scope and privacy checks as any other change before it is published.
+| - Do not ask Drake to choose between these two ways again: the rebase is the answer. Whatever else needs his word still needs it: a step that is hard to undo, a release, a conflict you cannot settle.
+end
+
 rule no-hard-caps
 date 2026-11-11
 said Instead of caps to prevent something, just put a TEST that will alarm if it passes the threshold.
