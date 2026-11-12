@@ -136,8 +136,8 @@ in [`PIN`](PIN), then compiles and runs every program here and in `skills/*/exam
 <!-- gen:pin -->
 | Pin (`PIN`) | Value |
 |---|---|
-| omega-mv commit | `5048558380c6e0a1f72dd0c68e43ae846d2fd1db` |
-| `seed/out/omc` sha256 | `ef27690591c86cab8cd2fefed1bf3bf5b7f29145f344fa3c6b9fc1af1b1fba22` |
+| omega-mv commit | `5a260fc6907ba82565dd173b6369cd2bc158c6af` |
+| `seed/out/omc` sha256 | `17657be4842e08d2ccb3b5c6f65b5f7209e584ad73274518cbdf0263d1fcb182` |
 | reference data | `data/reference.tsv`: omega-mcp's `data/reference.json` for this pin, with 198 keyword-table entries (80 host words), 29 compiler error codes, 14 traps and 13 topics |
 <!-- /gen:pin -->
 
@@ -154,7 +154,7 @@ It prints `PASS name` or `FAIL name: reason` per program and ends with a line li
 
 <!-- gen:gateline -->
 ```text
-GATE PASS examples=126 pass=126 fail=0 omc=ef27690591c86cab8cd2fefed1bf3bf5b7f29145f344fa3c6b9fc1af1b1fba22
+GATE PASS examples=126 pass=126 fail=0 omc=17657be4842e08d2ccb3b5c6f65b5f7209e584ad73274518cbdf0263d1fcb182
 ```
 <!-- /gen:gateline -->
 
