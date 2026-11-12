@@ -16,8 +16,8 @@ read [`skills/omega-encoding/SKILL.md`](../omega-encoding/SKILL.md).
 <!-- gen:pin -->
 | Pin (`PIN`) | Value |
 |---|---|
-| omega-mv commit | `d7fbd5658312e321b39edd992b27d8f3aefea882` |
-| `seed/out/omc` sha256 | `34c51cdc467a0103700786ed5acea49db8a919ce277c62c8e5b680d476022f32` |
+| omega-mv commit | `5048558380c6e0a1f72dd0c68e43ae846d2fd1db` |
+| `seed/out/omc` sha256 | `ef27690591c86cab8cd2fefed1bf3bf5b7f29145f344fa3c6b9fc1af1b1fba22` |
 | reference data | `data/reference.tsv`: omega-mcp's `data/reference.json` for this pin, with 198 keyword-table entries (80 host words), 29 compiler error codes, 14 traps and 13 topics |
 <!-- /gen:pin -->
 
