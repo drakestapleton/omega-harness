@@ -356,6 +356,67 @@ with exit 0 to a file starting `MZ`; the same unit with `be8c5130` gives `omc: l
   holding only spaces or tabs runs nothing, gets no J line and is not counted in JOBS. It prints
   `EQUAL` (exit 0) or `DIFFERENT` (exit 1); exit 2 is a usage error.
 
+### `target a64efi`: an Arm program with no operating system (omega-mv `d7fbd565`, `50485583` and `5a260fc6`, observed 2026-11-12)
+
+Observed on 2026-11-12 with the omc that omega-mv commit `5a260fc6907ba82565dd173b6369cd2bc158c6af`
+carries. The target landed two commits earlier, at `d7fbd5658312e321b39edd992b27d8f3aefea882`, and was
+corrected at `5048558380c6e0a1f72dd0c68e43ae846d2fd1db` and at `5a260fc6`; the compiler before
+`d7fbd565` gives `omc: line 1: error 25` for the line. Every sentence below that is not true of all
+three says from which commit it holds. Authority: that revision's `docs/A64-EFI.md`, `seed/a64efi/efirt.om` and `tests/a64efi/run.sh`.
+
+- The exact first line `target a64efi` emits a PE32+ EFI application for 64-bit Arm UEFI firmware
+  (`\EFI\BOOT\BOOTAA64.EFI`). Whole programs only: a unit without `fn main` is error 25 at line 1.
+  Without `om2`, OM-2 forms such as an unsized array parameter (`edit uchar *`) are error 16.
+- `om2` may be the line after the target line (`om2` first is error 16 at line 2). From `5a260fc6`
+  the unit is then OM-2 in language with the OM-1 addressing: no global is pinned in a register. At
+  `d7fbd565` and `50485583` the same two lines compiled but kept global bases in X18..X26, registers
+  this target never sets, and the OM-2 word `scrub` cleared X18, the platform's register under UEFI: do
+  not combine the lines with those compilers. From `5a260fc6` `scrub` clears X19..X26 here and leaves
+  X18. `efirt.om` compiles under `om2` from `5a260fc6` (before, a local of it named `out` was
+  error 16 there).
+- Every Linux host word is error 25 at its line, `read` and `write` included, and so is a run-time
+  pool (`global NAME T *`). (At `d7fbd565` `read` and `write` compiled, to a Linux system call that
+  nothing answers; `50485583` refuses them.)
+- `efi OP ARG A OFF N` has x86efi's contract (OP a literal 0..14, error 25 above 14, a non-literal OP
+  error 16; `OFF + N` inside A or trap 3; bit 63 of the result marks an error). Here the operation is
+  Omega code: the word is a call of the program's own
+  `fn efirt op ulong arg ulong addr ulong n ulong to ulong`. Without one, the use is error 16. From
+  `50485583`, one that is not four `ulong` parameters and a `ulong` result makes the use error 9; at
+  `d7fbd565` any function of that name was called. It may be defined anywhere in the unit. Use
+  `seed/a64efi/efirt.om` of the same omega-mv revision: it implements OP 1, 2, 10, 12, 13 and 14, and
+  the others return `2^63 | 3`.
+- Five words exist under this target only, all `ulong` in and out:
+  - `fwcall F A0 A1 A2 A3 A4 A5` calls the address F with six arguments. 64 KiB of the Omega stack
+    must be free, else trap 6.
+  - `fwld ADDR W` and `fwst ADDR W V` load or store W bytes at a raw address. W is 1, 2, 4 or 8; any
+    other W is treated as 1, not refused.
+  - `fwsys K`: 0 ImageHandle, 1 SystemTable, 2 the counter, 3 its frequency, anything else MIDR_EL1.
+  - `fwadr A OFF N`: the address of `A[OFF]`, with `OFF + N` inside A (trap 3).
+  A wrong address is not caught: nothing is beneath the program.
+- `efi` and the five words are reserved under this target. From `50485583`, defining a variable,
+  parameter, global, constant, text or function with one of those names is error 16. At `d7fbd565`
+  each of those definitions compiled, and where a value starts the word still won, so the name was
+  silently ignored. Without the target line the five firmware
+  words are ordinary names (a program may define `fwld` itself), and `efi` is ordinary with no target
+  line but stays reserved under `target x86efi` (error 16).
+- A sized array parameter (`edit uchar 8`, `view uchar 8`) cannot take a global (error 19): pass
+  offsets and use the global by name, or take its address with `fwadr`.
+- Error 12 is the register pool, as everywhere: a seven-argument `fwcall` in a function that already
+  holds about a dozen live values runs out. Split the function; nesting calls inside the arguments
+  is not what triggers it.
+- Under `om2`, `dit 1` sets the processor's data-independent-timing bit and the return to the firmware
+  does not put it back: write `dit 0` before returning.
+- `sub` is a keyword: a variable named `sub` is error 16 (not specific to this target).
+- A `fn efiexit to void`, when the program has one, runs once on every exit path (return, `exit`,
+  trap) before the image returns to the firmware. From `50485583`, a function of that name with a
+  parameter or a result is error 9, reported at the end of the unit; at `d7fbd565` it was called
+  whatever its shape.
+- Run evidence: `tests/a64efi/run.sh` (QEMU virt + EDK2; KVM on an AArch64 host) printed
+  `SUMMARY pass=35 fail=0 not_run=1` at `5a260fc6`. One physical boot (at `d7fbd565`'s compiler; the
+  image is byte-identical under the two later ones): a DGX Spark's firmware started aien-train's `ollm` built
+  this way, and its 11 jobs equalled the Linux reference (`evidence/a64efi-dgx-spark-20261112/`). One
+  machine is EXERCISED, not QUALIFIED.
+
 ### Historical quantity/check/next candidate (observed 2026-10-28)
 
 | Item | Value |
@@ -2186,7 +2247,7 @@ separate namespace in the same registry (OMEGESE section 11.1). The message form
 | 11 | ambiguous bare number | 22 | bad text literal |
 | 12 | register pool exhausted | 23 | size capacity |
 | 24 | AArch64 branch displacement out of range | 28 | abstract type: `seal` outside its constructor, or an unsupported `holds` |
-| 25 | unknown target, an AArch64-only path on another target, or an x86efi refusal (omega-mv#1015: bare unit, Linux host word, `efi` OP literal outside 0..13, 0..14 with #1022) | 29 | external `layout` out of bounds or misplaced |
+| 25 | unknown target, an AArch64-only path on another target, or an x86efi refusal (omega-mv#1015: bare unit, Linux host word, `efi` OP literal outside 0..13, 0..14 with #1022); under `target a64efi` the same refusals and a run-time pool | 29 | external `layout` out of bounds or misplaced |
 | 26 | unused (no emitting site) | 30 | contract syntax misplaced or not supported here (IR mode included) |
 | 27 | `fresh` element read before it is definitely written, or a fresh array passed on | | |
 
@@ -2462,7 +2523,7 @@ runs in [`examples/gate.sh`](../../examples/gate.sh) with the programs in the re
 `examples/` directory:
 
 <!-- gen:examples -->
-`examples/gate.sh` reruns 126 programs: 121 in `examples/` and 5 in `skills/*/examples/`.
+`examples/gate.sh` reruns 130 programs: 125 in `examples/` and 5 in `skills/*/examples/`.
 <!-- /gen:examples -->
 
 The gate runs only under the pinned compiler (section 0); the observations

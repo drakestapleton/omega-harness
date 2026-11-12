@@ -421,6 +421,9 @@ with its exact stderr line in the matching `.expect`, except 24, which needs a g
   (omega-mv#1015) a bare unit (no `fn main`), a Linux host word or an `efi` OP literal outside 0..13
   is error 25 (0..14 with omega-mv#1022); a non-literal OP is error 16, and `efi` under
   `target x86linux` is error 3. See `omega-encoding`.
+  `target a64efi` (an AArch64 program a firmware starts with no operating system) refuses the same
+  things with error 25, and a run-time pool too. It has no Linux words at all, `read` and `write`
+  included. Its details, `efirt.om` and the five firmware words are in `omega-encoding`.
 - 29 also covers a `layout` line after the first `fn`, a SIZE or field COUNT outside 1..4096 (a
   written 0 included), a field that starts or ends past SIZE, and two fields sharing a byte; a SIZE,
   COUNT or OFF written as 2^64 or more is error 8 instead (`mistake_om2_layout_late`,
