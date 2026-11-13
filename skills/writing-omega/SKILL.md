@@ -65,9 +65,9 @@ chmod +x prog && ./prog; echo "exit $?"
 ```
 
 - omc reads the unit on stdin and writes the executable on stdout. Exit 0 means accepted. Any other
-  exit is the error number, and stderr has the line `omc: line N: error K`, with two additions
-  (section 11): after an error 14 an `omc-use` record may follow that line, and a failed write of a
-  `check` report exits 2 with no line at all.
+  exit is the error number, and stderr has the line `omc: line N: error K`. That is the default
+  form; section 11 has the additions (an `omc-use` record after some error 14 refusals, a `check`
+  report whose failed write exits 2 with no line, and the longer lines under `OMC_DIAGNOSTICS=2`).
 - **Never run the output of a refused compile**: stdout may still hold bytes.
 - A unit with `fn main` is program mode (an executable). A unit without it is function mode (raw
   machine words for a host to call); never execute function-mode output directly.
@@ -385,11 +385,13 @@ omega-mv `f4df8239` (omc `3ad9f10f…`), where `execenv` is not reserved: inside
 
 ## 11. Compiler errors
 
-Exit status = error number. The message is the stderr line `omc: line N: error K`, where N
+Exit status = error number. Under the default diagnostics (no `OMC_DIAGNOSTICS` in the environment)
+the message is the stderr line `omc: line N: error K`, where N
 is the line being read (0 when no line was read). Observed at omega-mv `2ee0a70d`: an error 14 is
 followed by an `omc-use` record when the arena was refused, and also on the nesting refusal when the
 unit's first line is `usage`; a failed write of the `check` report ends with exit 2 and no stderr
-line. One refusal per code is in `examples/errNN_*.om`
+line under the default diagnostics, and with `OMC_DIAGNOSTICS=2` it prints
+`omc: line 5: error 2:` followed by the meaning and an `omc-diag 2` line. One refusal per code is in `examples/errNN_*.om`
 with its exact stderr line in the matching `.expect`, except 24, which needs a generated program.
 
 <!-- gen:errors -->

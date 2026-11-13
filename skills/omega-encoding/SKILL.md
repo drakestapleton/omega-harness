@@ -21,8 +21,9 @@ cannot express, and before encoding bytes, integers or host I/O in Omega.
 The pin is written once, in this repository's `PIN` file; the table above is generated from it and from
 the reference data for it (`omega-harness` section 6). `examples/gate.sh` refuses any other compiler. The
 rest of this section is dated history: how earlier pinned compilers were established, and those pins.
-omc `c52e986e…` (omega-mv `3537baad`, landed 2026-11-11) replaced the fixed capacity tables of omc
-`f4fa7951…` with one arena (OMEGESE 9.6; section 11 error 14); with it `examples/gate.sh` printed
+omc `c52e986e…` (omega-mv `3537baad`, landed 2026-11-11) replaced those fixed tables of omc
+`f4fa7951…` that grow with the unit (names, functions, calls, trap sites, blocks, input, output)
+with one arena; the fixed tables OMEGESE 9.6 lists stayed (section 11 error 14); with it `examples/gate.sh` printed
 `GATE PASS` for every program on 2026-11-11.
 
 Merge status, 2026-10-29: compiler batch #904 merged at `e2662fffbce1c21ef09da71c0d8808133a6af8ab`;
@@ -883,7 +884,7 @@ units separately. Do not claim the frozen manifest itself passes or rewrite it.
 | Fixtures | `seed/omc/contracts/contracts.cases` (44 rows), `mutant.cases` (2 mutants, both must FAIL) |
 | Size ledger | `seed/omc/size-history.tsv`, row `RM2-capacity-f32` with that sha256 |
 
-At that commit the capacity was 4096 functions, 8192 names and 524288 call sites per unit (omc has no fixed table capacity since 2026-11-11, section 11). Native `to f32`
+At that commit the capacity was 4096 functions, 8192 names and 524288 call sites per unit (since 2026-11-11 these three tables have no fixed capacity; the fixed tables OMEGESE 9.6 lists remain, section 11). Native `to f32`
 returns now work: internal void return code 12 is distinct from f32 value type 10 and f64 11.
 `gate8.sh` exercises f32 values and rejects void-as-value (7) and f32 fallthrough (18).
 Consumers must explicitly migrate and qualify their own pins; a main merge does not deploy them.
