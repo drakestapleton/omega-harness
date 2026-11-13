@@ -16,9 +16,9 @@ read [`skills/omega-encoding/SKILL.md`](../omega-encoding/SKILL.md).
 <!-- gen:pin -->
 | Pin (`PIN`) | Value |
 |---|---|
-| omega-mv commit | `5a260fc6907ba82565dd173b6369cd2bc158c6af` |
-| `seed/out/omc` sha256 | `17657be4842e08d2ccb3b5c6f65b5f7209e584ad73274518cbdf0263d1fcb182` |
-| reference data | `data/reference.tsv`: omega-mcp's `data/reference.json` for this pin, with 198 keyword-table entries (80 host words), 29 compiler error codes, 14 traps and 13 topics |
+| omega-mv commit | `2ee0a70d1830581b706f288e722f3329d51f3583` |
+| `seed/out/omc` sha256 | `26540e6de62402d5784b30b24d7c6faae488137c1f8a4b3e784fd0b5d5528991` |
+| reference data | `data/reference.tsv`: omega-mcp's `data/reference.json` for this pin, with 201 keyword-table entries (80 host words), 30 compiler error codes, 14 traps and 13 topics |
 <!-- /gen:pin -->
 
 The pin is written once, in this repository's `PIN` file. The table above, the word, trap and error
@@ -169,11 +169,11 @@ Every declaration and statement form at the pin (OMEGESE sections 9 to 12 are th
 ## 4. Words
 
 <!-- gen:words -->
-The keyword table at the pin has 198 entries; the 80 host words are in the host-word table. The rest, by kind:
+The keyword table at the pin has 201 entries; the 80 host words are in the host-word table. The rest, by kind:
 
 | Kind | Words |
 |---|---|
-| device | `devctl fd request A off n`, `mapnew fd offset bytes access mode`, `mapdrop handle`, `mapread handle offset A off n`, `mapwrite handle offset A off n`, `devcall fd request H hoff 32 P poff n`, `uvmctl fd command A off n`, `mapaddr handle`, `mapget handle offset width`, `mapset handle offset width value`, `maphold address bytes`, `vfioctl fd request A off n`, `vfiomap fd A off 32`, `vfiomapw fd A off 32`, `eventfd initial`, `vfioirq fd request A off n`, `mapbind handle fd offset access`, `cpufence`, `cpurelax` |
+| device | `devctl fd request A off n`, `mapnew fd offset bytes access mode`, `mapdrop handle`, `mapread handle offset A off n`, `mapwrite handle offset A off n`, `devcall fd request H hoff 32 P poff n`, `uvmctl fd command A off n`, `mapaddr handle`, `mapget handle offset width`, `mapset handle offset width value`, `maphold address bytes`, `vfioctl fd request A off n`, `vfiomap fd A off 32`, `vfiomapw fd A off 32`, `eventfd initial`, `vfioirq fd request A off n`, `mapbind handle fd offset access`, `cpufence`, `cpurelax`, `kfdres n`, `kfdmap fd offset n`, `kfdctl fd request H off n [SUFFIX]` |
 | type | `bool VALUE  (conversion) \| NAME bool  (parameter) \| to bool  (result)`, `uchar VALUE  (conversion) \| NAME uchar  (parameter) \| to uchar  (result)`, `u8 VALUE  (conversion) \| NAME u8  (parameter) \| to u8  (result)`, `ushort VALUE  (conversion) \| NAME ushort  (parameter) \| to ushort  (result)`, `u16 VALUE  (conversion) \| NAME u16  (parameter) \| to u16  (result)`, `uint VALUE  (conversion) \| NAME uint  (parameter) \| to uint  (result)`, `u32 VALUE  (conversion) \| NAME u32  (parameter) \| to u32  (result)`, `ulong VALUE  (conversion) \| NAME ulong  (parameter) \| to ulong  (result)`, `u64 VALUE  (conversion) \| NAME u64  (parameter) \| to u64  (result)`, `byte VALUE  (conversion) \| NAME byte  (parameter) \| to byte  (result)`, `i8 VALUE  (conversion) \| NAME i8  (parameter) \| to i8  (result)`, `short VALUE  (conversion) \| NAME short  (parameter) \| to short  (result)`, `i16 VALUE  (conversion) \| NAME i16  (parameter) \| to i16  (result)`, `int VALUE  (conversion) \| NAME int  (parameter) \| to int  (result)`, `i32 VALUE  (conversion) \| NAME i32  (parameter) \| to i32  (result)`, `long VALUE  (conversion) \| NAME long  (parameter) \| to long  (result)`, `i64 VALUE  (conversion) \| NAME i64  (parameter) \| to i64  (result)`, `qty VALUE  (conversion) \| NAME qty  (parameter) \| to qty  (result)` |
 | operator | `add A B`, `sub A B`, `mul A B`, `div A B`, `rem A B`, `and A B`, `or A B`, `xor A B`, `shl A B`, `shr A B`, `eq A B`, `ne A B`, `lt A B`, `le A B`, `gt A B`, `ge A B`, `neg A`, `not A` |
 | data | `get A i \| get P field [i]`, `len A`, `read fd A off n`, `write fd A off n`, `true`, `false`, `NAME view T N \| NAME view T *  (parameter) \| view A  (argument)`, `NAME edit T N \| NAME edit T *  (parameter) \| edit A  (argument)` |
@@ -398,7 +398,7 @@ with its exact stderr line in the matching `.expect`, except 24, which needs a g
 | 11 | ambiguous bare number | Prefix it with a type word, e.g. `x = int 5`. | `err11_ambiguous` |
 | 12 | register pool exhausted | Split the function or reuse names so fewer values are live. | `err12_registers` |
 | 13 | name too long | Shorten the name: at most 63 characters, 8 for abstract, layout and layout-field names and in IR mode. | `err13_long_name` |
-| 14 | capacity exceeded | Bring the construct under the bound OMEGESE 9.6 names, or split the unit. A unit whose first line is `usage` compiles as usual and prints its `omc-use` record (what each arena group holds) instead of the binary. | `err14_capacity` |
+| 14 | capacity exceeded | Bring the construct under the bound OMEGESE 9.6 names, split the unit, or give the compiler more memory. A unit whose first line is `usage` compiles as usual and prints its `omc-use` record (what each arena group holds) instead of the binary. | `err14_capacity` |
 | 15 | missing end | Add the missing `end`. | `err15_missing_end` |
 | 16 | syntax error or unknown word | Check the word's spelling and form with lookup. | `err16_syntax` |
 | 17 | line after a path end | Delete the unreachable line or move it before the path end. | `err17_after_path` |
@@ -410,6 +410,7 @@ with its exact stderr line in the matching `.expect`, except 24, which needs a g
 | 23 | size capacity | Use a smaller array. | `err23_size` |
 | 24 | branch displacement out of range | Split very large functions or programs; this is reached only by programs with about 1 MiB of code between a conditional branch and its target. | none |
 | 25 | not available on this target | Use the default AArch64 target for that construct, or write it with words the target supports. | `err25_target` |
+| 26 | bad memory ceiling | Unset OMC_MEMORY_MAX, or set it to the ceiling in decimal bytes (0 or empty: none). | none |
 | 27 | fresh element read before write (OM-2 init) | Write every element before reading it (put with a number index). | `err27_fresh` |
 | 28 | abstract constructor violation (OM-2 ctor) | Seal only inside the function named NAME followed by mk. | `err28_seal` |
 | 29 | layout violation (OM-2 layout) | Put every layout above the first fn, keep SIZE and COUNT in 1..4096 (leave COUNT out for one element), and keep every field inside SIZE and apart from the others. | `err29_layout` |
