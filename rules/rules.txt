@@ -5,6 +5,24 @@
 # Seeded 2026-11-11 from the instruction files then in use; the account of every change is in the landing
 # report. Change a rule here and land it; the files are regenerated at landing.
 
+rule interplane-without-radicle
+date 2026-11-13
+said we are cutting out radicle
+said Staying on interplane, it's just being built without radicle now
+said update the rules so every agent knows we are building interplane without radicle now
+said I want you to take everything radicle did and replicate it into interplane and leave out all the bullshit and part that no nody likes. Maek this intended and designed around agent workflows and agent coding
+for all watchdog
+order 12
+| ## Interplane is built without Radicle now (Drake, 2026-11-13)
+| Drake: "we are cutting out radicle", "Staying on interplane, it's just being built without radicle now" and "take everything radicle did and replicate it into interplane ... Maek this intended and designed around agent workflows and agent coding".
+| - Interplane (interplane.io) stays the destination and the only forge. Radicle is no longer part of it: not the storage, not the signing layer, not the network, not the way work is published. This rule wins over every older line, skill, brief, tool comment or receipt that names Radicle as the route.
+| - Do not push, init, announce, seed, sync, open a patch or an issue, or land anything on Radicle, and do not build new work on `rad`, a Radicle ID or the Radicle node.
+| - Interplane does itself what Radicle did for us (keeping the code and its history, proving who published what, copying projects between machines, proposed changes, issues), built in seeded Omega and designed first for agents doing the work: every action a plain request with a machine-readable answer. Where a tool, page or guide still depends on Radicle, do not extend that dependency. If replacing it is inside your slice, do that; if not, record it in your report (path, what it uses Radicle for).
+| - Until Interplane's own publishing route is announced on the board, finished work stays as local commits with its evidence: gates run on a fresh clone, the other-provider review verdict, and a READY line on the board naming the exact head. Nothing is published around the new route, and never on GitHub.
+| - What is already in Radicle storage is history and the last published state. Read it when you need a past head or a receipt. Never delete it, rewrite it or stop the nodes that serve it: when those go is Drake's call.
+| - Everything else in these rules stands: gates on a fresh clone, receipts, review by another provider's model, nothing installed from unreviewed work, plain words on the surface, full verification one click down.
+end
+
 rule no-github
 date 2026-11-11
 said No more GitHub? Everything goes to interplane.
@@ -12,8 +30,8 @@ for all watchdog
 order 20
 | ## No GitHub: everything goes to Interplane (Drake standing rule, 2026-11-11)
 | Drake: "No more GitHub? Everything goes to interplane."
-| - Interplane (interplane.io, serving the Radicle repositories) is the only forge and the canonical source of code, history and decisions. Never push to a GitHub remote, open or update a GitHub PR or issue, publish with `gh`, or treat a GitHub branch as current state.
-| - For current status inspect Radicle main (`rad ls`, the Radicle storage, the records generated from it). Where these instructions or a skill say PR, push or merge, use the Radicle route: lane head, gates on a fresh clone, landing on Radicle main with a receipt, project shown on interplane.io. GitHub links and `aien-dev` names are history. Only Drake reverses this, in a direct message.
+| - Interplane (interplane.io) is the only forge and the canonical source of code, history and decisions. Never push to a GitHub remote, open or update a GitHub PR or issue, publish with `gh`, or treat a GitHub branch as current state.
+| - Where these instructions or a skill say PR, push, merge or land, use Interplane's own route (the rule above says what to do until it exists): lane head, gates on a fresh clone, a receipt, project shown on interplane.io. GitHub links, `aien-dev` names and Radicle IDs are history. Only Drake reverses this, in a direct message.
 end
 
 rule receipts-not-approvals
@@ -23,7 +41,7 @@ for all watchdog
 order 22
 | ## Receipts, not approvals (Drake, 2026-11-11)
 | Drake: "receipts, not approvals" (when he removed the merge desk).
-| There is no merge desk. A lane lands its own exact head on Radicle `main` when the repository's own gates pass on a fresh clone, and writes the landing receipt first (commands, exit codes, pins, log sha256) with the landing tool in use. A non-MERGE review verdict for that head stops the landing. A patch is a vehicle, not an approval. Never bypass a gate or overwrite a receipt. Keep independent final-source review of the exact head, dependency ordering between landings, and read-back of every remote write; no skipped gate, fabricated PASS or retry-until-green.
+| There is no merge desk. A lane lands its own exact head on `main` when the repository's own gates pass on a fresh clone, and writes the landing receipt first (commands, exit codes, pins, log sha256) with the landing tool in use. A non-MERGE review verdict for that head stops the landing. A patch is a vehicle, not an approval. Never bypass a gate or overwrite a receipt. Keep independent final-source review of the exact head, dependency ordering between landings, and read-back of every remote write; no skipped gate, fabricated PASS or retry-until-green.
 end
 
 rule own-review
@@ -61,10 +79,10 @@ date 2026-11-12
 said btw that should be the standing rule
 for all
 order 24
-| ## What is installed is built from Radicle main (Drake standing rule, 2026-11-12)
+| ## What is installed is built from main (Drake standing rule, 2026-11-12)
 | Drake was running an app built from a branch that had not landed, while main had newer work. Asked whether to install main over it, or to rebase that branch onto main, get it reviewed, land it and install the result, he chose the second and said: "btw that should be the standing rule".
-| - A first-party program (one built from these Radicle repositories) that is installed on Drake's machines is built from Radicle `main`. Nothing of ours is installed from an unlanded or unreviewed branch.
-| - When you are installing or updating such a program and the copy now installed came from an unlanded branch, do not install main over it: that loses the work. Rebase that branch onto the current main, get it reviewed by another provider's model, land it with a receipt, then install the landed result, so that the installed program, Radicle main and Interplane agree.
+| - A first-party program (one built from our own repositories) that is installed on Drake's machines is built from `main`. Nothing of ours is installed from an unlanded or unreviewed branch.
+| - When you are installing or updating such a program and the copy now installed came from an unlanded branch, do not install main over it: that loses the work. Rebase that branch onto the current main, get it reviewed by another provider's model, land it with a receipt, then install the landed result, so that the installed program, main and Interplane agree.
 | - Take what the installed program was really built from, uncommitted changes included, as a copy; another lane's worktree is never changed. If the lane that owns the branch is still working on it, agree with it first who rebases and lands, and do not rebase or land its work until that is settled. If the lane's session has ended, say on the board that you are taking the branch over, before you start. What the copy holds passes the same scope and privacy checks as any other change before it is published.
 | - Do not ask Drake to choose between these two ways again: the rebase is the answer. Whatever else needs his word still needs it: a step that is hard to undo, a release, a conflict you cannot settle.
 end
@@ -91,8 +109,8 @@ for all
 order 25
 | ## Interplane: plain surface, full depth one click down (Drake, 2026-11-11)
 | Drake: "my users are not tech users. They don't know what radical is." and "I don't want to take away the verification part in the records part. I want all that."
-| - Bringing or getting a project on Interplane is one command for a person who has never heard of Radicle, with nothing to install first. Radicle stays underneath as the storage and signing layer, and the person is told plainly, once, that publishing there is permanent.
-| - Nothing about verification or records is removed or weakened: receipts, exact commands, fingerprints, the reviewed head, the Radicle ID and the clone command stay complete, one click down in a developer or proof view.
+| - Bringing or getting a project on Interplane is one command for a person who has never used a forge, with nothing to install first, and the person is told plainly, once, that publishing there is permanent.
+| - Nothing about verification or records is removed or weakened: receipts, exact commands, fingerprints, the reviewed head, the project's ID and the command that fetches it stay complete, one click down in a developer or proof view.
 | - Words on the surface are for people who are not programmers: no "RID", "delegate", "seed", "patch" or "refs" above the fold. Each appears only in the developer view, with a one-line explanation.
 end
 
@@ -155,7 +173,7 @@ rule no-silent-dependency
 date 2026-10-25
 for agents omp
 order 171
-| - An outside dependency is never adopted silently. When first-party work needs one, code it in seeded Omega; route any conversion through omega-bridge (its Radicle repository), which emits checked C and Python from a bounded `.om` subset and lets foreign callers call compiled Omega units — it does NOT import arbitrary C or Python, so a host implementation cannot simply be pulled in, and a missing converter is a concrete extension proposal. Anything that stays a host binary, library or language runtime in the build or production path is recorded with its exact version, what it does for us, and the Omega replacement. Verification oracles are untouched by this rule: the pinned compiler, QEMU/OVMF, and read-only checkers such as mtools, sgdisk, fsck.vfat, git and gh stay in use.
+| - An outside dependency is never adopted silently. When first-party work needs one, code it in seeded Omega; route any conversion through omega-bridge (its own repository), which emits checked C and Python from a bounded `.om` subset and lets foreign callers call compiled Omega units — it does NOT import arbitrary C or Python, so a host implementation cannot simply be pulled in, and a missing converter is a concrete extension proposal. Anything that stays a host binary, library or language runtime in the build or production path is recorded with its exact version, what it does for us, and the Omega replacement. Verification oracles are untouched by this rule: the pinned compiler, QEMU/OVMF, and read-only checkers such as mtools, sgdisk, fsck.vfat, git and gh stay in use.
 end
 
 rule fix-it-dont-file-it
@@ -217,7 +235,7 @@ order 187
 |
 | ### Issue tracker
 |
-| Issues live on Radicle, in each repository (`rad issue list`, `rad issue open`); GitHub issues across the `aien-dev` repos are history (No GitHub, 2026-11-11). See `docs/agents/issue-tracker.md`.
+| Issues will live on Interplane, in each repository. Until its issue route is announced on the board, put an issue on the board and in the lane's handoff notes. Radicle issues and GitHub issues across the `aien-dev` repos are history. See `docs/agents/issue-tracker.md`.
 |
 | ### Triage labels
 |
