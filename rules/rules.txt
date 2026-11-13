@@ -18,7 +18,7 @@ order 12
 | - Interplane (interplane.io) stays the destination and the only forge. Radicle is being taken out of it: the storage, the signing layer, the network and the way work is published. Parts that are deployed today still run on Radicle until their replacement works; they are replaced, not extended. As the route for new work, this rule wins over every older line, skill, brief, tool comment or receipt that names Radicle.
 | - Do not push, init, announce, seed, sync, open a patch or an issue, or land anything on Radicle, and do not build new work on `rad`, a Radicle ID or the Radicle node.
 | - The target, under construction: Interplane does itself what Radicle did for us (keeping the code and its history, proving who published what, copying projects between machines, proposed changes, issues), built in seeded Omega and designed first for agents doing the work: every action a plain request with a machine-readable answer. Where a tool, page or guide still depends on Radicle, do not extend that dependency. If replacing it is inside your slice, do that; if not, record it in your report (path, what it uses Radicle for).
-| - Interplane's own publishing route counts as existing once it has passed its own gates on a fresh clone, has a MERGE verdict from another provider's model and a receipt, and these rules name it. Until then work that is done is reviewed and READY, not merged and not published: local commits with their evidence (gates run on a fresh clone, the review verdict, a READY line on the board naming the exact head). That state is finished for the lane. Nothing is published around the new route, and never on GitHub. The route's own first installation follows the same gates, review and receipt, from its reviewed local head.
+| - Interplane's own publishing route counts as existing once it has passed its own gates on a fresh clone and has a MERGE verdict from another provider's model and a receipt. Until then work that is done is reviewed and READY, waiting to be published: local commits with their evidence (gates run on a fresh clone, the review verdict, a READY line on the board naming the exact head). The lane stays responsible for landing it once the route exists. Nothing is published around the new route, and never on GitHub.
 | - What is already in Radicle storage is history and the last published state. Read it when you need a past head or a receipt. Never delete or rewrite it: removing it is Drake's call.
 | - Everything else in these rules stands: gates on a fresh clone, receipts, review by another provider's model, nothing installed from unreviewed work, plain words on the surface, full verification one click down.
 end
@@ -235,7 +235,7 @@ order 187
 |
 | ### Issue tracker
 |
-| Issues will live on Interplane, in each repository. Until Interplane's own route exists (the Interplane rule above), put an issue on the board and in the lane's handoff notes. Radicle issues and GitHub issues across the `aien-dev` repos are history. See `docs/agents/issue-tracker.md`.
+| Issues will live on Interplane, in each repository. Until Interplane's own route exists (the Interplane rule above), put an issue on the board. Radicle issues and GitHub issues across the `aien-dev` repos are history. See `docs/agents/issue-tracker.md`.
 |
 | ### Triage labels
 |
