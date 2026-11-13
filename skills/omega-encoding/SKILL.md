@@ -2228,7 +2228,7 @@ The single source of the codes on main `91c83438d` (#965) is the registry
 (issue #797). `seed/omc/gate15.sh` ([#L1-L9](https://github.com/aien-dev/omega-mv/blob/91c83438daec0bdb88bf5c077cae10f3d15d365d/seed/omc/gate15.sh#L1-L9),
 cases [#L45-L72](https://github.com/aien-dev/omega-mv/blob/91c83438daec0bdb88bf5c077cae10f3d15d365d/seed/omc/gate15.sh#L45-L72))
 holds one minimal program per code (at `91c83438` codes 1..25 and 27..30, when 26 had no emitting
-site; observed at `2ee0a70d`, codes 1..30, with 26 the malformed `OMC_MEMORY_MAX` case), each
+site; observed 2026-11-13 at `2ee0a70d`, codes 1..30, with 26 the malformed `OMC_MEMORY_MAX` case), each
 checked for its exact exit code and `omc: line L: error C` line, and runs `seed/omc/codereg.om`,
 which fails when an emitting site in `omc.om` has no registry row, an emitted row has no site, the
 table in OMEGESE section 9.14 ([#L811-L855](https://github.com/aien-dev/omega-mv/blob/91c83438daec0bdb88bf5c077cae10f3d15d365d/docs/one_layer/OMEGESE.md#L811-L855))
@@ -2261,7 +2261,7 @@ in `fn mflush`, a failed write of buffered output).
 
 A refused compile may still leave bytes on stdout. Never run output from a non-zero compile.
 Capacity boundaries are gated in `seed/omc/gate12.sh`. At `91c83438` it required 8193 globals, and
-4096 helper functions plus `main`, to be refused with error 14. Observed at `2ee0a70d`: it requires
+4096 helper functions plus `main`, to be refused with error 14. Observed 2026-11-13 at `2ee0a70d`: it requires
 both units to compile, and both do (exit 0); what it still refuses is the host's refusal of arena
 growth, a value nested 32768 deep and the program's own pool limits (error 23).
 

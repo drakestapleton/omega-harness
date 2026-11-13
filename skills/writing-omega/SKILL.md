@@ -387,7 +387,7 @@ omega-mv `f4df8239` (omc `3ad9f10f…`), where `execenv` is not reserved: inside
 
 Exit status = error number. Under the default diagnostics (no `OMC_DIAGNOSTICS` in the environment)
 the message is the stderr line `omc: line N: error K`, where N
-is the line being read (0 when no line was read). Observed at omega-mv `2ee0a70d`: an error 14 is
+is the line being read (0 when no line was read). Observed 2026-11-13 at omega-mv `2ee0a70d`: an error 14 is
 followed by an `omc-use` record when the arena was refused, and also on the nesting refusal when the
 unit's first line is `usage`; a failed write of the `check` report ends with exit 2 and no stderr
 line under the default diagnostics, and with `OMC_DIAGNOSTICS=2` it prints
@@ -449,7 +449,7 @@ exits with the code (`exit int code`). The other exits are
 `exit int 0` and `exit 0`, and one `exit int 2` in `fn mflush` (a failed write of buffered output,
 which under the default diagnostics prints no stderr line; present at `91c83438` too); every other refusal goes through `fail`. At omega-mv `91c83438` its callers
 passed the literals 1..25 and 27..30, or forwarded a literal 3, 4, 6, 8, 13 or 16 through `lenval`,
-`nfail` and `unkfail`, and no caller passed 26. Observed at `2ee0a70d`: `fail 1` to `fail 30` all
+`nfail` and `unkfail`, and no caller passed 26. Observed 2026-11-13 at `2ee0a70d`: `fail 1` to `fail 30` all
 occur (26 five times, for a malformed `OMC_MEMORY_MAX`, which the registry
 `seed/omc/error-codes.reg` lists as io). Code 25 comes from the target checks (`fail 25` in `fn emit` and six other
 sites). A trap inside omc itself would exit
