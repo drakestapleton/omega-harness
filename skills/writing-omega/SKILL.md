@@ -65,7 +65,8 @@ chmod +x prog && ./prog; echo "exit $?"
 ```
 
 - omc reads the unit on stdin and writes the executable on stdout. Exit 0 means accepted. Any other
-  exit is the error number, and stderr has one line `omc: line N: error K`.
+  exit is the error number, and stderr has the line `omc: line N: error K` (after an error 14 an
+  `omc-use` record may follow it, section 11).
 - **Never run the output of a refused compile**: stdout may still hold bytes.
 - A unit with `fn main` is program mode (an executable). A unit without it is function mode (raw
   machine words for a host to call); never execute function-mode output directly.
@@ -380,8 +381,11 @@ omega-mv `f4df8239` (omc `3ad9f10f…`), where `execenv` is not reserved: inside
 
 ## 11. Compiler errors
 
-Exit status = error number. The only message is the one stderr line `omc: line N: error K`, where N
-is the line being read (0 when no line was read). One refusal per code is in `examples/errNN_*.om`
+Exit status = error number. The message is the stderr line `omc: line N: error K`, where N
+is the line being read (0 when no line was read). Observed at omega-mv `2ee0a70d`: an error 14 is
+followed by an `omc-use` record when the arena was refused, and also on the nesting refusal when the
+unit's first line is `usage`; a failed write of the `check` report ends with exit 2 and no stderr
+line. One refusal per code is in `examples/errNN_*.om`
 with its exact stderr line in the matching `.expect`, except 24, which needs a generated program.
 
 <!-- gen:errors -->
@@ -431,11 +435,13 @@ with its exact stderr line in the matching `.expect`, except 24, which needs a g
   written 0 included), a field that starts or ends past SIZE, and two fields sharing a byte; a SIZE,
   COUNT or OFF written as 2^64 or more is error 8 instead (`mistake_om2_layout_late`,
   `mistake_om2_layout_zero_count`).
-- 26 is never emitted, and 24 needs a generated program (both below).
+- 26 is a malformed `OMC_MEMORY_MAX` in the compiler's environment, and 24 needs a generated
+  program (both below).
 
 How the emitted set was established: in `seed/omc/omc.om`, `fn fail` writes the stderr line and
-exits with the code (`exit int code`). The only other exits are
-`exit int 0` and `exit 0`, so every refusal goes through `fail`. At omega-mv `91c83438` its callers
+exits with the code (`exit int code`). The other exits are
+`exit int 0` and `exit 0`, and one `exit int 2` in `fn mflush` (a failed write of buffered output,
+which prints no stderr line; present at `91c83438` too); every other refusal goes through `fail`. At omega-mv `91c83438` its callers
 passed the literals 1..25 and 27..30, or forwarded a literal 3, 4, 6, 8, 13 or 16 through `lenval`,
 `nfail` and `unkfail`, and no caller passed 26. Observed at `2ee0a70d`: `fail 1` to `fail 30` all
 occur (26 five times, for a malformed `OMC_MEMORY_MAX`, which the registry

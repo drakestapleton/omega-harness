@@ -2239,7 +2239,7 @@ separate namespace in the same registry (OMEGESE section 11.1). The message form
 | Code | Meaning | Code | Meaning |
 |---|---|---|---|
 | 1, 2 | compiler input / output (stdin a directory: 1; stdout `/dev/full`: 2; both observed) | 13 | name over 63 bytes (IR-mode names, `abstract`/`layout` names and layout fields: over 8) |
-| 3 | unknown name or field | 14 | capacity: the host refused to grow the compiler's arena or the caller's memory ceiling `OMC_MEMORY_MAX` was reached (observed at omega-mv `2ee0a70d`, OMEGESE 9.6; the refusal is followed on stderr by an `omc-use` record saying what held the arena; at omc `c52e986e…`, 2026-11-11, the arena was a fixed 128 MiB), a value nested deeper than 32768 (error 14 on the value's own line, no record), or AArch64 output past 134217728 bytes. History: omc `f4fa7951…` (omega-mv `b2ad967e`, bisected 2026-11-11) had fixed tables of 8192 names (texts and globals share it; `omc: line 8193: error 14`), 8192 trap sites per function (one per call; `omc: line 8196: error 14`) and a 262144-byte code budget per `om2` function (6552 calls with one unsized view argument compiled, 6553 did not); at `91b3c932`: 8192 names, 4096 functions, 512 nested blocks, 1024 nesting depth, 8 MiB input/output |
+| 3 | unknown name or field | 14 | capacity: the host refused to grow the compiler's arena or the caller's memory ceiling `OMC_MEMORY_MAX` was reached (observed at omega-mv `2ee0a70d`, OMEGESE 9.6; the refusal is followed on stderr by an `omc-use` record saying what held the arena; at omc `c52e986e…`, 2026-11-11, the arena was a fixed 128 MiB), a value nested deeper than 32768 (error 14 on the value's own line; no record unless the unit's first line is `usage`), or AArch64 output past 134217728 bytes. History: omc `f4fa7951…` (omega-mv `b2ad967e`, bisected 2026-11-11) had fixed tables of 8192 names (texts and globals share it; `omc: line 8193: error 14`), 8192 trap sites per function (one per call; `omc: line 8196: error 14`) and a 262144-byte code budget per `om2` function (6552 calls with one unsized view argument compiled, 6553 did not); at `91b3c932`: 8192 names, 4096 functions, 512 nested blocks, 1024 nesting depth, 8 MiB input/output |
 | 4 | line ends too early | 15 | missing `end` |
 | 5 | extra words on the line | 16 | syntax / unknown word |
 | 6 | malformed number | 17 | line after `ret`/`break`/`continue`/`trap`/`exit` |
@@ -2255,8 +2255,10 @@ separate namespace in the same registry (OMEGESE section 11.1). The message form
 | 27 | `fresh` element read before it is definitely written, or a fresh array passed on | | |
 
 A refused compile may still leave bytes on stdout. Never run output from a non-zero compile.
-Capacity boundaries are gated in `seed/omc/gate12.sh` (8192 globals accepted, 8193 refused;
-4095 helper functions plus `main` accepted, 4096 plus `main` refused).
+Capacity boundaries are gated in `seed/omc/gate12.sh`. At `91c83438` it required 8193 globals, and
+4096 helper functions plus `main`, to be refused with error 14. Observed at `2ee0a70d`: it requires
+both units to compile, and both do (exit 0); what it still refuses is the host's refusal of arena
+growth, a value nested 32768 deep and the program's own pool limits (error 23).
 
 OM-2 units add or extend codes ([OMEGESE 9.13](https://github.com/aien-dev/omega-mv/blob/19f014f2178ca9cd3473728fe00a475a2398c409/docs/one_layer/OMEGESE.md#L624),
 [`spec/omegese-om2.md` section 8](https://github.com/aien-dev/omega-mv/blob/19f014f2178ca9cd3473728fe00a475a2398c409/spec/omegese-om2.md#L225)):
