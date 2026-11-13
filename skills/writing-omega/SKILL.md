@@ -65,8 +65,9 @@ chmod +x prog && ./prog; echo "exit $?"
 ```
 
 - omc reads the unit on stdin and writes the executable on stdout. Exit 0 means accepted. Any other
-  exit is the error number, and stderr has the line `omc: line N: error K` (after an error 14 an
-  `omc-use` record may follow it, section 11).
+  exit is the error number, and stderr has the line `omc: line N: error K`, with two additions
+  (section 11): after an error 14 an `omc-use` record may follow that line, and a failed write of a
+  `check` report exits 2 with no line at all.
 - **Never run the output of a refused compile**: stdout may still hold bytes.
 - A unit with `fn main` is program mode (an executable). A unit without it is function mode (raw
   machine words for a host to call); never execute function-mode output directly.
@@ -299,8 +300,11 @@ A trap ends the process with exit status 100 + N. Output already written stays w
   expression into several assignments of one or two words each.
 - Size limits: an array up to 16777216 elements, 4 MiB of local arrays per function, 1 GiB of
   globals (error 23).
-- Capacity (error 14): omc has no fixed table capacity of its own. Every table that grows with the
-  unit (input, output, names, functions, call sites, trap sites, blocks) lives in one arena. At
+- Capacity (error 14): the tables that grow with the unit (input, output, names, functions, call
+  sites, trap sites, blocks) have no fixed capacity of their own; they live in one arena. The fixed
+  tables OMEGESE 9.6 lists remain, each error 14 past its number (observed at `2ee0a70d`: an `ir`
+  unit of 32 functions compiles and one of 33 is error 14; the same 33 functions without `ir`
+  compile). At
   omega-mv `3537baad` that arena was 16777216 8-byte words (128 MiB); since the run-time pools
   (observed at `2ee0a70d`) it has no size of its own and grows while the host gives it memory. A unit
   is error 14 when the host refuses that growth or the caller's ceiling `OMC_MEMORY_MAX` is reached,

@@ -1606,7 +1606,9 @@ fixed limit (section 4).
   measure the headroom, append k three-line functions (`fn zqN to ulong`, `ret 0`, `end`, N unique;
   never `fN`, because `f32`/`f64` are type words) and run `seed/rung4/om4.bin < omc.om > /dev/null`.
 - **Do not confuse it with omc's capacity for user programs.** Since omc `c52e986e…` (omega-mv
-  `3537baad`, 2026-11-11) omc has no table capacity of its own: its tables share one arena (a fixed
+  `3537baad`, 2026-11-11) the omc tables that grow with the unit (names, functions, calls, trap
+  sites, blocks, input, output) have no capacity of their own, while the fixed tables OMEGESE 9.6
+  lists remain (IR mode's 32 functions among them): the growing tables share one arena (a fixed
   128 MiB at that compiler; since the run-time pools, observed at omega-mv `2ee0a70d`, it grows while
   the host gives it memory), and a refused arena is error 14 with an `omc-use` record (OMEGESE 9.6);
   om4 keeps its own limits. Before
