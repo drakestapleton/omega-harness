@@ -1606,8 +1606,10 @@ fixed limit (section 4).
   measure the headroom, append k three-line functions (`fn zqN to ulong`, `ret 0`, `end`, N unique;
   never `fN`, because `f32`/`f64` are type words) and run `seed/rung4/om4.bin < omc.om > /dev/null`.
 - **Do not confuse it with omc's capacity for user programs.** Since omc `c52e986e…` (omega-mv
-  `3537baad`, 2026-11-11) omc has no table capacity of its own: its tables share one 128 MiB arena and
-  a full arena is error 14 with an `omc-use` record (OMEGESE 9.6); om4 keeps its own limits. Before
+  `3537baad`, 2026-11-11) omc has no table capacity of its own: its tables share one arena (a fixed
+  128 MiB at that compiler; since the run-time pools, observed at omega-mv `2ee0a70d`, it grows while
+  the host gives it memory), and a refused arena is error 14 with an `omc-use` record (OMEGESE 9.6);
+  om4 keeps its own limits. Before
   that, the compiled `omc` held 4096 functions per program
   ([omc.om#L116-L118](https://github.com/aien-dev/omega-mv/blob/62d1d0d668f897386a0e311374f8dbcc5c32dde8/seed/omc/omc.om#L116-L118),
   refusal [#L7809-L7810](https://github.com/aien-dev/omega-mv/blob/62d1d0d668f897386a0e311374f8dbcc5c32dde8/seed/omc/omc.om#L7809-L7810);
@@ -2222,7 +2224,8 @@ The single source of the codes on main `91c83438d` (#965) is the registry
 [`seed/omc/error-codes.reg`](https://github.com/aien-dev/omega-mv/blob/91c83438daec0bdb88bf5c077cae10f3d15d365d/seed/omc/error-codes.reg)
 (issue #797). `seed/omc/gate15.sh` ([#L1-L9](https://github.com/aien-dev/omega-mv/blob/91c83438daec0bdb88bf5c077cae10f3d15d365d/seed/omc/gate15.sh#L1-L9),
 cases [#L45-L72](https://github.com/aien-dev/omega-mv/blob/91c83438daec0bdb88bf5c077cae10f3d15d365d/seed/omc/gate15.sh#L45-L72))
-holds one minimal program per code for codes 1..25 and 27..30 (26 has no emitting site), each
+holds one minimal program per code (at `91c83438` codes 1..25 and 27..30, when 26 had no emitting
+site; observed at `2ee0a70d`, codes 1..30, with 26 the malformed `OMC_MEMORY_MAX` case), each
 checked for its exact exit code and `omc: line L: error C` line, and runs `seed/omc/codereg.om`,
 which fails when an emitting site in `omc.om` has no registry row, an emitted row has no site, the
 table in OMEGESE section 9.14 ([#L811-L855](https://github.com/aien-dev/omega-mv/blob/91c83438daec0bdb88bf5c077cae10f3d15d365d/docs/one_layer/OMEGESE.md#L811-L855))
@@ -2236,7 +2239,7 @@ separate namespace in the same registry (OMEGESE section 11.1). The message form
 | Code | Meaning | Code | Meaning |
 |---|---|---|---|
 | 1, 2 | compiler input / output (stdin a directory: 1; stdout `/dev/full`: 2; both observed) | 13 | name over 63 bytes (IR-mode names, `abstract`/`layout` names and layout fields: over 8) |
-| 3 | unknown name or field | 14 | capacity: at the pin (omc `c52e986e…`, OMEGESE 9.6, 2026-11-11) a unit whose tables no longer fit the one 128 MiB arena (that refusal is followed on stderr by an `omc-use` record saying what held the arena), a value nested deeper than 32768 (error 14 on the value's own line, no record), or AArch64 output past 134217728 bytes. History: omc `f4fa7951…` (omega-mv `b2ad967e`, bisected 2026-11-11) had fixed tables of 8192 names (texts and globals share it; `omc: line 8193: error 14`), 8192 trap sites per function (one per call; `omc: line 8196: error 14`) and a 262144-byte code budget per `om2` function (6552 calls with one unsized view argument compiled, 6553 did not); at `91b3c932`: 8192 names, 4096 functions, 512 nested blocks, 1024 nesting depth, 8 MiB input/output |
+| 3 | unknown name or field | 14 | capacity: the host refused to grow the compiler's arena or the caller's memory ceiling `OMC_MEMORY_MAX` was reached (observed at omega-mv `2ee0a70d`, OMEGESE 9.6; the refusal is followed on stderr by an `omc-use` record saying what held the arena; at omc `c52e986e…`, 2026-11-11, the arena was a fixed 128 MiB), a value nested deeper than 32768 (error 14 on the value's own line, no record), or AArch64 output past 134217728 bytes. History: omc `f4fa7951…` (omega-mv `b2ad967e`, bisected 2026-11-11) had fixed tables of 8192 names (texts and globals share it; `omc: line 8193: error 14`), 8192 trap sites per function (one per call; `omc: line 8196: error 14`) and a 262144-byte code budget per `om2` function (6552 calls with one unsized view argument compiled, 6553 did not); at `91b3c932`: 8192 names, 4096 functions, 512 nested blocks, 1024 nesting depth, 8 MiB input/output |
 | 4 | line ends too early | 15 | missing `end` |
 | 5 | extra words on the line | 16 | syntax / unknown word |
 | 6 | malformed number | 17 | line after `ret`/`break`/`continue`/`trap`/`exit` |
@@ -2248,7 +2251,7 @@ separate namespace in the same registry (OMEGESE section 11.1). The message form
 | 12 | register pool exhausted | 23 | size capacity |
 | 24 | AArch64 branch displacement out of range | 28 | abstract type: `seal` outside its constructor, or an unsupported `holds` |
 | 25 | unknown target, an AArch64-only path on another target, or an x86efi refusal (omega-mv#1015: bare unit, Linux host word, `efi` OP literal outside 0..13, 0..14 with #1022); under `target a64efi` the same refusals and a run-time pool | 29 | external `layout` out of bounds or misplaced |
-| 26 | unused (no emitting site) | 30 | contract syntax misplaced or not supported here (IR mode included) |
+| 26 | the compiler's environment entry `OMC_MEMORY_MAX` is malformed (refused before the input is read, line 0; observed at `2ee0a70d`, no emitting site before the run-time pools) | 30 | contract syntax misplaced or not supported here (IR mode included) |
 | 27 | `fresh` element read before it is definitely written, or a fresh array passed on | | |
 
 A refused compile may still leave bytes on stdout. Never run output from a non-zero compile.

@@ -298,10 +298,12 @@ A trap ends the process with exit status 100 + N. Output already written stays w
   expression into several assignments of one or two words each.
 - Size limits: an array up to 16777216 elements, 4 MiB of local arrays per function, 1 GiB of
   globals (error 23).
-- Capacity (error 14) at the pin: omc has no fixed table capacity of its own. Every table that grows
-  with the unit (input, output, names, functions, call sites, trap sites, blocks) lives in one arena
-  of 16777216 8-byte words (128 MiB) and doubles as it fills; a unit whose tables need more than the
-  arena is error 14, followed on stderr by an `omc-use` record that says what held the arena. Values
+- Capacity (error 14): omc has no fixed table capacity of its own. Every table that grows with the
+  unit (input, output, names, functions, call sites, trap sites, blocks) lives in one arena. At
+  omega-mv `3537baad` that arena was 16777216 8-byte words (128 MiB); since the run-time pools
+  (observed at `2ee0a70d`) it has no size of its own and grows while the host gives it memory. A unit
+  is error 14 when the host refuses that growth or the caller's ceiling `OMC_MEMORY_MAX` is reached,
+  followed on stderr by an `omc-use` record that says what held the arena. Values
   nest at most 32768 deep, and AArch64 output stops at 134217728 bytes, the reach of B and BL
   (OMEGESE 9.6 at omega-mv `3537baad`, 2026-11-11). Checked 2026-11-11 with omc `c52e986e…`: 10000
   `text` lines, 20000 calls in one `main` and, in an `om2` unit, 7000 calls passing an unsized
@@ -433,10 +435,11 @@ with its exact stderr line in the matching `.expect`, except 24, which needs a g
 
 How the emitted set was established: in `seed/omc/omc.om`, `fn fail` writes the stderr line and
 exits with the code (`exit int code`). The only other exits are
-`exit int 0` and `exit 0`, so every refusal goes through `fail`. Its callers pass the literals 1..25
-and 27..30, or forward a literal 3, 4, 6, 8, 13 or 16 through `lenval`, `nfail` and `unkfail`. No
-caller passes 26, so that code is never emitted (the registry `seed/omc/error-codes.reg` lists it as
-"no emitting site"). Code 25 comes from the target checks (`fail 25` in `fn emit` and six other
+`exit int 0` and `exit 0`, so every refusal goes through `fail`. At omega-mv `91c83438` its callers
+passed the literals 1..25 and 27..30, or forwarded a literal 3, 4, 6, 8, 13 or 16 through `lenval`,
+`nfail` and `unkfail`, and no caller passed 26. Observed at `2ee0a70d`: `fail 1` to `fail 30` all
+occur (26 five times, for a malformed `OMC_MEMORY_MAX`, which the registry
+`seed/omc/error-codes.reg` lists as io). Code 25 comes from the target checks (`fail 25` in `fn emit` and six other
 sites). A trap inside omc itself would exit
 100 + N, which is not an error code.
 
