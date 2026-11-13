@@ -2237,7 +2237,9 @@ separate namespace in the same registry (OMEGESE section 11.1). The message form
 ([omc.om#L122-L148](https://github.com/aien-dev/omega-mv/blob/55f9b0af47de70a3d06357985cf99ae3e45c016f/seed/omc/omc.om#L122-L148) at `55f9b0af`;
 [omc.om#L292-L322](https://github.com/aien-dev/omega-mv/blob/e5b32567a7aff3ce594e3254a622a846a6cd190b/seed/omc/omc.om#L292-L322) at `e5b32567`;
 [omc.om#L324-L356](https://github.com/aien-dev/omega-mv/blob/91c83438daec0bdb88bf5c077cae10f3d15d365d/seed/omc/omc.om#L324-L356) at `91c83438`,
-`fn fail` on the first line and `exit int code`, the only non-zero `exit` in the compiler, on the last).
+`fn fail` on the first line and `exit int code` on the last; at `e5b32567` that was the only
+non-zero `exit` in the compiler, and at `91c83438` and `2ee0a70d` there is one other, `exit int 2`
+in `fn mflush`, a failed write of buffered output).
 
 | Code | Meaning | Code | Meaning |
 |---|---|---|---|
