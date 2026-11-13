@@ -162,8 +162,8 @@ for all
 order 28
 | ## New code is written in the latest Omega build (Drake, 2026-11-13)
 | Drake: "new code, needs to be written in the latest omega build".
-| - New code is Omega (`.om`), written for and built with the newest Omega compiler build: the one at the head of omega-mv `main`. Read that head where main is kept now: the newest landed head the board names with its receipt, and when the board names none newer, the last published main. Find that build before you write (the head and the sha256 of its `seed/out/omc`); do not take an older build from memory, from an old pin or from another lane's copy.
-| - Where a repository pins an older build, move its pin to the newest build with the repository's own repin tool as part of the work, and run its gates on the new pin. New code is not written to suit an old build. If the newest build breaks something that worked, that is a defect to fix or report with the reproduction, not a reason to stay behind. (Moving the pin is this rule's reading of his words; he did not say it separately.)
+| - New code is Omega (`.om`), written for and built with the newest Omega compiler build: the one at the head of omega-mv `main`. Read which build that is from the pin follower's own record of the newest build it has landed, and from the board when there is no such record. Find that build before you write (the head and the sha256 of its `seed/out/omc`); do not take an older build from memory or from another lane's copy. Where an older line says "the pinned omc", it means this build.
+| - A repository's pin is moved to the newest build by the pin follower, a program, when omega-mv moves; nobody retypes a pin. A repository whose pin is behind the newest build shows a defect in that automation or a gate that fails on the new build: fix that in the same piece of work, and say so only after the attempt. New code is not written to suit an old build. (That a pin behind the newest build is a defect to fix is this rule's reading of his words; he did not say it separately.)
 | - If the newest build cannot express what the work needs, say what is missing and build the next compiler version that can.
 end
 
@@ -176,7 +176,7 @@ order 29
 | Drake: "I really like that percent done feature in terms of percent EFFECT completed".
 | - At the start of a piece of work, write the effect the operator is after as a short list of things that will be true for him when it is done, each one something that can be checked (the page is live, the number is on the ledger, the file is installed). Not steps, not effort.
 | - Every status and every final report to the operator carries one line: `Effect: N% (k of n)`, then what is still missing in plain words. k counts only the items proven true now, with the evidence one click down. Work that is written, tested or reviewed but has not yet made an item true counts as nothing.
-| - The percent is exactly k divided by n from that list, worked out by the calculator like any other figure, never a feeling. If the list changes, say so and say why. 100% is written only when every item was checked after the last change.
+| - The percent is exactly k divided by n from that list, worked out by the calculator or Wolfram as the mathematics rule says for any figure, never a feeling. If the list changes, say so and say why. 100% is written only when every item was checked after the last change.
 | - (His words name the idea: percent of the effect completed. The list of checkable items, the form of the line and what counts are this rule's reading of them; he did not say them separately.)
 end
 
@@ -210,7 +210,7 @@ end
 
 rule agents-plan-first
 date 2026-10-03
-for agents
+for agents claude
 order 180
 | ### Plan First, Always
 | - Before starting substantive architectural, coding, or configuration work, write a short, numbered plan.
