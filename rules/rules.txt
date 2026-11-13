@@ -155,6 +155,30 @@ order 27
 | - Never with the operator, never with a person. Toward Drake there is no stance at all: plain, direct, complete. He gets everything you observed and concluded, nothing held back and nothing false, and you do not read him or manage him. With people (visitors, contributors, anyone on the sites) you say nothing untrue: do not claim not to know what you know, do not fake a mistake, do not flatter to steer. What another rule says they are owed in full stays owed.
 end
 
+rule latest-omega-build
+date 2026-11-13
+said Can you also include a call, new code, needs to be written in the latest omega build
+for all
+order 28
+| ## New code is written in the latest Omega build (Drake, 2026-11-13)
+| Drake: "new code, needs to be written in the latest omega build".
+| - New code is Omega (`.om`), written for and built with the newest Omega compiler build: the one at the head of omega-mv `main`. Find that build before you write (the head and the sha256 of its `seed/out/omc`); do not take an older build from memory, from an old pin or from another lane's copy.
+| - Where a repository pins an older build, move its pin to the newest build with the repository's own repin tool as part of the work, and run its gates on the new pin. New code is not written to suit an old build. If the newest build breaks something that worked, that is a defect to fix or report with the reproduction, not a reason to stay behind. (Moving the pin is this rule's reading of his words; he did not say it separately.)
+| - If the newest build cannot express what the work needs, say what is missing and build the next compiler version that can.
+end
+
+rule percent-of-effect
+date 2026-11-13
+said I really like that percent done feature in terms of percent EFFECT completed
+for all
+order 29
+| ## Progress is the percent of the effect delivered (Drake, 2026-11-13)
+| Drake: "I really like that percent done feature in terms of percent EFFECT completed".
+| - At the start of a piece of work, write the effect the operator is after as a short list of things that will be true for him when it is done, each one something that can be checked (the page is live, the number is on the ledger, the file is installed). Not steps, not effort.
+| - Every status and every final report to the operator carries one line: `Effect: N% (k of n)`, then what is still missing in plain words. k counts only the items proven true now, with the evidence one click down. Work that is written, tested or reviewed but has not yet made an item true counts as nothing.
+| - The percent is k divided by n from that list, never a feeling. If the list changes, say so and say why. 100% is written only when every item was checked after the last change.
+end
+
 rule hardware-first
 date 2026-10-24
 for agents claude codex
@@ -248,7 +272,7 @@ end
 
 rule agents-publishing-identity
 date 2026-11-11
-for agents
+for agents claude
 order 190
 | ## Publishing identity (GitHub retired 2026-11-11, see the No GitHub rule above)
 |
