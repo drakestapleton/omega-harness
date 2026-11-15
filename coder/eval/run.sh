@@ -44,7 +44,7 @@ ids=${*:-$(ls "$tasks")}
 # the exact model id the aien profile serves) and OMEGA_EVAL_SEED (the sampling seed the profile fixes, or
 # "none" when it fixes none). The runner itself is hashed because it holds the prompt template and the limits.
 h() { if [ -f "$1" ]; then sha256sum "$1" | cut -d' ' -f1; else echo absent; fi; }
-hd() { (cd "$1" && find . -type f | LC_ALL=C sort | xargs sha256sum) | sha256sum | cut -d' ' -f1; }
+hd() { if [ -d "$1" ]; then (cd "$1" && find . -type f | LC_ALL=C sort | xargs sha256sum) | sha256sum | cut -d' ' -f1; else echo absent; fi; }
 manifest=$(printf 'arm\t%s\nmodel\t%s\nseed\t%s\nomc_sha256\t%s\ngate_sha256\t%s\nfixtures_sha256\t%s\nprompt_sha256\t%s\nguard_sha256\t%s\nerrors_sha256\t%s\nrunner_sha256\t%s\ntasks_sha256\t%s\naien\t%s\naien_version\t%s\n' \
 	"$arm" "$model" "$seed" "$sha" "$(h "$home/gate")" "$(hd "$home/seed/qualification/om2/fixtures")" "$(h "$prompt_file")" \
 	"$(h "$home/omega-guard.ts")" "$(h "$home/context/errors.tsv")" "$(h "$0")" "$(hd "$tasks")" \
@@ -95,12 +95,21 @@ Write the program to main.om in the working directory, check it with omega_run, 
 	else
 		"$omc" < "$d/work/main.om" > "$d/main.elf" 2> "$d/score.log"
 		orc=$?
+		# 126/127: omc could not be executed. That is the machine, not the model: stop without a row.
+		if [ "$orc" -eq 126 ] || [ "$orc" -eq 127 ]; then
+			echo "$id: omc could not run (rc $orc), see $d/score.log; no row written" >&2
+			exit 3
+		fi
 		if [ "$orc" -ne 0 ]; then
 			verdict=compile-fail
 		else
 			rm -rf "$d/scratch"
 			(cd "$home" && ./gate "$omc" "$sha" "$d/cases.txt" "$d/scratch") >> "$d/score.log" 2>&1
 			grc=$?
+			if [ "$grc" -eq 126 ] || [ "$grc" -eq 127 ]; then
+				echo "$id: gate could not run (rc $grc), see $d/score.log; no row written" >&2
+				exit 3
+			fi
 			if [ "$grc" -eq 0 ] && grep -q '^OM2GATE PASS ' "$d/score.log"; then verdict=pass; else verdict=wrong-output; fi
 		fi
 	fi

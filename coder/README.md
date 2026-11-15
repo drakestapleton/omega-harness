@@ -7,7 +7,7 @@ scripts. "Only Omega" is enforced by the harness and the compiler, not by model 
 
 | File | What it does |
 |---|---|
-| `omega-guard.ts` | `omp` extension (load with `-e`). Refuses every write or edit except `.om` files and `NOTES.md` inside the session directory; refuses reads outside the session directory and the context pack; compiles each written `.om` with the pinned `omc` (sha256 checked before every compile) and appends the result, with the error meaning and offending line, to the tool result; adds the `omega_run` tool (compile, then run in a `bwrap` sandbox with no network); refuses to let the session finish while a touched `.om` fails to compile, or, with `OMEGA_CASES` set, until the om2 gate passes those cases. |
+| `omega-guard.ts` | `omp` extension (load with `-e`). Refuses every write or edit except `.om` files and `NOTES.md` inside the session directory; refuses reads outside the session directory and the context pack; compiles each written `.om` with the pinned `omc` (sha256 checked before every compile) and appends the result, with the error's meaning and fix (from the pack's `errors.tsv`) and the offending line, to the tool result; adds the `omega_run` tool (compile, then run in a `bwrap` sandbox with no network); refuses to let the session finish while a touched `.om` fails to compile, or, with `OMEGA_CASES` set, until the om2 gate passes those cases. |
 | `omega-prompt-head.md` | Rules part of the system prompt (tools, check loop, `DONE <file>`). |
 | `omega-observed.md` | Compiler facts observed with the pinned `omc` that the skill does not state. Each has a probe in `observed/` (expected compiler and program exit status in `observed/expect.tsv`) that `build-context.sh` runs; a fact that stops holding stops the build. |
 | `build-context.sh` | Builds the context pack: `OMEGA.md` = rules + `skills/omega-encoding` sections 2-11 (citation links stripped) + observed facts + the examples it lists, each of which must compile with the pinned `omc`; `CONTROL.md` = rules only; `PIN` (a copy of the repository's `PIN`) and `errors.tsv` (meaning and fix of each error code, from `data/reference.tsv`, which must be for the same pin), both read by the guard. Refuses an `omc` that is not the one `PIN` names. |
@@ -61,8 +61,15 @@ guard, error table, the runner itself (it holds the prompt template and the sess
 (name and digest of each) and the `aien` program, with `aien --version`. A resume into an `OUTDIR` whose
 manifest differs is refused. `sh coder/eval/compare.sh OMEGA_OUTDIR CONTROL_OUTDIR` refuses two arms whose
 manifests differ in anything but arm and prompt, then prints the raw per-task verdicts side by side, the
-totals and a `LEDGER` line. `OMEGA_HOME=... sh coder/eval/selftest.sh` checks the runner, `compare.sh` and the
-scorer with a stub session in both arms, with a refusal case for each check above (exit 0 = SELFTEST PASS).
+totals and a `LEDGER` line. The guard is the same in both arms, so both get the compiler's error meaning and fix after each compile;
+only the prompt and the readable context differ. (Before 2026-11-15 the guard gave a shorter typed meaning
+table; no complete run exists from then to compare with.) A seed of `none` is recorded as such: that run
+cannot be repeated exactly, and the `LEDGER` line says `seed none`.
+`OMEGA_HOME=... sh coder/eval/selftest.sh` checks the runner, `compare.sh` and the scorer with a stub session
+that records what each session was given (prompt, readable context, case file) and answers differently per
+arm. It covers each manifest key in `compare.sh`, a refused resume for each hashed input, missing model or
+seed, a pack for another pin, a wrong compiler, and an `omc` or gate that cannot run (exit 3, no row, never
+counted as compile-fail). Exit 0 = SELFTEST PASS.
 
 Running both arms (on the machine that has `aien` and its model; start new OUTDIRs whenever PIN moves, since
 results from another pin are not comparable):
@@ -74,6 +81,8 @@ cp -r $MV/seed/qualification/om2/fixtures $H/seed/qualification/om2/
 $H/omc < $MV/seed/qualification/om2/gate.om > $H/gate && chmod +x $H/gate
 OMEGA_MV=$MV OMC=$H/omc sh coder/build-context.sh $H/context && cp coder/omega-guard.ts $H/
 OMEGA_HOME=$H sh coder/eval/selftest.sh
+# the held-out references must pass at this pin first (case lines as run.sh writes them, references outside
+# this repository); until then a task may fail because the compiler changed, not because of the model
 export OMEGA_EVAL_MODEL=<exact model id> OMEGA_EVAL_SEED=<seed or none> P=$(sed -n 's/^omc-sha256 //p' PIN | cut -c1-8)
 sh coder/eval/run.sh omega   ~/handoffs/OmegaCoder/eval-$P/omega   coder/eval/tasks
 sh coder/eval/run.sh control ~/handoffs/OmegaCoder/eval-$P/control coder/eval/tasks

@@ -1,6 +1,6 @@
-st1-pass	pass
-st2-wrong	wrong-output
-st3-exit	pass
-st4-badcompile	compile-fail
-st5-nofile	compile-fail
-st6-stdin	pass
+st1-pass	pass	wrong-output
+st2-wrong	wrong-output	wrong-output
+st3-exit	pass	pass
+st4-badcompile	compile-fail	compile-fail
+st5-nofile	compile-fail	compile-fail
+st6-stdin	pass	pass

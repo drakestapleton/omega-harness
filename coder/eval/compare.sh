@@ -16,8 +16,9 @@ done
 strip() { grep -v -e "^arm$tab" -e "^prompt_sha256$tab" "$1"; }
 if [ "$(strip "$o/manifest.tsv")" != "$(strip "$c/manifest.tsv")" ]; then
 	echo "COMPARE FAIL the arms were measured with different inputs:" >&2
-	strip "$o/manifest.tsv" > "$o/.cmp.$$"; strip "$c/manifest.tsv" > "$c/.cmp.$$"
-	diff "$o/.cmp.$$" "$c/.cmp.$$" >&2; rm -f "$o/.cmp.$$" "$c/.cmp.$$"
+	t=$(mktemp -d)
+	strip "$o/manifest.tsv" > "$t/omega"; strip "$c/manifest.tsv" > "$t/control"
+	diff "$t/omega" "$t/control" >&2; rm -rf "$t"
 	exit 1
 fi
 ids_o=$(tail -n +2 "$o/results.tsv" | cut -f1 | LC_ALL=C sort)
