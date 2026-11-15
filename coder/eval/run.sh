@@ -7,7 +7,8 @@
 # Tasks run one after another (the live 35B takes serial requests only). Each task gets a fresh empty
 # directory; the model must leave main.om there. Scoring is independent of the session: compile with
 # the pinned omc, then run the om2 gate on the task's case line in a fresh scratch directory.
-# Per task: OUTDIR/ID/{work/,cases.txt,transcript.jsonl,stderr,guard.log,score.log}; summary OUTDIR/results.tsv.
+# Per task: OUTDIR/ID/{work/,cases.txt,transcript.jsonl,stderr,guard.log,score.log}; summary OUTDIR/results.tsv;
+# inputs (compiler, gate, prompt, guard, tasks, session program) OUTDIR/manifest.tsv.
 set -u
 arm=${1:?arm: omega or control}
 out=${2:?outdir}
@@ -15,8 +16,14 @@ tasks=${3:?taskdir}
 shift 3
 home=${OMEGA_HOME:-$HOME/.local/share/aien-omega}
 omc="$home/omc"
-sha=2c82480596bbdc50cda9626866209ef662d5834f278f839ff4ce0250c495029f
-[ "$(sha256sum "$omc" | cut -d' ' -f1)" = "$sha" ] || { echo "pinned omc mismatch" >&2; exit 2; }
+# The pin is read from the repository's PIN (the one place it is written); the installed pack must
+# have been built for the same pin, or the guard and this scorer would disagree.
+pin="$(cd "$(dirname "$0")/../.." && pwd)/PIN"
+sha=$(sed -n 's/^omc-sha256 //p' "$pin")
+[ -n "$sha" ] || { echo "no omc-sha256 line in $pin" >&2; exit 2; }
+got=$(sha256sum "$omc" | cut -d' ' -f1)
+[ "$got" = "$sha" ] || { echo "pinned omc mismatch: $omc sha256 $got, $pin says $sha" >&2; exit 2; }
+cmp -s "$pin" "$home/context/PIN" || { echo "pack built for another pin: rebuild $home/context with build-context.sh" >&2; exit 2; }
 command -v aien > /dev/null || { echo "aien not on PATH" >&2; exit 2; }
 case $arm in
 omega) prompt_file="$home/context/OMEGA.md"; context="$home/context" ;;
@@ -27,6 +34,19 @@ mkdir -p "$out" "$out/empty-context"
 out=$(cd "$out" && pwd)
 [ "$arm" = control ] && context="$out/empty-context"
 ids=${*:-$(ls "$tasks")}
+# What this run was measured with. A resumed run must match the manifest it started with, so the two arms
+# and every resume use the same compiler, pack, guard, tasks and session program.
+h() { if [ -f "$1" ]; then sha256sum "$1" | cut -d' ' -f1; else echo absent; fi; }
+manifest=$(printf 'arm\t%s\nomc_sha256\t%s\ngate_sha256\t%s\nprompt_sha256\t%s\nguard_sha256\t%s\nerrors_sha256\t%s\ntasks_sha256\t%s\naien\t%s\naien_version\t%s\n' \
+	"$arm" "$sha" "$(h "$home/gate")" "$(h "$prompt_file")" "$(h "$home/omega-guard.ts")" "$(h "$home/context/errors.tsv")" \
+	"$(cat "$tasks"/*/spec.md "$tasks"/*/stdin "$tasks"/*/expected.out "$tasks"/*/expected.exit 2>/dev/null | sha256sum | cut -d' ' -f1)" \
+	"$(h "$(command -v aien)")" "$(aien --version 2>&1 | head -n 1)")
+if [ -f "$out/manifest.tsv" ]; then
+	[ "$manifest" = "$(cat "$out/manifest.tsv")" ] ||
+		{ echo "resume with different inputs; diff $out/manifest.tsv against:" >&2; echo "$manifest" >&2; exit 2; }
+else
+	echo "$manifest" > "$out/manifest.tsv"
+fi
 # Resumable: a task already scored in results.tsv is skipped; an interrupted task left no row and is re-run.
 [ -s "$out/results.tsv" ] ||
 	printf 'id\tverdict\tomc_rc\tgate_rc\tsession_rc\twall_s\tstop_refusals\tnon_om_files\n' > "$out/results.tsv"

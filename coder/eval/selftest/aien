@@ -1,0 +1,9 @@
+#!/bin/sh
+# Stub session program for selftest.sh only: stands in for `aien --omega` so the runner and scorer can be
+# checked without a model. It writes src/ID.om (ID = the task directory) to ./main.om, or nothing.
+[ "${1:-}" = --version ] && { echo "selftest-stub 1"; exit 0; }
+here=$(cd "$(dirname "$0")" && pwd)
+id=$(basename "$(dirname "$(pwd)")")
+[ -f "$here/src/$id.om" ] && cp "$here/src/$id.om" main.om
+echo '{"type":"stub"}'
+exit 0

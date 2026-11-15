@@ -1,0 +1,6 @@
+st1-pass	pass
+st2-wrong	wrong-output
+st3-exit	pass
+st4-badcompile	compile-fail
+st5-nofile	compile-fail
+st6-stdin	pass

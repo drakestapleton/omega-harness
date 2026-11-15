@@ -18,7 +18,8 @@
 // - The session cannot end while any touched `.om` file fails to compile, or, when OMEGA_CASES names a
 //   gate case list, until the gate prints `OM2GATE PASS`.
 //
-// Environment: OMEGA_HOME (default ~/.local/share/aien-omega: omc, gate, gate fixtures, context/),
+// Environment: OMEGA_HOME (default ~/.local/share/aien-omega: omc, gate, gate fixtures, context/ with PIN
+// and errors.tsv),
 // OMEGA_CASES (optional case list for the stop check; keep it outside the session directory).
 import { spawnSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
@@ -33,8 +34,18 @@ const GATE = join(OMEGA_HOME, 'gate')
 const CONTEXT = process.env.OMEGA_CONTEXT || join(OMEGA_HOME, 'context')
 // Stop refusals before the session may end anyway (eval runs set it; unset means no limit).
 const STOP_LIMIT = Number(process.env.OMEGA_STOP_LIMIT || 0)
-// omega-mv f1b9ecb5d13f3b7303c055a187fff06e802eb952, seed/out/omc (commit 82a399b9f "batch 2 pin 2c824805").
-const OMC_SHA256 = '2c82480596bbdc50cda9626866209ef662d5834f278f839ff4ce0250c495029f'
+// The pin and the error meanings are not typed here: build-context.sh writes both into the pack from the
+// repository's PIN and from skills/omega-encoding section 11. They are read from OMEGA_HOME/context, not
+// OMEGA_CONTEXT, so the eval control arm (an empty readable context) runs with the same guard.
+const PACK = join(OMEGA_HOME, 'context')
+function readPack(name: string): string {
+  try {
+    return readFileSync(join(PACK, name), 'utf8')
+  } catch {
+    return ''
+  }
+}
+const OMC_SHA256 = (readPack('PIN').match(/^omc-sha256 ([0-9a-f]{64})$/m) || [])[1] || ''
 const LOG = process.env.OMEGA_LOG
 
 function note(line: string): void {
@@ -43,14 +54,10 @@ function note(line: string): void {
 const ALLOWED_TOOLS = new Set(['read', 'grep', 'glob', 'edit', 'write', 'omega_run'])
 const BUILD = mkdtempSync(join(tmpdir(), 'aien-omega-'))
 
-const ERRORS: Record<number, string> = {
-  1: 'compiler I/O', 2: 'compiler I/O', 3: 'unknown name or field', 4: 'line ends too early (missing value)',
-  5: 'extra words on the line', 6: 'malformed number', 7: 'type mismatch (no implicit conversion)',
-  8: 'number out of range', 9: 'word in a disallowed place', 10: 'duplicate name', 11: 'ambiguous bare number (give it a type: uint 5)',
-  12: 'register pool exhausted (fewer live names or split the function)', 13: 'name too long (non-function names at most 8 characters)',
-  14: 'capacity', 15: 'missing end', 16: 'syntax error or unknown word', 17: 'line after ret/break/continue/trap/exit',
-  18: 'missing ret (end of a value-returning function is reachable)', 19: 'global passed as argument, or same array twice in one call',
-  20: 'write to a view or text', 21: 'constant index out of range', 22: 'bad text literal', 23: 'size capacity',
+const ERRORS: Record<number, string> = {}
+for (const row of readPack('errors.tsv').split('\n')) {
+  const tab = row.indexOf('\t')
+  if (tab > 0) ERRORS[Number(row.slice(0, tab))] = row.slice(tab + 1)
 }
 
 type Ctx = { cwd?: string }
@@ -63,6 +70,7 @@ type Pi = {
 
 function omcVerified(): string | undefined {
   try {
+    if (!OMC_SHA256) return `no pin: ${join(PACK, 'PIN')} has no omc-sha256 line (run build-context.sh)`
     const sha = createHash('sha256').update(readFileSync(OMC)).digest('hex')
     return sha === OMC_SHA256 ? undefined : `pinned omc mismatch: ${OMC} sha256 ${sha}, expected ${OMC_SHA256}`
   } catch (e) {
