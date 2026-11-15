@@ -18,9 +18,9 @@ order 12
 | - Interplane (interplane.io) stays the destination and the only forge. Radicle is being taken out of it: the storage, the signing layer, the network and the way work is published. Parts that are deployed today still run on Radicle until their replacement works; they are replaced, not extended. As the route for new work, this rule wins over every older line, skill, brief, tool comment or receipt that names Radicle.
 | - Do not push, init, announce, seed, sync, open a patch or an issue, or land anything on Radicle, and do not build new work on `rad`, a Radicle ID or the Radicle node.
 | - The target, under construction: Interplane does itself what Radicle did for us (keeping the code and its history, proving who published what, copying projects between machines, proposed changes, issues), built in seeded Omega and designed first for agents doing the work: every action a plain request with a machine-readable answer. Where a tool, page or guide still depends on Radicle, do not extend that dependency. If replacing it is inside your slice, do that; if not, record it in your report (path, what it uses Radicle for).
-| - Interplane's own publishing route counts as existing once it has passed its own gates on a fresh clone and has a MERGE verdict from another provider's model and a receipt. Until then work that is done is reviewed and READY, waiting to be published: local commits with their evidence (gates run on a fresh clone, the review verdict, a READY line on the board naming the exact head). The lane stays responsible for landing it once the route exists. Nothing is published around the new route, and never on GitHub.
+| - Interplane's own publishing route counts as existing once it has passed its own gates on a fresh clone and has a MERGE verdict from the independent review (the review rule) and a receipt. Until then work that is done is reviewed and READY, waiting to be published: local commits with their evidence (gates run on a fresh clone, the review verdict, a READY line on the board naming the exact head). The lane stays responsible for landing it once the route exists. Nothing is published around the new route, and never on GitHub.
 | - What is already in Radicle storage is history and the last published state. Read it when you need a past head or a receipt. Never delete or rewrite it: removing it is Drake's call.
-| - Everything else in these rules stands: gates on a fresh clone, receipts, review by another provider's model, nothing installed from unreviewed work, plain words on the surface, full verification one click down.
+| - Everything else in these rules stands: gates on a fresh clone, receipts, the independent review of the exact head, nothing installed from unreviewed work, plain words on the surface, full verification one click down.
 end
 
 rule no-github
@@ -45,16 +45,18 @@ order 22
 end
 
 rule own-review
-date 2026-11-11
+date 2026-11-14
 said get rid of review desk and we should ALL be doing our own reviews and spinning up subagents of a different provider to do the review to keep it honest.
+said just use Claude Opus 5.5 agents on medium to replace reviewers regardless just to get this moving again.
 for all watchdog
 order 23
-| ## No review desk: review your own work with another provider's model (Drake, 2026-11-11)
-| Drake: "we no longer have a review desk assignment. Anyone can take acting control of review desk at any time to match with the decentralized nature now that we are out of github." and "get rid of review desk and we should ALL be doing our own reviews and spinning up subagents of a different provider to do the review to keep it honest."
+| ## No review desk: review your own work with a fresh Claude Opus 5.5 run (Drake, 2026-11-11 and 2026-11-14)
+| Drake, 2026-11-11: "we no longer have a review desk assignment. Anyone can take acting control of review desk at any time to match with the decentralized nature now that we are out of github." Drake, 2026-11-14, replacing the other-provider reviewer: "just use Claude Opus 5.5 agents on medium to replace reviewers regardless just to get this moving again."
 | - There is no review desk and no reviewer assignment. Nothing waits for a desk, a queue or a named reviewer, and no file, tool or ledger line may require one. Any agent may review or land any ready head at any time.
-| - The lane that wrote a change gets it reviewed itself, before landing. It starts a reviewer subagent on a model from a different provider than the model that wrote the change (work written by a Claude model is reviewed through Codex or Gemini, and the other way round). The reviewer gets the exact head, the base, the task in the operator's words and these rules, never the author's conclusions.
-| - The verdict is a file that names the exact head, the reviewer's program and model, and each finding. The author fixes each finding or answers it in writing in that file's reply; a changed head is reviewed again. The landing receipt names the verdict file. A REJECT, or a finding neither fixed nor answered, stops the landing.
-| - A review by the author, or by a model of the author's own provider, is not the independent review.
+| - The lane that wrote a change gets it reviewed itself, before landing, by a fresh run of Claude Opus 5.5 at medium effort started for that review alone: `claude -p "<brief>" --model claude-opus-5-5 --effort medium --dangerously-skip-permissions --max-turns 150`. Fresh means a new process with no context from the author: never a resumed session, a fork of the author's chat or a subagent that inherits it. This holds whichever model wrote the change; no review waits for another provider's model, account or credit.
+| - The reviewer's brief gives the exact head, the base, the task in the operator's words and these rules, never the author's conclusions, and asks for harsh findings, each with a confidence percent.
+| - The verdict is a file that names the exact head, the reviewer's program, model and effort, and each finding with its confidence percent. The author fixes each finding or answers it in writing in that file's reply; a changed head is reviewed again by another fresh run. The landing receipt names the verdict file. A REJECT, or a finding neither fixed nor answered, stops the landing.
+| - A review by the author, or by any run that shares the author's context, is not the independent review.
 end
 
 rule automate-everything
@@ -82,7 +84,7 @@ order 24
 | ## What is installed is built from main (Drake standing rule, 2026-11-12)
 | Drake was running an app built from a branch that had not landed, while main had newer work. Asked whether to install main over it, or to rebase that branch onto main, get it reviewed, land it and install the result, he chose the second and said: "btw that should be the standing rule".
 | - A first-party program (one built from our own repositories) that is installed on Drake's machines is built from `main`. Nothing of ours is installed from an unlanded or unreviewed branch.
-| - When you are installing or updating such a program and the copy now installed came from an unlanded branch, do not install main over it: that loses the work. Rebase that branch onto the current main, get it reviewed by another provider's model, land it with a receipt, then install the landed result, so that the installed program, main and Interplane agree.
+| - When you are installing or updating such a program and the copy now installed came from an unlanded branch, do not install main over it: that loses the work. Rebase that branch onto the current main, get it reviewed independently (the review rule), land it with a receipt, then install the landed result, so that the installed program, main and Interplane agree.
 | - Take what the installed program was really built from, uncommitted changes included, as a copy; another lane's worktree is never changed. If the lane that owns the branch is still working on it, agree with it first who rebases and lands, and do not rebase or land its work until that is settled. If the lane's session has ended, say on the board that you are taking the branch over, before you start. What the copy holds passes the same scope and privacy checks as any other change before it is published.
 | - Do not ask Drake to choose between these two ways again: the rebase is the answer. Whatever else needs his word still needs it: a step that is hard to undo, a release, a conflict you cannot settle.
 end
