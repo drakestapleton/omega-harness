@@ -2,11 +2,12 @@
 
 Operating instructions for an agent working in this repository. Read this before editing a skill.
 
-**Standing rules (Drake, 2026-11-11).** Interplane (https://interplane.io, serving the Radicle
-repositories) is the only forge and the canonical source: never push to a GitHub remote, open or update
-a GitHub PR or issue, publish with `gh`, or cite a GitHub branch as current state. New work is a new
-Radicle repository or a landing on Radicle `main` with a receipt, finished only when interplane.io shows
-it (URL and HTTP status). No hard caps on our own software: put a test that alarms instead.
+**Standing rules (Drake, 2026-11-11, Radicle retired 2026-11-13).** Interplane (https://interplane.io)
+is the only forge and the canonical source. Clone with
+`git clone https://interplane.io/projects/<repo>/repo.git`. Never push to a GitHub remote, open or update
+a GitHub PR or issue, publish with `gh`, or cite a GitHub branch as current state. New work lands on
+that repository's `main` with a receipt, finished only when interplane.io shows it (URL and HTTP status).
+No hard caps on our own software: put a test that alarms instead.
 `skills/omega-harness/SKILL.md` section 1 has both rules in full. Only Drake reverses them.
 
 ## What this repository is
@@ -90,7 +91,7 @@ untrue, and record what you observed with its date. Older measurements stay as d
 Re-check, read only, in a fresh clone:
 
 ```sh
-git clone rad://z6do9WDBhuSnvopDkgFdFr1yWA62 omega-src
+git clone https://interplane.io/projects/omega-mv/repo.git omega-src
 git -C omega-src checkout "$(sed -n 's/^omega-mv //p' PIN)"
 sha256sum omega-src/seed/out/omc   # must equal the omc-sha256 line of PIN
 ```
@@ -123,13 +124,12 @@ output, the negative control, and what was not run.
 
 ## Contributing
 
-This repository lives on Radicle: `rad clone rad:z39gvwWsnkRZsAConQLjaKiNVLHfW` or `git clone
-https://www.aienos.com/rad/z39gvwWsnkRZsAConQLjaKiNVLHfW.git`, shown at
+This repository is `git clone https://interplane.io/projects/omega-harness/repo.git`, shown at
 https://interplane.io/drakestapleton/omega-harness. The `aien-dev` GitHub organization is frozen
 (2026-11-07) and GitHub is not a route (2026-11-11): never push, open a PR or open an issue there, and
-treat its links as historical citations. A change lands on Radicle `main` with a receipt (receipts, not
+treat its links as historical citations. A change lands on Interplane `main` with a receipt (receipts, not
 approvals, 2026-11-11): rerun `examples/gate.sh` and `tools/check.sh` with the pinned omc and a
-wrong-compiler control in a fresh `rad clone` of the exact head, write the landing receipt (commands,
+wrong-compiler control in a fresh clone of the exact head, write the landing receipt (commands,
 exit codes, pins, log sha256), land it with the hive landing tools, then confirm the head on the
 interplane.io page. A non-MERGE review verdict on that head stops the landing. After the landing, the
 landing tools' `land-hooks.sh` `harness` hook re-installs the skills and the instruction files from the

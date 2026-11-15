@@ -13,8 +13,8 @@ cannot express, and before encoding bytes, integers or host I/O in Omega.
 <!-- gen:pin -->
 | Pin (`PIN`) | Value |
 |---|---|
-| omega-mv commit | `2ee0a70d1830581b706f288e722f3329d51f3583` |
-| `seed/out/omc` sha256 | `26540e6de62402d5784b30b24d7c6faae488137c1f8a4b3e784fd0b5d5528991` |
+| omega-mv commit | `6c562dd1f7ab01fd9a2638e74a7330ec4c941ad8` |
+| `seed/out/omc` sha256 | `34d611ca0415eab1728d3234911d90e74af17ba9ab0c581d559f48274d7ca6d3` |
 | reference data | `data/reference.tsv`: omega-mcp's `data/reference.json` for this pin, with 201 keyword-table entries (80 host words), 30 compiler error codes, 14 traps and 13 topics |
 <!-- /gen:pin -->
 
@@ -161,8 +161,8 @@ with exit 105. The same `fnv1a32.om` prefixed with `target x86linux` printed `0b
 
 The omega MCP tools (`compile`, `run`, `explain_error`, `lookup`) report the compiler they run as
 `compiler_sha256`: read it from a trivial `compile` and compare it with this repository's `PIN` before
-trusting any MCP result. omega-mcp records its own source pin in its `PIN` file (Radicle
-`rad:z3e8UBQVfwEcESJrcTWEbyMAHWFBZ`); before its 2026-11-11 repin it pinned omega-mv `f4df8239`, omc
+trusting any MCP result. omega-mcp records its own source pin in its `PIN` file
+(`https://interplane.io/projects/omega-mcp/repo.git`); before its 2026-11-11 repin it pinned omega-mv `f4df8239`, omc
 `3ad9f10f…3194` (omega-mcp [#6](https://github.com/aien-dev/omega-mcp/pull/6), frozen GitHub history).
 On 2026-11-11 the server at the path agent configs named still reported omc `2c82480596bb…029f`
 (omega-mv `e5b32567`). Whenever a server reports
@@ -916,7 +916,7 @@ Main has since moved to the x86 integration compiler `62775d2a...712b` and then 
 Re-check recipe (read only, in a fresh clone, never in a shared working tree another agent may be using):
 
 ```sh
-git clone rad://z6do9WDBhuSnvopDkgFdFr1yWA62 omega-src
+git clone https://interplane.io/projects/omega-mv/repo.git omega-src
 git -C omega-src checkout f4df82394e35893dcf1354dda69a2fe028d94bc1
 git -C omega-src rev-parse HEAD
 sha256sum omega-src/seed/omc/omc.om omega-src/seed/out/omc
@@ -2485,7 +2485,7 @@ are `seed/omc/omc.om` at `9920aab1`.
    Python and call the result Omega. Say exactly which word or capacity is missing.
 5. Missing is not impossible, and it is not a stopping point. Drake's standing rule (2026-10-26):
    "If .om doesn't have a feature, you need to make that feature." Build it in Omega and land it on
-   omega-mv Radicle main (`rad:z6do9WDBhuSnvopDkgFdFr1yWA62`) with a receipt (`omega-harness` section
+   omega-mv main (`https://interplane.io/projects/omega-mv/repo.git`) with a receipt (`omega-harness` section
    6), coordinated with whoever owns the compiler lane at the time. The change names the
    hardware or OS need, the word and its types, refusal codes and a new error code if one is needed,
    gates with a negative control, parity against an independent oracle, and the matching update to

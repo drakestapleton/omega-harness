@@ -28,20 +28,17 @@ For the documented method and systems-software case study, see Gregory M. Kurtze
 
 ## Install
 
-One command installs the skills from Radicle `main` and records the head it installed in
+One command installs the skills from Interplane `main` and records the head it installed in
 `DIR/.installed-from-omega-harness`; the same command with `--check` exits 1 when `main` has moved past
 that head or an installed skill was edited:
 
 ```sh
-rad clone rad:z39gvwWsnkRZsAConQLjaKiNVLHfW omega-harness
-# or, without Radicle installed:
-git clone https://www.aienos.com/rad/z39gvwWsnkRZsAConQLjaKiNVLHfW.git omega-harness
+git clone https://interplane.io/projects/omega-harness/repo.git omega-harness
 omega-harness/tools/install.sh --skills ~/.agents/skills            # pick the directory for your agent
 omega-harness/tools/install.sh --skills ~/.agents/skills --check    # is the installed head current?
 ```
 
-`install.sh` takes `main` from Radicle itself (the local Radicle storage when it exists, else the HTTPS
-mirror), so the clone only provides the script. It replaces only this repository's skills in that
+`install.sh` takes `main` from that Interplane repository, so the clone only provides the script. It replaces only this repository's skills in that
 directory. On a Linux AArch64 machine with an overlay (`~/.config/omega-harness/local.rules`, never
 published), `tools/install.sh --omc OMC` also renders and installs the agents' instruction files that the
 overlay names (`omp` `RULES.md`, Claude Code `CLAUDE.md`, Codex and home `AGENTS.md`) from
@@ -49,7 +46,7 @@ overlay names (`omp` `RULES.md`, Claude Code `CLAUDE.md`, Codex and home `AGENTS
 from the landed head.
 
 **Interplane is the only forge (Drake, 2026-11-11).** This repository is shown at
-https://interplane.io/drakestapleton/omega-harness, and its Radicle `main` is the canonical source.
+https://interplane.io/drakestapleton/omega-harness, and its Interplane `main` is the canonical source.
 Never push to a GitHub remote, open or update a GitHub PR or issue, publish with `gh`, or cite a GitHub
 branch as current state. The `aien-dev` GitHub organization has been frozen since 2026-11-07; its
 `github.com/aien-dev/...` links below are historical citations of the commits they name, not live
@@ -136,13 +133,13 @@ in [`PIN`](PIN), then compiles and runs every program here and in `skills/*/exam
 <!-- gen:pin -->
 | Pin (`PIN`) | Value |
 |---|---|
-| omega-mv commit | `2ee0a70d1830581b706f288e722f3329d51f3583` |
-| `seed/out/omc` sha256 | `26540e6de62402d5784b30b24d7c6faae488137c1f8a4b3e784fd0b5d5528991` |
+| omega-mv commit | `6c562dd1f7ab01fd9a2638e74a7330ec4c941ad8` |
+| `seed/out/omc` sha256 | `34d611ca0415eab1728d3234911d90e74af17ba9ab0c581d559f48274d7ca6d3` |
 | reference data | `data/reference.tsv`: omega-mcp's `data/reference.json` for this pin, with 201 keyword-table entries (80 host words), 30 compiler error codes, 14 traps and 13 topics |
 <!-- /gen:pin -->
 
 ```sh
-git clone rad://z6do9WDBhuSnvopDkgFdFr1yWA62 omega-src
+git clone https://interplane.io/projects/omega-mv/repo.git omega-src
 git -C omega-src checkout "$(sed -n 's/^omega-mv //p' PIN)"
 sha256sum omega-src/seed/out/omc   # must equal the omc-sha256 line of PIN
 examples/gate.sh omega-src/seed/out/omc
@@ -154,7 +151,7 @@ It prints `PASS name` or `FAIL name: reason` per program and ends with a line li
 
 <!-- gen:gateline -->
 ```text
-GATE PASS examples=130 pass=130 fail=0 omc=26540e6de62402d5784b30b24d7c6faae488137c1f8a4b3e784fd0b5d5528991
+GATE PASS examples=130 pass=130 fail=0 omc=34d611ca0415eab1728d3234911d90e74af17ba9ab0c581d559f48274d7ca6d3
 ```
 <!-- /gen:gateline -->
 
@@ -172,10 +169,10 @@ Repinning is editing `PIN` and running `tools/regen.sh`. The agents' standing ru
 `rules/rules.txt`, rendered into each agent program's instruction file by `tools/rules.om`. What people
 and agents still write is prose: explanations, method, rules and dated observations with their
 evidence. When your change makes that prose untrue, rewrite it in the same piece of work and land it on
-Radicle `main` with a receipt (`examples/gate.sh` and `tools/check.sh` on a fresh clone of the exact
+Interplane `main` with a receipt (`examples/gate.sh` and `tools/check.sh` on a fresh clone of the exact
 head, the landing receipt, then the new head on https://interplane.io/drakestapleton/omega-harness).
-Never push to github.com. If you can't make the change, open a Radicle issue (`rad issue open`) saying
-what is now stale. `omega-harness` section 6 has the full map. Contributions follow the
+Never push to github.com. If you can't make the change, say what is now stale. `omega-harness` section 6
+has the full map. Contributions follow the
 [shared AIEN agent rules](https://www.aienos.com/agents/RULES.md).
 
 The [native GPU realization guidance](skills/omega-communication/SKILL.md#native-gpu-realization-records-2026-10-28) distinguishes quantization indexes, canonical artifact identity, session residency and independent qualification. It tracks the CUDApp #26 work without treating host fixtures or unmerged components as production admission.

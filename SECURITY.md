@@ -44,7 +44,7 @@ In scope:
 Out of scope:
 
 - The Omega compiler and runtime themselves; report those privately to the omega-mv maintainer
-  (Radicle `rad:z6do9WDBhuSnvopDkgFdFr1yWA62`, https://interplane.io/drakestapleton/omega-mv).
+  (`https://interplane.io/projects/omega-mv/repo.git`, https://interplane.io/drakestapleton/omega-mv).
 - Conversion between Omega and other languages; report that privately to the omega-bridge maintainer
   (https://interplane.io/drakestapleton/omega-bridge).
 - The agent harnesses that load these skills (omp, Claude Code, Codex and others), the Wolfram

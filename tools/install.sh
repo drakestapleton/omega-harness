@@ -1,5 +1,5 @@
 #!/bin/sh
-# install.sh: install omega-harness from Radicle main at a recorded head, or check an installation.
+# install.sh: install omega-harness from Interplane main at a recorded head, or check an installation.
 #
 #   tools/install.sh --skills DIR [--check] [--source URL] [--rev SHA]
 #       Copy every skills/<name>/ of main into DIR (other skills in DIR are left alone), remove a skill
@@ -10,7 +10,7 @@
 #       one install has recorded its head there.
 #   tools/install.sh --omc OMC|auto [--check] [--source URL] [--rev SHA] [--overlay FILE]
 #       On a Linux AArch64 host: build tools/rules with OMC (its sha256 must be PIN's; `auto` takes
-#       seed/out/omc at PIN's omega-mv commit from omega-mv's Radicle storage or mirror), then install
+#       seed/out/omc at PIN's omega-mv commit from the Interplane omega-mv repository), then install
 #       or check every skills directory and instruction file that FILE names (default
 #       ~/.config/omega-harness/local.rules; `skills DIR` and `target PROGRAM PATH` records). Each
 #       instruction file is rendered from rules/rules.txt plus FILE. A file kept by aien-keep (its
@@ -22,14 +22,15 @@
 #       a failure inside its install loop to the overlay's `alarm` file; earlier failures (clone, PIN,
 #       omc, overlay) are alarmed by the hook. Nothing runs on a clock or inside Radicle storage.
 #
-# SOURCE is the local Radicle storage of omega-harness when it exists, else the HTTPS mirror. --rev
+# SOURCE is the Interplane git repository of omega-harness. --rev
 # installs that commit instead of main's head (the post-landing hook passes the landed head).
+# The recorded install token still begins `rad:` plus the old repository id, so a check matches
+# copies installed before the forge move.
 # This file is invocation glue (clone, copy, compare, rename); what is generated and how is decided
 # by tools/rules.om. Exit 0 installed or current, 1 a check found a difference, 2 usage or a failed step.
 set -u
 PATH=$HOME/.local/bin:$PATH
 RID=z39gvwWsnkRZsAConQLjaKiNVLHfW
-STORE=${RAD_HOME:-$HOME/.radicle}/storage/$RID
 check=0 sdir= omc= overlay=$HOME/.config/omega-harness/local.rules source= rev=
 while [ $# -gt 0 ]; do
     case $1 in
@@ -39,13 +40,13 @@ while [ $# -gt 0 ]; do
         --omc) omc=${2:?}; shift ;;
         --overlay) overlay=${2:?}; shift ;;
         --source) source=${2:?}; shift ;;
-        *) sed -n '2,28s/^# \{0,1\}//p' "$0" >&2; exit 2 ;;
+        *) sed -n '2,30s/^# \{0,1\}//p' "$0" >&2; exit 2 ;;
     esac
     shift
 done
-[ -n "$sdir$omc" ] || { sed -n '2,28s/^# \{0,1\}//p' "$0" >&2; exit 2; }
+[ -n "$sdir$omc" ] || { sed -n '2,30s/^# \{0,1\}//p' "$0" >&2; exit 2; }
 if [ -z "$source" ]; then
-    if [ -d "$STORE" ]; then source=$STORE; else source=https://www.aienos.com/rad/$RID.git; fi
+    source=https://interplane.io/projects/omega-harness/repo.git
 fi
 unset GIT_DIR GIT_NAMESPACE GIT_WORK_TREE GIT_INDEX_FILE
 export GIT_TERMINAL_PROMPT=0
@@ -123,11 +124,9 @@ fi
 [ -f "$tmp/h/PIN" ] && [ -f "$tmp/h/tools/rules.om" ] ||
     { echo "install: $head has no PIN or tools/rules.om (install from a commit that has them)" >&2; exit 2; }
 if [ "$omc" = auto ]; then
-    # the compiler PIN names, taken from omega-mv's Radicle storage (or its HTTPS mirror)
-    mvrid=z6do9WDBhuSnvopDkgFdFr1yWA62
+    # the compiler PIN names, taken from the Interplane omega-mv repository
     mvrev=$(sed -n 's/^omega-mv //p' "$tmp/h/PIN")
-    mvs=${RAD_HOME:-$HOME/.radicle}/storage/$mvrid
-    [ -d "$mvs" ] || { git clone -q --bare --filter=blob:none "https://www.aienos.com/rad/$mvrid.git" "$tmp/mv" && mvs=$tmp/mv; }
+    git clone -q --bare "https://interplane.io/projects/omega-mv/repo.git" "$tmp/mv" && mvs=$tmp/mv
     git --git-dir "$mvs" cat-file blob "$mvrev:seed/out/omc" > "$tmp/omc" && chmod +x "$tmp/omc" ||
         { echo "install: cannot read seed/out/omc at omega-mv $mvrev" >&2; exit 2; }
     omc=$tmp/omc

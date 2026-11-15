@@ -27,7 +27,7 @@ Companion skills in this package:
 ## First-party mission orchestration: omega-mission (DRA-459)
 
 Factory Droid was retired by Drake on 2026-11-07. omega-mission (Radicle
-`rad:z6HYc7ot5JZD8FSfvU77pWdMUdru`; its current head is on its interplane.io page)
+`https://interplane.io/projects/omega-mission/repo.git`; its current head is on its interplane.io page)
 implements plan/check/step/verify/status/resume in seeded Omega, pinned to
 omega-mv 6fbc6cbe4bfa4092608e2b5f06d2e8f537893992 and omc SHA256
 cfd96b48b0460ab5557853d6856f9c741b96ac8d0d624e06198defb4cbfa0d8a.
@@ -60,10 +60,10 @@ This wording follows the method and systems-software case study documented by Gr
 **Interplane is the only forge (standing rule, Drake 2026-11-11: "No more GitHub? Everything goes to
 interplane.").** Interplane (https://interplane.io, which serves the Radicle repositories) is the
 canonical source. Never push to a GitHub remote, open or update a GitHub PR or issue, publish with `gh`,
-or cite a GitHub branch as current state. New work is a new Radicle repository or a landing on a
-repository's Radicle `main` with a receipt, and it is finished only when interplane.io shows it: give
+or cite a GitHub branch as current state. Radicle is retired (2026-11-13). New work lands on the
+repository's Interplane `main` with a receipt, and it is finished only when interplane.io shows it: give
 the page URL and its HTTP status (this repository: https://interplane.io/drakestapleton/omega-harness).
-Clone with `rad clone rad:<RID>` or `git clone https://www.aienos.com/rad/<RID>.git`. Every
+Clone with `git clone https://interplane.io/projects/<repo>/repo.git`. Every
 `github.com/aien-dev/...` link in these skills is a dated citation of the commit, PR, issue or run it
 names, history and never a place to work or a source of current state. Only Drake reverses this rule.
 
@@ -214,7 +214,7 @@ establish macOS host-word support. Positive runtime receipts below do not close
 this language gap.
 
 - First-party implementation belongs in `.om`. Existing C, Rust and shell are unfinished migration, not permission to add more foreign code. Never pass off a foreign implementation as generated code, vendor code, glue or an `.om` file.
-- When the language lacks something, build it (Drake's standing rule, 2026-10-26: "If .om doesn't have a feature, you need to make that feature"). Land it on omega-mv Radicle main (`rad:z6do9WDBhuSnvopDkgFdFr1yWA62`) with a receipt (section 6), coordinated with whoever owns the compiler lane, carrying the word or facility, its error code, gates with a negative control, parity against an independent oracle, and the guide update. Do not invent a word you have not implemented, and do not route around the gap with host code. Host code is a last resort only, recorded with its Omega successor and the omega-mv change that will replace it. A gap that needs a decision Drake has not made (for example heap or imports, omega-mv #793 and #795, frozen GitHub numbers kept as history) is put to him rather than built around.
+- When the language lacks something, build it (Drake's standing rule, 2026-10-26: "If .om doesn't have a feature, you need to make that feature"). Land it on omega-mv main (`https://interplane.io/projects/omega-mv/repo.git`) with a receipt (section 6), coordinated with whoever owns the compiler lane, carrying the word or facility, its error code, gates with a negative control, parity against an independent oracle, and the guide update. Do not invent a word you have not implemented, and do not route around the gap with host code. Host code is a last resort only, recorded with its Omega successor and the omega-mv change that will replace it. A gap that needs a decision Drake has not made (for example heap or imports, omega-mv #793 and #795, frozen GitHub numbers kept as history) is put to him rather than built around.
 - Seeded Omegese, compiled by `seed/out/omc`, is the forward language. The historical console syntax in `spec/omega-language-v0.md` and the C compiler checks are different things. As of omega-mv main `55f9b0af47de70a3d06357985cf99ae3e45c016f` (2026-10-25), the seeded compiler and its host and device words are on main. Any source saying they exist only on candidate branches is stale.
 - Do not promote design ambitions into supported syntax. Check the keyword table, typing and lowering, and the fixtures of the compiler you will actually run. Compiler limits are implementation limits at a pin, not permanent properties of Omega.
 - Optimize for verified programs produced per unit of inference cost on held-out tasks (first-attempt correctness, successful compilation, verified behavior, completion time, and total compute cost). Tokenization is not a language rule: fitting vocabulary to single tokens under a specific tokenizer is an empirical cost measurement, not a binding language constraint.
@@ -679,7 +679,7 @@ remain dated history.
 
 
 ```sh
-git clone rad://z6do9WDBhuSnvopDkgFdFr1yWA62 omega-src
+git clone https://interplane.io/projects/omega-mv/repo.git omega-src
 git -C omega-src checkout f4df82394e35893dcf1354dda69a2fe028d94bc1
 cd omega-src || exit 1
 git rev-parse HEAD
@@ -708,7 +708,7 @@ fi
   row for each distinct compiler change: the qty compiler and the check/next
   compiler have separate rows, even when they arrive in the same PR. A final
   matching row does not excuse omitting an intermediate compiler change.
-- **Seed-chain bootstrap challenge (merged in [omega-mv #863](https://github.com/aien-dev/omega-mv/pull/863), merge `52eba8831aa0b8db9fa2f2e13289920be4fa85f6`).** The public command that rebuilds omc from the 408-byte seed without rewriting tracked files is `git clone rad://z6do9WDBhuSnvopDkgFdFr1yWA62 omega-mv && cd omega-mv && sh seed/challenge/run.sh` (Radicle since 2026-11-07; the frozen GitHub URL is history). The script extracts `git archive 369dbc96` (seed/rung0..4, seed/omc) into `build/seed/challenge/src`, then builds seed0 → hex1 → asm2 → om4 → omc stage1/2/3, where each rung is built by the freshly built rung below it. It checks every input and rung against `seed/challenge/expected.txt`, whose values were read from the committed files with `git show <pin>:<path> | sha256sum` (omc `2c824805…`, 325,524 bytes). Exit codes: 0 `CHALLENGE PASS`, 1 FAIL, 2 usage, 3 NOT_RUN (not AArch64 Linux, or pin missing). In a `git clone --depth 1` the pin is missing; first run `git fetch --depth 1 origin 369dbc96daa1684db2d7c2c7085bbf16b3fd77ee` (omega-mv `seed/challenge/CHALLENGE.md`, commit `d764f076`). `--tree DIR` and `--expect FILE` run negative controls. Observed 2026-10-27: a pass on the Spark from a fresh clone of merged main `52eba883` (challenge 0.53 s wall, chain 362 ms), and a pass on GitHub `ubuntu-24.04-arm` (chain 359 ms) together with three controls that fail as required (tampered hex1, wrong omc value, forged log). The public runner and result inbox are in [aien-dev/omega-seed-challenge](https://github.com/aien-dev/omega-seed-challenge): `challenge.yml`, the "I reproduced it" issue form, and `results/*.log` checked by `check-result.sh`. A pass is a fixed-output reproducibility match. It is not general self-hosting and not diverse double compilation, and a log check proves consistency, not that the run happened.
+- **Seed-chain bootstrap challenge (merged in [omega-mv #863](https://github.com/aien-dev/omega-mv/pull/863), merge `52eba8831aa0b8db9fa2f2e13289920be4fa85f6`).** The public command that rebuilds omc from the 408-byte seed without rewriting tracked files is `git clone https://interplane.io/projects/omega-mv/repo.git omega-mv && cd omega-mv && sh seed/challenge/run.sh` (Radicle since 2026-11-07; the frozen GitHub URL is history). The script extracts `git archive 369dbc96` (seed/rung0..4, seed/omc) into `build/seed/challenge/src`, then builds seed0 → hex1 → asm2 → om4 → omc stage1/2/3, where each rung is built by the freshly built rung below it. It checks every input and rung against `seed/challenge/expected.txt`, whose values were read from the committed files with `git show <pin>:<path> | sha256sum` (omc `2c824805…`, 325,524 bytes). Exit codes: 0 `CHALLENGE PASS`, 1 FAIL, 2 usage, 3 NOT_RUN (not AArch64 Linux, or pin missing). In a `git clone --depth 1` the pin is missing; first run `git fetch --depth 1 origin 369dbc96daa1684db2d7c2c7085bbf16b3fd77ee` (omega-mv `seed/challenge/CHALLENGE.md`, commit `d764f076`). `--tree DIR` and `--expect FILE` run negative controls. Observed 2026-10-27: a pass on the Spark from a fresh clone of merged main `52eba883` (challenge 0.53 s wall, chain 362 ms), and a pass on GitHub `ubuntu-24.04-arm` (chain 359 ms) together with three controls that fail as required (tampered hex1, wrong omc value, forged log). The public runner and result inbox are in [aien-dev/omega-seed-challenge](https://github.com/aien-dev/omega-seed-challenge): `challenge.yml`, the "I reproduced it" issue form, and `results/*.log` checked by `check-result.sh`. A pass is a fixed-output reproducibility match. It is not general self-hosting and not diverse double compilation, and a log check proves consistency, not that the run happened.
 - Run the changed path and compare exact expected bytes, status and state; a successful compile proves nothing about behavior. Also exercise the failure or refusal boundary most likely to regress. If that is impractical, say exactly what was not run.
 - Run a negative control: change an expected value or feed invalid input, and confirm the check fails. A verifier that also accepts its negative control has not established anything.
 - Qualification case files (`.cases` in omega-mv) are executed by a conductor, not run directly. More than one conductor exists under `seed/qualification/`, and picking the wrong one looks like a failing gate. Read the conductor's `main` for its argument count first. Observed 2026-10-25 with compiler `734f0a39319fbfa930bcc62cb30dbf06d47d78e126372b74f5baf478e6126b61`: `seed/qualification/om2/gate.om` takes four arguments (`omc pinhash casesfile scratchdir`) and summarises as `OM2GATE PASS cases=N pass=N fail=N invalid=N not_run=N`; `seed/qualification/security673/gate669.om` accepts at most one argument and exits 90 under a four-argument call. A usage status such as 90 from a conductor is INVALID setup, never a qualified refusal.
@@ -1444,7 +1444,7 @@ Where prose lives:
 | Conversion, encoder or bridge behavior, or what it supports | the conversion note in `omega-harness` section 2, and the README |
 | Status vocabulary, receipts, report or handoff conventions, wire formats | `omega-communication` |
 | Repository purpose, ownership, names, archive state, plan authority, merge or Alpha policy, a resolved or new contradiction | `aien-repositories` |
-| Any project repository's purpose, status or links, or a new repository | that repository's row in `compiler/inventory.tsv` of the sovereign-intelligence Radicle repository (`rad:z2JJz4RDfZZxKGBLn6UhmW5p9VJQj`; columns name, rid, description; core tier in `compiler/order.tsv`), in the same piece of work. Heads and branches in its `repos.tsv`, README and served `/si` are generated from Radicle (since SI main `ba770327`, 2026-11-11); never type one |
+| Any project repository's purpose, status or links, or a new repository | that repository's row in `compiler/inventory.tsv` of the sovereign-intelligence repository (`https://interplane.io/projects/sovereign-intelligence/repo.git`; columns name, rid, description; core tier in `compiler/order.tsv`), in the same piece of work. Heads and branches in its `repos.tsv`, README and served `/si` are generated from Radicle (since SI main `ba770327`, 2026-11-11); never type one |
 | A new source of hardware facts, a new use of an NVIDIA SDK tool, or stored NVIDIA-tool output | that repository's `PROVENANCE.md`, and section 4 here if the rule changed |
 | A standing rule for agents | `rules/rules.txt` (public) or the machine's overlay (private or machine-specific) |
 
@@ -1454,8 +1454,8 @@ How to do it:
    untrue; do not just add a contradicting one.
 2. If an example or expected output changed, rerun it and record what you observed. Never copy a
    predicted result into the guide.
-3. Land on omega-harness Radicle main (`rad:z39gvwWsnkRZsAConQLjaKiNVLHfW`) with a receipt: on a fresh
-   `rad clone` of the exact head that fast-forwards from main, run `examples/gate.sh` and
+3. Land on omega-harness main (`https://interplane.io/projects/omega-harness/repo.git`) with a receipt: on a fresh
+   fresh clone of the exact head that fast-forwards from main, run `examples/gate.sh` and
    `tools/check.sh` with the pinned omc plus a wrong-compiler control, write the landing receipt
    (commands, exit codes, pins, log sha256) before the push, then confirm the new head on
    https://interplane.io/drakestapleton/omega-harness with its HTTP status. GitHub is not a route

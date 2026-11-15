@@ -108,7 +108,7 @@ There is no test suite. The only executable check is the example recipe from `RE
 "Check the examples yourself" (Linux AArch64 only), NOT_RUN while writing this document:
 
 ```sh
-git clone rad://z6do9WDBhuSnvopDkgFdFr1yWA62 omega-src
+git clone https://interplane.io/projects/omega-mv/repo.git omega-src
 git -C omega-src checkout f4df82394e35893dcf1354dda69a2fe028d94bc1
 sha256sum omega-src/seed/out/omc
 omega-src/seed/out/omc < skills/omega-encoding/examples/fnv1a32.om > fnv 2> fnv.err
@@ -137,7 +137,7 @@ controls. The clone above checks out the harness pin `f4df8239`; compare the pri
 ## Dependencies and provenance
 
 - No lockfile, no vendored code, no package dependencies.
-- The examples depend on omega-mv (cloned at run time from Radicle `rad:z6do9WDBhuSnvopDkgFdFr1yWA62`;
+- The examples depend on omega-mv (cloned at run time from `https://interplane.io/projects/omega-mv/repo.git`;
   the `aien-dev` GitHub organization is frozen since 2026-11-07) and a Linux AArch64 host.
 - `skills/wolfram-math/SKILL.md` relies on the hosted Wolfram MCP endpoint for agents' arithmetic.
 - `skills/lean-verify/SKILL.md` relies on Lean `v4.35.0`, Mathlib `v4.35.0` and `lean-lsp-mcp`

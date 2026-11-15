@@ -6,8 +6,7 @@ description: Portable guide to writing Omega (.om) programs that the seeded omc 
 # Writing Omega programs
 
 This guide is for any agent or person writing `.om` on any machine. It needs only a clone of
-omega-mv (`rad clone rad:z6do9WDBhuSnvopDkgFdFr1yWA62`, or `git clone
-https://www.aienos.com/rad/z6do9WDBhuSnvopDkgFdFr1yWA62.git`; browse it at
+omega-mv (`git clone https://interplane.io/projects/omega-mv/repo.git`; browse it at
 https://interplane.io/drakestapleton/omega-mv) and of this repository. The worked
 examples are rerun by [`examples/gate.sh`](../../examples/gate.sh), which accepts only the pinned
 compiler below. For compiler internals, register rules, wire formats and the reasons behind each rule,
@@ -16,8 +15,8 @@ read [`skills/omega-encoding/SKILL.md`](../omega-encoding/SKILL.md).
 <!-- gen:pin -->
 | Pin (`PIN`) | Value |
 |---|---|
-| omega-mv commit | `2ee0a70d1830581b706f288e722f3329d51f3583` |
-| `seed/out/omc` sha256 | `26540e6de62402d5784b30b24d7c6faae488137c1f8a4b3e784fd0b5d5528991` |
+| omega-mv commit | `6c562dd1f7ab01fd9a2638e74a7330ec4c941ad8` |
+| `seed/out/omc` sha256 | `34d611ca0415eab1728d3234911d90e74af17ba9ab0c581d559f48274d7ca6d3` |
 | reference data | `data/reference.tsv`: omega-mcp's `data/reference.json` for this pin, with 201 keyword-table entries (80 host words), 30 compiler error codes, 14 traps and 13 topics |
 <!-- /gen:pin -->
 
@@ -56,7 +55,7 @@ At `e5b32567`, write `while C bound N` with N at most 999999 and no `for ... bou
 ## 1. Compile and run
 
 ```sh
-git clone rad://z6do9WDBhuSnvopDkgFdFr1yWA62 omega-mv && cd omega-mv
+git clone https://interplane.io/projects/omega-mv/repo.git omega-mv && cd omega-mv
 git checkout "$(sed -n 's/^omega-mv //p' path/to/omega-harness/PIN)"
 sha256sum seed/out/omc      # must equal the omc-sha256 line of PIN; any other omc is refused by the gate
 sh seed/omega-from-seed.sh  # optional: rebuild omc from the 408-byte loader

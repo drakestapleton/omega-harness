@@ -4,7 +4,7 @@
 # With OMC (its sha256 must be PIN's omc-sha256) it builds tools/jflat.om, tools/guides.om and
 # tools/rules.om, then requires:
 #   data      data/reference.tsv is tools/jflat's flattening of the omega-mcp data/reference.json that
-#             data/SOURCE names (OMEGA_MCP: default its local Radicle storage, else the HTTPS mirror)
+#             data/SOURCE names (OMEGA_MCP: default the Interplane git repository)
 #   guides    `git ls-files | guides check` exits 0: every block matches its sources, nothing typed
 #   rules     `rules lint rules/rules.txt` exits 0, and rendering is deterministic
 # and that every check fails its negative control, on a scratch copy of the tracked files:
@@ -19,7 +19,6 @@ set -u
 [ "$#" -ge 1 ] || { sed -n '2,14s/^# \{0,1\}//p' "$0" >&2; exit 2; }
 omc=$1
 mcp=${2:-}
-RID=z3e8UBQVfwEcESJrcTWEbyMAHWFBZ
 [ -f PIN ] && [ -d tools ] || { echo "CHECK FAIL run in the omega-harness root" >&2; exit 2; }
 want=$(sed -n 's/^omc-sha256 //p' PIN)
 got=$(sha256sum "$omc" 2>/dev/null | cut -d' ' -f1)
@@ -41,8 +40,7 @@ expect() { if [ "$3" = "$2" ]; then ok "$1 (exit $3)"; else no "$1: exit $3, exp
 set -- $(cat data/SOURCE 2>/dev/null)
 if [ "$#" -ge 6 ]; then
     if [ -z "$mcp" ]; then
-        mcp=${RAD_HOME:-$HOME/.radicle}/storage/$RID
-        [ -d "$mcp" ] || mcp=https://www.aienos.com/rad/$RID.git
+        mcp=https://interplane.io/projects/omega-mcp/repo.git
     fi
     if git clone -q --bare "$mcp" "$tmp/mcp" 2>/dev/null && git --git-dir "$tmp/mcp" show "$3:$4" > "$tmp/ref.json" 2>/dev/null; then
         [ "$(sha256sum "$tmp/ref.json" | cut -d' ' -f1)" = "$6" ] && "$tmp/jflat" < "$tmp/ref.json" | cmp -s - data/reference.tsv

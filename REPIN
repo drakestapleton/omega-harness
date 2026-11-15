@@ -2,7 +2,7 @@ note How this repository moves to a new omega-mv pin, read by the landing tools'
 note lands a new seed/out/omc. PIN stays the only place the pin is written; the follower rewrites PIN, runs
 note tools/regen.sh (which needs omega-mcp's reference data for the same pin, hence the follows line), commits,
 note and lands only when examples/gate.sh and tools/check.sh pass on a fresh clone ("Keeping it current").
-follows rad:z3e8UBQVfwEcESJrcTWEbyMAHWFBZ
+follows https://interplane.io/projects/omega-mcp/repo.git
 regen sh tools/regen.sh "$OMC"
 gate examples bash examples/gate.sh "$OMC"
 gate check sh tools/check.sh "$OMC"
