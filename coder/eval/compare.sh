@@ -2,7 +2,8 @@
 # Compare the two eval arms: refuse unless their manifests are equal in every line but arm and prompt_sha256
 # (same model, seed, compiler, gate, fixtures, both prompt files, guard, error table, runner, tasks and session
 # program), then
-# print the raw per-task verdicts side by side, the totals and the ledger line.
+# print the raw per-task verdicts side by side, an AT_LIMIT line for each row bound by a session limit, the totals
+# and the ledger line.
 # usage: sh compare.sh OMEGA_OUTDIR CONTROL_OUTDIR
 # Exit 0 with the table; 1 when the arms are not comparable: different inputs, different or incomplete task
 # sets (every task in the task directory must be scored), or a row with an unknown verdict or a session rc
@@ -43,6 +44,14 @@ printf 'id\tomega\tcontrol\n'
 for id in $ids_o; do
 	printf '%s\t%s\t%s\n' "$id" "$(awk -F'\t' -v i="$id" '$1 == i { print $2 }' "$o/results.tsv")" \
 		"$(awk -F'\t' -v i="$id" '$1 == i { print $2 }' "$c/results.tsv")"
+done
+# Rows bound by a session limit (case.sh): the session was stopped by the timeout (rc 124) or the guard let it
+# finish only because it hit the stop limit. Listed so such a verdict is not read as a free answer.
+for d in "$o" "$c"; do
+	a=$(sed -n "s/^arm$tab//p" "$d/manifest.tsv")
+	tail -n +2 "$d/results.tsv" | awk -F'\t' -v a="$a" -v sl="$SESSION_STOP_LIMIT" '
+		$5 == "124" { print "AT_LIMIT " a " " $1 " session_rc=124 (timeout)" }
+		$7 + 0 >= sl + 0 { print "AT_LIMIT " a " " $1 " stop_refusals=" $7 " (stop limit " sl ")" }'
 done
 po=$(tail -n +2 "$o/results.tsv" | cut -f2 | grep -cx pass)
 pc=$(tail -n +2 "$c/results.tsv" | cut -f2 | grep -cx pass)

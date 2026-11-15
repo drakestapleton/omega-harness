@@ -60,13 +60,16 @@ by `omega_run` see a read-only root, so a program could read the task's files. B
 comparison is like for like, but a pass rate here is "pass with feedback from the scoring case", not a blind
 pass rate. Scoring does not trust the session: the runner compiles `main.om` with the pinned `omc`
 (non-zero exit or no file = compile-fail) and runs the om2 gate on the task's case line in a fresh
-scratch directory: PASS = pass, FAIL = wrong-output, past the deadline = timeout, killed by a signal = crash.
+scratch directory inside `bwrap` (read-only root, only the task's sandbox directory writable, no network, own
+pid namespace), since the gate is not a sandbox and the program is model-written: PASS = pass, FAIL = wrong-output, past the deadline = timeout, killed by a signal = crash.
 What is not the model's answer stops the run with exit 3 and no row, so a rerun retries the task: a session
 that ends with a code other than 0 or 124 (for example an unreachable model server), an `omc` or gate that
 cannot execute, a gate result with no verdict on the program (an unreadable fixture, scratch or exec
 failure), and a session that ended normally while the guard log shows no finish (the guard was not loaded) or
 shows a guard without the case file. The task directory is made absolute, since the gate reads the case line
-from `$OMEGA_HOME`; a task id with no directory is refused before anything is written. Session limits, the
+from `$OMEGA_HOME`; a task id with no directory, and a task or fixture file name with white space, are refused.
+The session's only time limit is the wall-clock timeout around `aien` (rc 124, scored); `aien`'s own
+`--max-time` is not used, since what it does at the limit is not known here. Session limits, the
 case deadline, the case line and the verdict words are in `eval/case.sh`.
 
 The runner cannot see which model `aien` serves or its sampling seed, so the operator states them in
@@ -78,7 +81,8 @@ the case line and the verdict words), the task files
 manifest differs is refused, and so is an `OUTDIR` with result rows but no manifest (rows scored with unknown
 inputs, such as those an older runner wrote). `sh coder/eval/compare.sh OMEGA_OUTDIR CONTROL_OUTDIR` refuses two arms whose
 manifests differ in anything but arm and the prompt that arm got, or whose scored task ids are not exactly the task
-directory's, or hold a row with an unknown verdict or a session code other than 0 or 124, then prints the raw per-task verdicts side by side, the
+directory's, or hold a row with an unknown verdict or a session code other than 0 or 124, then prints the raw per-task verdicts side by side, an `AT_LIMIT` line for each row stopped by the session
+timeout or bound by the stop limit, the
 totals and a `LEDGER` line. The guard is the same in both arms, so both get the compiler's error meaning and fix after each compile;
 only the prompt and the readable context differ. (Before 2026-11-15 the guard gave a shorter typed meaning
 table; no complete run exists from then to compare with.) A seed of `none` is recorded as such: that run

@@ -18,6 +18,7 @@ pin="$(cd "$(dirname "$0")/../.." && pwd)/PIN"
 sha=$(sed -n 's/^omc-sha256 //p' "$pin")
 [ -n "$sha" ] && [ "$(sha256sum "$home/omc" | cut -d' ' -f1)" = "$sha" ] || { echo "REFCHECK FAIL $home/omc is not the omc in $pin" >&2; exit 2; }
 command -v jq > /dev/null || { echo "REFCHECK FAIL jq not on PATH" >&2; exit 2; }
+command -v bwrap > /dev/null || { echo "REFCHECK FAIL bwrap not on PATH" >&2; exit 2; }
 for d in "$tasks" "$refs"; do [ -d "$d" ] || { echo "REFCHECK FAIL no directory $d" >&2; exit 2; }; done
 tasks=$(cd "$tasks" && pwd)
 refs=$(cd "$refs" && pwd)
@@ -41,8 +42,10 @@ for id in $(jq -r '.[].id' "$man"); do
 	[ "$(sha256sum < "$refs/$id.om" | cut -d' ' -f1)" = "$(echo "$row" | jq -r .ref_sha256)" ] || bad "$id reference sha256 differs from ref_sha256"
 	caseline "$id" "$refs/$id.om" "$t" >> "$work/cases.txt"
 done
-(cd "$home" && ./gate "$home/omc" "$sha" "$work/cases.txt" "$work/scratch") > "$work/gate.log" 2>&1
+mkdir "$work/sandbox"
+sandboxed_gate "$home" "$work/sandbox" "$home/omc" "$sha" "$work/cases.txt" "$work/sandbox/scratch" > "$work/gate.log" 2>&1
 grc=$?
-grep '^VERDICT ' "$work/gate.log" | grep -v '^VERDICT [^ ]* PASS' | sed 's/^/REFCHECK FAIL gate: /'
+notpass=$(grep '^VERDICT ' "$work/gate.log" | grep -v '^VERDICT [^ ]* PASS')
+[ -z "$notpass" ] || bad "gate verdicts: $notpass"
 [ "$grc" -eq 0 ] && grep -q "^OM2GATE PASS cases=$n " "$work/gate.log" || bad "gate rc $grc: $(grep '^OM2GATE ' "$work/gate.log")"
 if [ "$fail" -eq 0 ]; then echo "REFCHECK PASS n=$n omc=$sha"; else exit 1; fi

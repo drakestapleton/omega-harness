@@ -21,11 +21,14 @@ for a in "$@"; do [ -n "${last+x}" ] && args="$args${args:+ }$last"; last=$a; do
 printf '%s\n' "$last" > ../session-prompt.txt
 printf '%s\n' "$args" > ../session-args.txt
 # Guard log lines as the guard writes them at a finish (a mode file in this directory changes that: "nolog"
-# writes none, as when the guard is not loaded; "nocases" writes the line of a guard without OMEGA_CASES).
+# writes no log, as when the guard is not loaded; "nostop" logs a tool call but no finish; "nocases" writes the
+# finish line of a guard without OMEGA_CASES).
 # Known values for the raw columns: st3 has two refused finishes, st6 leaves junk.txt (and NOTES.md, which is
 # not counted), st2 takes at least one second.
 mode=$(cat "$here/mode" 2> /dev/null)
-if [ -n "${OMEGA_LOG:-}" ] && [ "$mode" != nolog ]; then
+if [ -n "${OMEGA_LOG:-}" ] && [ "$mode" = nostop ]; then
+	echo "x tool write allowed" >> "$OMEGA_LOG"
+elif [ -n "${OMEGA_LOG:-}" ] && [ "$mode" != nolog ]; then
 	[ "$id" = st3-exit ] && printf 'x stop refused #1: x\nx stop refused #2: x\n' >> "$OMEGA_LOG"
 	if [ "$mode" = nocases ]; then
 		echo "x stop allowed: every touched .om compiles; no OMEGA_CASES" >> "$OMEGA_LOG"

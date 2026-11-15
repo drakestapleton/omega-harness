@@ -28,6 +28,7 @@ got=$(sha256sum "$omc" | cut -d' ' -f1)
 [ "$got" = "$sha" ] || { echo "pinned omc mismatch: $omc sha256 $got, $pin says $sha" >&2; exit 2; }
 cmp -s "$pin" "$home/context/PIN" || { echo "pack built for another pin: rebuild $home/context with build-context.sh" >&2; exit 2; }
 command -v aien > /dev/null || { echo "aien not on PATH" >&2; exit 2; }
+command -v bwrap > /dev/null || { echo "bwrap not on PATH (the gate runs model-written programs inside it)" >&2; exit 2; }
 command -v jq > /dev/null || { echo "jq not on PATH (it quotes each task's standard input into the prompt)" >&2; exit 2; }
 # Case lines are read by the gate after cd "$home", so the task directory must be absolute.
 [ -d "$tasks" ] || { echo "no task directory $tasks" >&2; exit 2; }
@@ -53,6 +54,14 @@ out=$(cd "$out" && pwd)
 # from here (aien takes them from its own profile), so the operator states them: OMEGA_EVAL_MODEL (required,
 # the exact model id the aien profile serves) and OMEGA_EVAL_SEED (the sampling seed the profile fixes, or
 # "none" when it fixes none). The runner itself is hashed because it holds the prompt template and the limits.
+# File names with white space would split in hd(); refuse them rather than hash an error.
+for dd in "$tasks" "$home/seed/qualification/om2/fixtures"; do
+	[ -d "$dd" ] || continue
+	if find "$dd" | grep -q "[ $(printf '\t')]" || [ "$(find "$dd" | wc -l)" != "$(find "$dd" -exec printf '.\n' \; | wc -l)" ]; then
+		echo "a file name under $dd holds white space; rename it" >&2
+		exit 2
+	fi
+done
 h() { if [ -f "$1" ]; then sha256sum "$1" | cut -d' ' -f1; else echo absent; fi; }
 hd() { if [ -d "$1" ]; then (cd "$1" && find . -type f | LC_ALL=C sort | xargs sha256sum) | sha256sum | cut -d' ' -f1; else echo absent; fi; }
 # Both prompt files are recorded in every manifest (omega_prompt_sha256, control_prompt_sha256), so compare.sh
@@ -94,7 +103,7 @@ Write the program to main.om in the working directory, check it with omega_run, 
 	start=$(date +%s)
 	(cd "$d/work" && OMEGA_HOME="$home" OMEGA_PROMPT="$prompt_file" OMEGA_CONTEXT="$context" \
 		OMEGA_CASES="$d/cases.txt" OMEGA_STOP_LIMIT="$SESSION_STOP_LIMIT" OMEGA_LOG="$d/guard.log" \
-		timeout "$SESSION_TIMEOUT" aien --omega -p --mode json --max-time "$SESSION_MAX_TIME" --no-session "$prompt" \
+		timeout "$SESSION_TIMEOUT" aien --omega -p --mode json --no-session "$prompt" \
 		> "$d/transcript.jsonl" 2> "$d/stderr")
 	src=$?
 	# A session ends with 0, or 124 when timeout stops it. Anything else (126/127: it never started; another
@@ -132,8 +141,8 @@ Write the program to main.om in the working directory, check it with omega_run, 
 		if [ "$orc" -ne 0 ]; then
 			verdict=compile-fail
 		else
-			rm -rf "$d/scratch"
-			(cd "$home" && ./gate "$omc" "$sha" "$d/cases.txt" "$d/scratch") >> "$d/score.log" 2>&1
+			mkdir "$d/sandbox"
+			sandboxed_gate "$home" "$d/sandbox" "$omc" "$sha" "$d/cases.txt" "$d/sandbox/scratch" >> "$d/score.log" 2>&1
 			grc=$?
 			if [ "$grc" -eq 126 ] || [ "$grc" -eq 127 ]; then
 				echo "$id: gate could not run (rc $grc), see $d/score.log; no row written" >&2

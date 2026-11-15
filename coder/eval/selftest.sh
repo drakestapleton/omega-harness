@@ -7,15 +7,16 @@
 #   columns omc_rc, gate_rc, stop_refusals and non_om_files are as selftest/expect-raw.tsv says, wall_s a number
 #   (at least 1 for st2, where the stub sleeps a second);
 # - each session got its arm's prompt file and readable context (the pack, or an empty directory), a case
-#   file with case.sh's deadline, case.sh's stop limit, aien's arguments with case.sh's --max-time, and a task
-#   prompt holding that task's spec, its standard input (or "empty") and the instruction; the manifest records
-#   aien --version (the timeout around aien is covered by runner_sha256 only; the values themselves live in
-#   case.sh and are hashed, the test checks they reach the session);
-# - the scorer: the real gate's PASS and FAIL; a fake gate's deadline (timeout) and signal (crash) verdicts;
+#   file with case.sh's deadline, case.sh's stop limit, aien's arguments, and a task prompt holding that task's
+#   spec, its standard input (or "empty") and the instruction; the manifest records aien --version (the timeout
+#   around aien is covered by runner_sha256 only; the values live in case.sh and are hashed, the test checks they
+#   reach the session);
+# - the scorer runs the gate in the sandbox (no write outside it, loopback only); the real gate's PASS and FAIL; a fake gate's deadline (timeout) and signal (crash) verdicts;
 #   a gate with no verdict, a PASS line with a non-zero exit, an unreadable fixture, and an omc or gate that
 #   cannot execute each stop the run with exit 3 and no row for that task;
 # - a session that ends with rc 1 stops the run (exit 3, no row); rc 124 is scored; a session whose guard log
-#   shows no finish, or a guard without the case file, stops the run (exit 3, no row);
+#   is missing or shows no finish, or a guard without the case file, stops the run (exit 3, no row);
+# - a task file name with white space is refused;
 # - an id with no task directory is refused before anything is written; resume matches ids exactly;
 # - compare.sh prints exactly the expected per-task table, totals and LEDGER line, and refuses: swapped arms,
 #   different or incomplete or empty task sets, scored ids that are not the task directory's, a row with an unknown verdict or session rc, a control run with
@@ -27,7 +28,9 @@
 # - a missing model, a missing seed, missing jq, a pack built for another pin and a wrong compiler are each
 #   refused with exit 2 and nothing written (a different omc cannot reach the manifest: the pin check
 #   refuses it first);
-# - refcheck.sh passes good references and refuses a wrong reference, a reference whose sha256 is not the
+# - compare.sh marks rows at the stop limit or stopped by the timeout (AT_LIMIT) and no others;
+# - refcheck.sh refuses, with fake gates, a case count other than n, a PASS line with exit 1 and a FAIL verdict;
+#   it passes good references and refuses a wrong reference, a reference whose sha256 is not the
 #   manifest's, and a manifest whose expected_sha256, stdin_bytes, exit, spec or id differs for one task.
 # usage: OMEGA_HOME=... sh selftest.sh   (OMEGA_HOME as for run.sh: omc, gate, fixtures, context/)
 # Exit 0 only when every check passes.
@@ -83,7 +86,7 @@ for arm in omega control; do
 		check "$arm: $id task prompt holds its input" "$(grep -cxF "$line" "$tp")" 1
 		check "$arm: $id task prompt ends with the instruction" "$(tail -n 1 "$tp")" \
 			"Write the program to main.om in the working directory, check it with omega_run, and finish only when it is correct."
-		check "$arm: $id session arguments" "$(cat "$out/$arm/$id/session-args.txt")" "--omega -p --mode json --max-time $SESSION_MAX_TIME --no-session"
+		check "$arm: $id session arguments" "$(cat "$out/$arm/$id/session-args.txt")" "--omega -p --mode json --no-session"
 		check "$arm: $id case deadline" "$(head -n 1 "$out/$arm/$id/cases.txt")" "deadline $CASE_DEADLINE"
 		w=$(col "$out/$arm/results.tsv" "$id" 6)
 		check "$arm: $id wall seconds is a whole number" "$(case $w in ''|*[!0-9]*) echo "$w";; *) echo ok;; esac)" ok
@@ -131,6 +134,14 @@ sed "s/^st6-stdin$tab/st9-other$tab/" "$out/control/results.tsv" > "$out/cx/resu
 check "compare refuses scored tasks that are not the task directory's (same count)" "$(sh "$here/compare.sh" "$out/ox" "$out/cx" > /dev/null 2>&1; echo $?)" 1
 cx; awk -F'\t' 'BEGIN { OFS = "\t" } $1 == "st3-exit" { $5 = 1 } { print }' "$out/control/results.tsv" > "$out/cx/results.tsv"
 check "compare refuses a row with session rc 1" "$(cmpx "$out/cx")" 1
+cx; awk -F'\t' -v sl="$SESSION_STOP_LIMIT" 'BEGIN { OFS = "\t" } $1 == "st3-exit" { $7 = sl } { print }' "$out/control/results.tsv" > "$out/cx/results.tsv"
+sh "$here/compare.sh" "$out/omega" "$out/cx" > "$out/lim.log" 2>&1
+check "compare accepts a row at the stop limit" "$?" 0
+check "compare marks the row at the stop limit" "$(grep -c "^AT_LIMIT control st3-exit stop_refusals=$SESSION_STOP_LIMIT " "$out/lim.log")" 1
+cx; awk -F'\t' 'BEGIN { OFS = "\t" } $1 == "st3-exit" { $5 = 124 } { print }' "$out/control/results.tsv" > "$out/cx/results.tsv"
+sh "$here/compare.sh" "$out/omega" "$out/cx" > "$out/lim.log" 2>&1
+check "compare marks a row stopped by the timeout" "$(grep -c '^AT_LIMIT control st3-exit session_rc=124 ' "$out/lim.log")" 1
+check "no AT_LIMIT line when no row is at a limit" "$(grep -c '^AT_LIMIT' "$out/cmp.log")" 0
 cx; awk -F'\t' 'BEGIN { OFS = "\t" } $1 == "st3-exit" { $2 = "maybe" } { print }' "$out/control/results.tsv" > "$out/cx/results.tsv"
 check "compare refuses a row with an unknown verdict" "$(cmpx "$out/cx")" 1
 for k in $(cut -f1 "$out/control/manifest.tsv"); do
@@ -211,6 +222,15 @@ check "gate deadline: compile-fail stays compile-fail" "$(field "$out/g1/results
 fakegate "INVALID child signal; wait low byte=11" 3 "OM2GATE INVALID cases=1"
 run omega "$out/g2" "$out/h"
 check "gate signal scores crash" "$(field "$out/g2/results.tsv" st1-pass)" crash
+# the scorer's gate runs in the sandbox: a write outside its scratch fails and it sees no network but loopback
+copyhome
+printf '#!/bin/sh\nid=$(sed -n 2p "$3" | cut -d" " -f1)\ntouch "%s" 2> /dev/null\nwc -l < /proc/net/dev > "$(dirname "$4")/net"\necho "VERDICT $id PASS run exit=0"\necho "OM2GATE PASS cases=1"\nexit 0\n' "$out/escaped" > "$out/h/gate"
+chmod +x "$out/h/gate"
+run omega "$out/g6" "$out/h"
+check "sandboxed gate: run exit status" "$?" 0
+check "sandboxed gate: verdict" "$(field "$out/g6/results.tsv" st1-pass)" pass
+check "sandboxed gate cannot write outside its sandbox" "$([ -e "$out/escaped" ] && echo yes || echo no)" no
+check "sandboxed gate sees only loopback (2 header lines + lo)" "$(tr -d ' ' < "$out/g6/st1-pass/sandbox/net")" 3
 copyhome; printf '#!/bin/sh\nexit 0\n' > "$out/h/gate"; chmod +x "$out/h/gate"
 run omega "$out/g3" "$out/h"
 check "gate with no verdict stops the run" "$?" 3
@@ -230,7 +250,7 @@ check "omc not executable wrote no row" "$(rows "$out/x1")" 0
 copyhome; chmod -x "$out/h/gate"; run omega "$out/x2" "$out/h"
 check "gate not executable stops the run" "$?" 3
 check "gate not executable wrote no row" "$(rows "$out/x2")" 0
-for mode in nolog nocases; do
+for mode in nolog nostop nocases; do
 	rm -rf "$out/stub" && cp -r "$here/selftest" "$out/stub" && echo "$mode" > "$out/stub/mode"
 	run omega "$out/m$mode" "$home" selftest-stub none "" "" "$out/stub"
 	check "guard log $mode stops the run" "$?" 3
@@ -265,6 +285,12 @@ check "missing jq refused" "$?" 2
 check "missing jq: reason" "$(grep -c 'jq not on PATH' "$out/jqrun.log")" 1
 check "missing jq wrote nothing" "$([ -e "$out/jqrun" ] && echo yes || echo no)" no
 
+rm -rf "$out/t" && cp -r "$here/selftest/tasks" "$out/t" && echo x > "$out/t/st1-pass/a b"
+run omega "$out/ws" "$home" selftest-stub none "$out/t"
+check "a task file name with white space is refused" "$?" 2
+check "white space refusal: reason" "$(grep -c 'holds white space' "$out/ws.log")" 1
+check "white space refusal wrote no results" "$([ -e "$out/ws/results.tsv" ] && echo yes || echo no)" no
+
 mkdir -p "$out/pin"
 cp -r "$home/context" "$out/pin/context"
 cp "$home/gate" "$home/omc" "$out/pin/"
@@ -293,7 +319,7 @@ mkman() { # mkman: tasks.json for $out/rt with the sha256 of each reference in $
 			'{id: $id, spec: ($spec | rtrimstr("\n")), stdin_bytes: $n, expected_sha256: $e, exit: $x, ref_sha256: $r}'
 	done | jq -s . > "$out/rt.json"
 }
-refc() { OMEGA_HOME="$home" sh "$here/refcheck.sh" "$out/rt" "$out/rt.json" "$out/rr" > "$out/ref.log" 2>&1; echo $?; }
+refc() { OMEGA_HOME="${1:-$home}" sh "$here/refcheck.sh" "$out/rt" "$out/rt.json" "$out/rr" > "$out/ref.log" 2>&1; echo $?; }
 mkman
 check "refcheck passes good references" "$(refc)" 0
 check "refcheck PASS line" "$(grep -c '^REFCHECK PASS n=3 ' "$out/ref.log")" 1
@@ -308,6 +334,17 @@ for edit in '.expected_sha256 = "0"' '.stdin_bytes = 99' '.exit = 9' '.spec = "o
 done
 mkman
 check "refcheck passes again with the manifest restored" "$(refc)" 0
+# fake gates: refcheck must want every case to pass, the case count to be n, and exit 0
+fg() { copyhome; printf '#!/bin/sh\n%s\n' "$1" > "$out/h/gate"; chmod +x "$out/h/gate"; }
+allpass='for id in st1-pass st3-exit st6-stdin; do echo "VERDICT $id PASS"; done'
+fg "$allpass; echo 'OM2GATE PASS cases=3 '; exit 0"
+check "refcheck with a fake gate that passes all three" "$(refc "$out/h")" 0
+fg "$allpass; echo 'OM2GATE PASS cases=2 '; exit 0"
+check "refcheck refuses a gate case count other than n" "$(refc "$out/h")" 1
+fg "$allpass; echo 'OM2GATE PASS cases=3 '; exit 1"
+check "refcheck refuses a PASS line with gate exit 1" "$(refc "$out/h")" 1
+fg "echo 'VERDICT st1-pass FAIL'; echo 'VERDICT st3-exit PASS'; echo 'VERDICT st6-stdin PASS'; echo 'OM2GATE PASS cases=3 '; exit 0"
+check "refcheck refuses a FAIL verdict even under a PASS line" "$(refc "$out/h")" 1
 
 if [ "$fail" -eq 0 ]; then echo "SELFTEST PASS"; else echo "SELFTEST FAIL"; cat "$out/omega.log"; fi
 exit "$fail"
