@@ -1,0 +1,13 @@
+# arm	id	omc_rc	gate_rc	stop_refusals	non_om_files
+omega	st1-pass	0	0	0	0
+control	st1-pass	0	1	0	0
+omega	st2-wrong	0	1	0	0
+control	st2-wrong	0	1	0	0
+omega	st3-exit	0	0	2	0
+control	st3-exit	0	0	2	0
+omega	st4-badcompile	15	NA	0	0
+control	st4-badcompile	15	NA	0	0
+omega	st5-nofile	NA	NA	0	0
+control	st5-nofile	NA	NA	0	0
+omega	st6-stdin	0	0	0	1
+control	st6-stdin	0	0	0	1

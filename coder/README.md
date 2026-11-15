@@ -13,6 +13,10 @@ scripts. "Only Omega" is enforced by the harness and the compiler, not by model 
 | `build-context.sh` | Builds the context pack: `OMEGA.md` = rules + `skills/omega-encoding` sections 2-11 (citation links stripped) + observed facts + the examples it lists, each of which must compile with the pinned `omc`; `CONTROL.md` = rules only; `PIN` (a copy of the repository's `PIN`) and `errors.tsv` (meaning and fix of each error code, from `data/reference.tsv`, which must be for the same pin), both read by the guard. Refuses an `omc` that is not the one `PIN` names. |
 | `eval/` | Held-out eval: the tasks in `tasks/ID/{spec.md,stdin,expected.out,expected.exit}`, manifest `tasks.json`, runner `run.sh`, `refcheck.sh` (tasks and held-out references checked at the pin before a run), `compare.sh` (checks the two arms were measured alike, prints per-task verdicts and the ledger line) and `selftest.sh` (all of it checked with a stub session on synthetic tasks in `selftest/`, no model needed). |
 
+The guard is TypeScript because `omp` extensions are TypeScript; the builders and the eval scripts are POSIX
+shell glue around the pinned `omc` and the om2 gate, which do all the checking (harness tooling under the Python
+boundary rule, not product code).
+
 ## Environment read by the guard
 
 | Variable | Default | Meaning |
@@ -50,7 +54,11 @@ advisors off and no other providers so the session cannot fall back to another m
 `sh coder/eval/run.sh omega|control OUTDIR coder/eval/tasks` runs every task in a fresh empty
 directory, one after another. The `control` arm keeps the model, tools, guard and check loop and swaps
 the system prompt for `CONTROL.md` with an empty readable context, so the only variable is the Omega
-context. Scoring does not trust the session: the runner compiles `main.om` with the pinned `omc`
+context. The session is not blind to the scoring case: with `OMEGA_CASES` set, the guard runs that case when
+the session tries to finish and shows it the gate's verdict (up to `OMEGA_STOP_LIMIT` times), and programs run
+by `omega_run` see a read-only root, so a program could read the task's files. Both arms get the same, so the
+comparison is like for like, but a pass rate here is "pass with feedback from the scoring case", not a blind
+pass rate. Scoring does not trust the session: the runner compiles `main.om` with the pinned `omc`
 (non-zero exit or no file = compile-fail) and runs the om2 gate on the task's case line in a fresh
 scratch directory: PASS = pass, FAIL = wrong-output, past the deadline = timeout, killed by a signal = crash.
 What is not the model's answer stops the run with exit 3 and no row, so a rerun retries the task: a session
@@ -61,9 +69,11 @@ failure). The task directory is made absolute, since the gate reads the case lin
 The runner cannot see which model `aien` serves or its sampling seed, so the operator states them in
 `OMEGA_EVAL_MODEL` (required) and `OMEGA_EVAL_SEED` (required; `none` when the profile fixes no seed). It
 writes `OUTDIR/manifest.tsv`: arm, model, seed, and the sha256 of the compiler, gate, gate fixtures, the prompt
-this arm got and both prompt files (so the rules text must match across arms), guard, error table, the runner itself (it holds the prompt template and the session limits), the task files
+this arm got and both prompt files (so the rules text must match across arms), guard, error table, the runner (`run.sh` with `case.sh`, which hold the prompt template, the session limits,
+the case line and the verdict words), the task files
 (name and digest of each) and their count, and the `aien` program, with `aien --version`. A resume into an `OUTDIR` whose
-manifest differs is refused. `sh coder/eval/compare.sh OMEGA_OUTDIR CONTROL_OUTDIR` refuses two arms whose
+manifest differs is refused, and so is an `OUTDIR` with result rows but no manifest (rows scored with unknown
+inputs, such as those an older runner wrote). `sh coder/eval/compare.sh OMEGA_OUTDIR CONTROL_OUTDIR` refuses two arms whose
 manifests differ in anything but arm and the prompt that arm got, or whose results miss a task of the task
 directory or hold a row with an unknown verdict or a session code other than 0 or 124, then prints the raw per-task verdicts side by side, the
 totals and a `LEDGER` line. The guard is the same in both arms, so both get the compiler's error meaning and fix after each compile;

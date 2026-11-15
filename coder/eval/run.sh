@@ -12,6 +12,7 @@
 # Per task: OUTDIR/ID/{work/,cases.txt,transcript.jsonl,stderr,guard.log,score.log}; summary OUTDIR/results.tsv;
 # inputs (compiler, gate, prompt, guard, tasks, session program) OUTDIR/manifest.tsv.
 set -u
+. "$(dirname "$0")/case.sh"
 arm=${1:?arm: omega or control}
 out=${2:?outdir}
 tasks=${3:?taskdir}
@@ -56,8 +57,13 @@ hd() { if [ -d "$1" ]; then (cd "$1" && find . -type f | LC_ALL=C sort | xargs s
 manifest=$(printf 'arm\t%s\nmodel\t%s\nseed\t%s\nomc_sha256\t%s\ngate_sha256\t%s\nfixtures_sha256\t%s\nprompt_sha256\t%s\nomega_prompt_sha256\t%s\ncontrol_prompt_sha256\t%s\nguard_sha256\t%s\nerrors_sha256\t%s\nrunner_sha256\t%s\ntasks_sha256\t%s\ntasks_count\t%s\naien\t%s\naien_version\t%s\n' \
 	"$arm" "$model" "$seed" "$sha" "$(h "$home/gate")" "$(hd "$home/seed/qualification/om2/fixtures")" "$(h "$prompt_file")" \
 	"$(h "$home/context/OMEGA.md")" "$(h "$home/context/CONTROL.md")" \
-	"$(h "$home/omega-guard.ts")" "$(h "$home/context/errors.tsv")" "$(h "$0")" "$(hd "$tasks")" "$(ls "$tasks" | wc -l | tr -d ' ')" \
+	"$(h "$home/omega-guard.ts")" "$(h "$home/context/errors.tsv")" "$(cat "$0" "$(dirname "$0")/case.sh" | sha256sum | cut -d' ' -f1)" "$(hd "$tasks")" "$(ls "$tasks" | wc -l | tr -d ' ')" \
 	"$(h "$(command -v aien)")" "$(aien --version 2>&1 | head -n 1)")
+# Rows with no manifest were scored with unknown inputs (an older runner wrote results.tsv alone): never adopt them.
+if [ ! -f "$out/manifest.tsv" ] && [ -f "$out/results.tsv" ] && [ "$(wc -l < "$out/results.tsv")" -gt 1 ]; then
+	echo "$out/results.tsv has rows but no manifest.tsv: scored with unknown inputs; use a new OUTDIR" >&2
+	exit 2
+fi
 if [ -f "$out/manifest.tsv" ]; then
 	[ "$manifest" = "$(cat "$out/manifest.tsv")" ] ||
 		{ echo "resume with different inputs; diff $out/manifest.tsv against:" >&2; echo "$manifest" >&2; exit 2; }
@@ -73,8 +79,7 @@ for id in $ids; do
 	d="$out/$id"
 	rm -rf "$d"
 	mkdir -p "$d/work"
-	printf 'deadline 10\n%s run %s/work/main.om file:%s/stdin file:%s/expected.out - %s\n' \
-		"$id" "$d" "$t" "$t" "$(cat "$t/expected.exit")" > "$d/cases.txt"
+	{ echo "deadline $CASE_DEADLINE"; caseline "$id" "$d/work/main.om" "$t"; } > "$d/cases.txt"
 	if [ -s "$t/stdin" ]; then
 		input="Standard input for the check (JSON string): $(jq -Rs . < "$t/stdin")"
 	else

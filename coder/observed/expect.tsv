@@ -2,4 +2,4 @@
 struct_after_fn.om	9	-
 between_fns.om	0	0
 else_nested.om	0	7
-no_elif.om	17	-
+elif_is_assignment.om	0	2

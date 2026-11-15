@@ -2,7 +2,8 @@
 # Stub session program for selftest.sh only: stands in for `aien --omega` so the runner and scorer can be
 # checked without a model. It records what the session was given in ../session.txt (outside the scored work
 # directory): sha256 of OMEGA_PROMPT, OMEGA_CONTEXT and its entry count, whether OMEGA_CASES exists and
-# OMEGA_STOP_LIMIT; the task prompt (its last argument) goes to ../session-prompt.txt.
+# OMEGA_STOP_LIMIT; the task prompt (its last argument) goes to ../session-prompt.txt and the other arguments
+# to ../session-args.txt.
 # Then it writes a program to ./main.om (ID = the task directory): src-control/ID.om when the prompt is
 # CONTROL.md and that file exists, else src/ID.om, else nothing.
 [ "${1:-}" = --version ] && { echo "selftest-stub 1"; exit 0; }
@@ -15,8 +16,15 @@ id=$(basename "$(dirname "$(pwd)")")
 	if [ -n "${OMEGA_CASES:-}" ] && [ -s "$OMEGA_CASES" ]; then echo "cases yes"; else echo "cases no"; fi
 	echo "stop_limit ${OMEGA_STOP_LIMIT:-unset}"
 } > ../session.txt
-for a in "$@"; do last=$a; done
+args=
+for a in "$@"; do [ -n "${last+x}" ] && args="$args${args:+ }$last"; last=$a; done
 printf '%s\n' "$last" > ../session-prompt.txt
+printf '%s\n' "$args" > ../session-args.txt
+# Known values for the raw columns: st3 has two refused finishes in the guard log, st6 leaves a non-.om file,
+# st2 takes at least one second.
+[ "$id" = st3-exit ] && [ -n "${OMEGA_LOG:-}" ] && printf 'x stop refused\nx stop refused\n' >> "$OMEGA_LOG"
+[ "$id" = st6-stdin ] && echo junk > junk.txt
+[ "$id" = st2-wrong ] && sleep 1
 src="$here/src/$id.om"
 [ "$(basename "${OMEGA_PROMPT:-}")" = CONTROL.md ] && [ -f "$here/src-control/$id.om" ] && src="$here/src-control/$id.om"
 [ -f "$src" ] && cp "$src" main.om

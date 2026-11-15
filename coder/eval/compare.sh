@@ -8,6 +8,7 @@
 # sets (every task in the task directory must be scored), or a row with an unknown verdict or a session rc
 # other than 0 or 124.
 set -u
+. "$(dirname "$0")/case.sh"
 o=${1:?omega outdir}
 c=${2:?control outdir}
 tab=$(printf '\t')
@@ -31,9 +32,9 @@ n=$(echo "$ids_o" | wc -l | tr -d ' ')
 want=$(sed -n "s/^tasks_count$tab//p" "$o/manifest.tsv")
 [ "$n" = "$want" ] || { echo "COMPARE FAIL $n tasks scored, the task directory holds $want: finish both arms first" >&2; exit 1; }
 for d in "$o" "$c"; do
-	bad=$(tail -n +2 "$d/results.tsv" | awk -F'\t' '
-		($2 != "pass" && $2 != "wrong-output" && $2 != "timeout" && $2 != "crash" && $2 != "compile-fail") ||
-		($5 != "0" && $5 != "124") { print $1 }')
+	bad=$(tail -n +2 "$d/results.tsv" | awk -F'\t' -v vs="$VERDICTS" '
+		BEGIN { n = split(vs, a, " "); for (i = 1; i <= n; i++) ok[a[i]] = 1 }
+		!($2 in ok) || ($5 != "0" && $5 != "124") { print $1 }')
 	[ -z "$bad" ] || { echo "COMPARE FAIL $d/results.tsv has rows with an unknown verdict or a session rc other than 0/124:" $bad >&2; exit 1; }
 done
 printf 'id\tomega\tcontrol\n'

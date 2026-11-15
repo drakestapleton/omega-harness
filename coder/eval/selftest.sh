@@ -3,9 +3,13 @@
 # (selftest/aien) records what each session was given (system prompt file, readable context, case file,
 # stop limit, task prompt) and leaves a program as main.om: selftest/src/ID.om, or selftest/src-control/ID.om
 # in the control arm, so the arms differ. Checked:
-# - every task scores as selftest/expect.tsv says, per arm, also when TASKDIR is a relative path;
+# - every task scores as selftest/expect.tsv says, per arm, also when TASKDIR is a relative path, and the raw
+#   columns omc_rc, gate_rc, stop_refusals and non_om_files are as selftest/expect-raw.tsv says, wall_s a number
+#   (at least 1 for st2, where the stub sleeps a second);
 # - each session got its arm's prompt file and readable context (the pack, or an empty directory), a case
-#   file, stop limit 5, and a task prompt holding that task's spec and its standard input (or "empty");
+#   file with deadline 10, stop limit 5, the aien arguments, and a task prompt holding that task's spec, its
+#   standard input (or "empty") and the instruction; the manifest records aien --version (the timeout and
+#   --max-time wrapper is covered by runner_sha256 only);
 # - the scorer: the real gate's PASS and FAIL; a fake gate's deadline (timeout) and signal (crash) verdicts;
 #   a gate with no verdict, a PASS line with a non-zero exit, an unreadable fixture, and an omc or gate that
 #   cannot execute each stop the run with exit 3 and no row for that task;
@@ -13,9 +17,10 @@
 # - compare.sh prints exactly the expected per-task table, totals and LEDGER line, and refuses: swapped arms,
 #   different or incomplete or empty task sets, a row with an unknown verdict or session rc, a control run with
 #   other rules text, and a difference in any one manifest key other than arm and prompt_sha256;
-# - a rerun exits 0 and adds no row, and re-runs a task whose row is missing; a rerun with any one input
-#   changed (model, seed, gate, gate fixtures, prompt, guard, error table, runner, tasks, session program) is
-#   refused with exit 2 and adds no row;
+# - a rerun exits 0 and adds no row, and re-runs a task whose row is missing from a clean directory and guard
+#   log; a rerun with any one input changed (model, seed, gate, gate fixtures, prompt, guard, error table,
+#   run.sh, case.sh, tasks, session program) is refused with exit 2 and adds no row; rows without a manifest
+#   are refused; the verdict words in run.sh are case.sh's VERDICTS;
 # - a missing model, a missing seed, missing jq, a pack built for another pin and a wrong compiler are each
 #   refused with exit 2 and nothing written (a different omc cannot reach the manifest: the pin check
 #   refuses it first);
@@ -72,7 +77,20 @@ for arm in omega control; do
 			line="Standard input for the check is empty."
 		fi
 		check "$arm: $id task prompt holds its input" "$(grep -cxF "$line" "$tp")" 1
+		check "$arm: $id task prompt ends with the instruction" "$(tail -n 1 "$tp")" \
+			"Write the program to main.om in the working directory, check it with omega_run, and finish only when it is correct."
+		check "$arm: $id session arguments" "$(cat "$out/$arm/$id/session-args.txt")" "--omega -p --mode json --max-time 600 --no-session"
+		check "$arm: $id case deadline" "$(head -n 1 "$out/$arm/$id/cases.txt")" "deadline 10"
+		w=$(col "$out/$arm/results.tsv" "$id" 6)
+		check "$arm: $id wall seconds is a whole number" "$(case $w in ''|*[!0-9]*) echo "$w";; *) echo ok;; esac)" ok
 	done
+	while IFS="$tab" read -r a id orc grc ref non; do
+		[ "$a" = "$arm" ] || continue
+		check "$arm: $id raw columns omc_rc gate_rc stop_refusals non_om_files" \
+			"$(awk -F'\t' -v k="$id" '$1 == k { print $3, $4, $7, $8 }' "$out/$arm/results.tsv")" "$orc $grc $ref $non"
+	done < "$here/selftest/expect-raw.tsv"
+	check "$arm: manifest aien_version" "$(field "$out/$arm/manifest.tsv" aien_version)" "selftest-stub 1"
+	check "$arm: st2-wrong wall seconds at least 1 (the stub sleeps 1)" "$([ "$(col "$out/$arm/results.tsv" st2-wrong 6)" -ge 1 ] && echo yes)" yes
 done
 check "omega: readable context is not empty" "$([ "$(sed -n 's/^context_entries //p' "$out/omega/st1-pass/session.txt")" -gt 0 ] && echo yes)" yes
 check "control: readable context is empty" "$(sed -n 's/^context_entries //p' "$out/control/st1-pass/session.txt")" 0
@@ -118,11 +136,20 @@ run control "$out/ctl2" "$out/h"
 check "control run with other rules text: exit status" "$?" 0
 check "compare refuses a control run with other rules text" "$(cmpx "$out/ctl2")" 1
 
-# resume: unchanged inputs go on and fill in a missing row; any one changed input is refused
+# resume: unchanged inputs go on and fill in a missing row from a clean task directory; any one changed input
+# is refused; rows without a manifest are never adopted
 grep -v "^st3-exit$tab" "$out/omega/results.tsv" > "$out/m" && cp "$out/m" "$out/omega/results.tsv"
+echo stale > "$out/omega/st3-exit/work/NOTES.md"; echo stale > "$out/omega/st3-exit/work/stale.om"
 run omega "$out/omega" "$home"
 check "resume exit status" "$?" 0
 check "resume re-runs the task with no row" "$(field "$out/omega/results.tsv" st3-exit)" pass
+check "re-run task starts from a clean directory" "$(ls "$out/omega/st3-exit/work")" main.om
+check "re-run task starts with a fresh guard log" "$(col "$out/omega/results.tsv" st3-exit 7)" 2
+mkdir -p "$out/legacy" && printf 'id\tverdict\nst1-pass\twrong-output\n' > "$out/legacy/results.tsv"
+run omega "$out/legacy" "$home"
+check "rows without a manifest refused" "$?" 2
+check "rows without a manifest: reason" "$(grep -c 'has rows but no manifest' "$out/legacy.log")" 1
+check "rows without a manifest: no manifest written" "$([ -e "$out/legacy/manifest.tsv" ] && echo yes || echo no)" no
 check "resume rows" "$(rows "$out/omega")" "$ntasks"
 run omega "$out/omega" "$home"
 check "second resume exit status" "$?" 0
@@ -142,10 +169,18 @@ fresh; copyhome; echo '// x' >> "$out/h/omega-guard.ts"; run omega "$out/r" "$ou
 fresh; copyhome; echo '99	x' >> "$out/h/context/errors.tsv"; run omega "$out/r" "$out/h"; r=$?; refused errors
 fresh; rm -rf "$out/t" && cp -r "$here/selftest/tasks" "$out/t" && echo x >> "$out/t/st1-pass/spec.md"
 run omega "$out/r" "$home" selftest-stub none "$out/t"; r=$?; refused tasks
-fresh; mkdir -p "$out/tree/coder/eval" && cp "$here/../../PIN" "$out/tree/PIN" && { cat "$here/run.sh"; echo '# x'; } > "$out/tree/coder/eval/run.sh"
+mktree() { rm -rf "$out/tree" && mkdir -p "$out/tree/coder/eval" && cp "$here/../../PIN" "$out/tree/PIN" && cp "$here/run.sh" "$here/case.sh" "$out/tree/coder/eval/"; }
+fresh; mktree; echo '# x' >> "$out/tree/coder/eval/run.sh"
 run omega "$out/r" "$home" selftest-stub none "" "$out/tree/coder/eval/run.sh"; r=$?; refused runner
+fresh; mktree; echo '# x' >> "$out/tree/coder/eval/case.sh"
+run omega "$out/r" "$home" selftest-stub none "" "$out/tree/coder/eval/run.sh"; r=$?; refused "case.sh"
 fresh; rm -rf "$out/stub" && cp -r "$here/selftest" "$out/stub" && echo '# x' >> "$out/stub/aien"
 run omega "$out/r" "$home" selftest-stub none "" "" "$out/stub"; r=$?; refused "session program"
+
+# the verdict words run.sh can write are exactly case.sh's VERDICTS (compare.sh and refcheck.sh read case.sh)
+. "$here/case.sh"
+check "run.sh verdicts are case.sh VERDICTS" "$(grep -o 'verdict=[a-z-][a-z-]*' "$here/run.sh" | sed 's/verdict=//' | LC_ALL=C sort -u | tr '\n' ' ')" \
+	"$(echo $VERDICTS | tr ' ' '\n' | LC_ALL=C sort | tr '\n' ' ')"
 
 # the scorer: verdicts the program earns, and machine failures that stop the run
 fakegate() { # fakegate VERDICT-TEXT EXIT [FINAL-LINE]: a gate that answers every case with that verdict

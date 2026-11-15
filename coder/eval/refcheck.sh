@@ -6,9 +6,10 @@
 #   REFDIR    ID.om for every task (the references are not in this repository)
 # Refuses unless the manifest ids are exactly the task directories, each task's files match the manifest,
 # each reference's sha256 is the manifest's ref_sha256, and every reference passes its case line (the
-# same line run.sh writes) through the om2 gate with the pinned omc. Prints REFCHECK PASS n=N (exit 0) or
+# same line run.sh writes, from case.sh) through the om2 gate with the pinned omc. Prints REFCHECK PASS n=N (exit 0) or
 # REFCHECK FAIL with the reasons (exit 1); exit 2 on a usage or pin error.
 set -u
+. "$(dirname "$0")/case.sh"
 tasks=${1:?taskdir}
 man=${2:?tasks.json}
 refs=${3:?refdir}
@@ -25,7 +26,7 @@ bad() { echo "REFCHECK FAIL $*"; fail=1; }
 [ "$(jq -r '.[].id' "$man" | LC_ALL=C sort)" = "$(ls "$tasks" | LC_ALL=C sort)" ] || bad "manifest ids are not the task directories"
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
-echo 'deadline 10' > "$work/cases.txt"
+echo "deadline $CASE_DEADLINE" > "$work/cases.txt"
 n=0
 for id in $(jq -r '.[].id' "$man"); do
 	t="$tasks/$id"
@@ -38,7 +39,7 @@ for id in $(jq -r '.[].id' "$man"); do
 	[ "$(cat "$t/spec.md")" = "$(echo "$row" | jq -r .spec)" ] || bad "$id spec.md differs from spec"
 	if [ ! -f "$refs/$id.om" ]; then bad "$id no reference $refs/$id.om"; continue; fi
 	[ "$(sha256sum < "$refs/$id.om" | cut -d' ' -f1)" = "$(echo "$row" | jq -r .ref_sha256)" ] || bad "$id reference sha256 differs from ref_sha256"
-	printf '%s run %s/%s.om file:%s/stdin file:%s/expected.out - %s\n' "$id" "$refs" "$id" "$t" "$t" "$(cat "$t/expected.exit")" >> "$work/cases.txt"
+	caseline "$id" "$refs/$id.om" "$t" >> "$work/cases.txt"
 done
 (cd "$home" && ./gate "$home/omc" "$sha" "$work/cases.txt" "$work/scratch") > "$work/gate.log" 2>&1
 grc=$?
