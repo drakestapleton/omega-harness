@@ -1,1 +1,1 @@
-Copy standard input to standard output. Exit status 0.
+Copy standard input to standard output with the case of each letter swapped (a to A, A to a). Exit status 0.

@@ -31,6 +31,8 @@ ids_c=$(tail -n +2 "$c/results.tsv" | cut -f1 | LC_ALL=C sort)
 n=$(echo "$ids_o" | wc -l | tr -d ' ')
 want=$(sed -n "s/^tasks_count$tab//p" "$o/manifest.tsv")
 [ "$n" = "$want" ] || { echo "COMPARE FAIL $n tasks scored, the task directory holds $want: finish both arms first" >&2; exit 1; }
+[ "$(echo $ids_o)" = "$(sed -n "s/^task_ids$tab//p" "$o/manifest.tsv")" ] ||
+	{ echo "COMPARE FAIL the scored tasks are not the tasks in the task directory" >&2; exit 1; }
 for d in "$o" "$c"; do
 	bad=$(tail -n +2 "$d/results.tsv" | awk -F'\t' -v vs="$VERDICTS" '
 		BEGIN { n = split(vs, a, " "); for (i = 1; i <= n; i++) ok[a[i]] = 1 }

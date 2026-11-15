@@ -41,10 +41,13 @@ omega) prompt_file="$home/context/OMEGA.md"; context="$home/context" ;;
 control) prompt_file="$home/context/CONTROL.md" ;;
 *) echo "arm must be omega or control" >&2; exit 2 ;;
 esac
+ids=${*:-$(ls "$tasks")}
+for id in $ids; do
+	[ -d "$tasks/$id" ] || { echo "no task $id in $tasks" >&2; exit 2; }
+done
 mkdir -p "$out" "$out/empty-context"
 out=$(cd "$out" && pwd)
 [ "$arm" = control ] && context="$out/empty-context"
-ids=${*:-$(ls "$tasks")}
 # What this run was measured with. A resumed run must match the manifest it started with, and compare.sh
 # refuses two arms whose manifests differ in anything but arm and prompt. The model and seed cannot be read
 # from here (aien takes them from its own profile), so the operator states them: OMEGA_EVAL_MODEL (required,
@@ -54,10 +57,10 @@ h() { if [ -f "$1" ]; then sha256sum "$1" | cut -d' ' -f1; else echo absent; fi;
 hd() { if [ -d "$1" ]; then (cd "$1" && find . -type f | LC_ALL=C sort | xargs sha256sum) | sha256sum | cut -d' ' -f1; else echo absent; fi; }
 # Both prompt files are recorded in every manifest (omega_prompt_sha256, control_prompt_sha256), so compare.sh
 # can require the rules text to be the same in both arms; prompt_sha256 is the one this arm was given.
-manifest=$(printf 'arm\t%s\nmodel\t%s\nseed\t%s\nomc_sha256\t%s\ngate_sha256\t%s\nfixtures_sha256\t%s\nprompt_sha256\t%s\nomega_prompt_sha256\t%s\ncontrol_prompt_sha256\t%s\nguard_sha256\t%s\nerrors_sha256\t%s\nrunner_sha256\t%s\ntasks_sha256\t%s\ntasks_count\t%s\naien\t%s\naien_version\t%s\n' \
+manifest=$(printf 'arm\t%s\nmodel\t%s\nseed\t%s\nomc_sha256\t%s\ngate_sha256\t%s\nfixtures_sha256\t%s\nprompt_sha256\t%s\nomega_prompt_sha256\t%s\ncontrol_prompt_sha256\t%s\nguard_sha256\t%s\nerrors_sha256\t%s\nrunner_sha256\t%s\ntasks_sha256\t%s\ntasks_count\t%s\ntask_ids\t%s\naien\t%s\naien_version\t%s\n' \
 	"$arm" "$model" "$seed" "$sha" "$(h "$home/gate")" "$(hd "$home/seed/qualification/om2/fixtures")" "$(h "$prompt_file")" \
 	"$(h "$home/context/OMEGA.md")" "$(h "$home/context/CONTROL.md")" \
-	"$(h "$home/omega-guard.ts")" "$(h "$home/context/errors.tsv")" "$(cat "$0" "$(dirname "$0")/case.sh" | sha256sum | cut -d' ' -f1)" "$(hd "$tasks")" "$(ls "$tasks" | wc -l | tr -d ' ')" \
+	"$(h "$home/omega-guard.ts")" "$(h "$home/context/errors.tsv")" "$(cat "$0" "$(dirname "$0")/case.sh" | sha256sum | cut -d' ' -f1)" "$(hd "$tasks")" "$(ls "$tasks" | wc -l | tr -d ' ')" "$(ls "$tasks" | LC_ALL=C sort | tr '\n' ' ' | sed 's/ $//')" \
 	"$(h "$(command -v aien)")" "$(aien --version 2>&1 | head -n 1)")
 # Rows with no manifest were scored with unknown inputs (an older runner wrote results.tsv alone): never adopt them.
 if [ ! -f "$out/manifest.tsv" ] && [ -f "$out/results.tsv" ] && [ "$(wc -l < "$out/results.tsv")" -gt 1 ]; then
@@ -90,8 +93,8 @@ $input
 Write the program to main.om in the working directory, check it with omega_run, and finish only when it is correct."
 	start=$(date +%s)
 	(cd "$d/work" && OMEGA_HOME="$home" OMEGA_PROMPT="$prompt_file" OMEGA_CONTEXT="$context" \
-		OMEGA_CASES="$d/cases.txt" OMEGA_STOP_LIMIT=5 OMEGA_LOG="$d/guard.log" \
-		timeout 900 aien --omega -p --mode json --max-time 600 --no-session "$prompt" \
+		OMEGA_CASES="$d/cases.txt" OMEGA_STOP_LIMIT="$SESSION_STOP_LIMIT" OMEGA_LOG="$d/guard.log" \
+		timeout "$SESSION_TIMEOUT" aien --omega -p --mode json --max-time "$SESSION_MAX_TIME" --no-session "$prompt" \
 		> "$d/transcript.jsonl" 2> "$d/stderr")
 	src=$?
 	# A session ends with 0, or 124 when timeout stops it. Anything else (126/127: it never started; another
@@ -99,6 +102,17 @@ Write the program to main.om in the working directory, check it with omega_run, 
 	# a row, so the operator sees it at once and a rerun retries the task.
 	if [ "$src" -ne 0 ] && [ "$src" -ne 124 ]; then
 		echo "$id: session ended with rc $src (not 0 or 124), see $d/stderr; no row written" >&2
+		exit 3
+	fi
+	# The guard logs a "stop ..." line at every finish. A session that ended normally (rc 0) with none means the
+	# guard was not loaded or never saw the finish, and "no OMEGA_CASES" means the case file did not reach it:
+	# either way the session ran without the harness, so stop without a row.
+	if [ "$src" -eq 0 ] && ! grep -q 'stop allowed\|stop refused' "$d/guard.log" 2> /dev/null; then
+		echo "$id: guard.log shows no finish (the guard was not loaded?), see $d/guard.log; no row written" >&2
+		exit 3
+	fi
+	if grep -q 'no OMEGA_CASES' "$d/guard.log" 2> /dev/null; then
+		echo "$id: the guard ran without the case file (OMEGA_CASES), see $d/guard.log; no row written" >&2
 		exit 3
 	fi
 	wall=$(($(date +%s) - start))
