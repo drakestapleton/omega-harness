@@ -25,6 +25,10 @@ got=$(sha256sum "$omc" | cut -d' ' -f1)
 [ "$got" = "$sha" ] || { echo "pinned omc mismatch: $omc sha256 $got, $pin says $sha" >&2; exit 2; }
 cmp -s "$pin" "$home/context/PIN" || { echo "pack built for another pin: rebuild $home/context with build-context.sh" >&2; exit 2; }
 command -v aien > /dev/null || { echo "aien not on PATH" >&2; exit 2; }
+model=${OMEGA_EVAL_MODEL:-}
+seed=${OMEGA_EVAL_SEED:-}
+[ -n "$model" ] || { echo "set OMEGA_EVAL_MODEL to the exact model id the aien profile serves" >&2; exit 2; }
+[ -n "$seed" ] || { echo "set OMEGA_EVAL_SEED to the sampling seed the aien profile fixes, or none" >&2; exit 2; }
 case $arm in
 omega) prompt_file="$home/context/OMEGA.md"; context="$home/context" ;;
 control) prompt_file="$home/context/CONTROL.md" ;;
@@ -34,12 +38,16 @@ mkdir -p "$out" "$out/empty-context"
 out=$(cd "$out" && pwd)
 [ "$arm" = control ] && context="$out/empty-context"
 ids=${*:-$(ls "$tasks")}
-# What this run was measured with. A resumed run must match the manifest it started with, so the two arms
-# and every resume use the same compiler, pack, guard, tasks and session program.
+# What this run was measured with. A resumed run must match the manifest it started with, and compare.sh
+# refuses two arms whose manifests differ in anything but arm and prompt. The model and seed cannot be read
+# from here (aien takes them from its own profile), so the operator states them: OMEGA_EVAL_MODEL (required,
+# the exact model id the aien profile serves) and OMEGA_EVAL_SEED (the sampling seed the profile fixes, or
+# "none" when it fixes none). The runner itself is hashed because it holds the prompt template and the limits.
 h() { if [ -f "$1" ]; then sha256sum "$1" | cut -d' ' -f1; else echo absent; fi; }
-manifest=$(printf 'arm\t%s\nomc_sha256\t%s\ngate_sha256\t%s\nprompt_sha256\t%s\nguard_sha256\t%s\nerrors_sha256\t%s\ntasks_sha256\t%s\naien\t%s\naien_version\t%s\n' \
-	"$arm" "$sha" "$(h "$home/gate")" "$(h "$prompt_file")" "$(h "$home/omega-guard.ts")" "$(h "$home/context/errors.tsv")" \
-	"$(cat "$tasks"/*/spec.md "$tasks"/*/stdin "$tasks"/*/expected.out "$tasks"/*/expected.exit 2>/dev/null | sha256sum | cut -d' ' -f1)" \
+hd() { (cd "$1" && find . -type f | LC_ALL=C sort | xargs sha256sum) | sha256sum | cut -d' ' -f1; }
+manifest=$(printf 'arm\t%s\nmodel\t%s\nseed\t%s\nomc_sha256\t%s\ngate_sha256\t%s\nfixtures_sha256\t%s\nprompt_sha256\t%s\nguard_sha256\t%s\nerrors_sha256\t%s\nrunner_sha256\t%s\ntasks_sha256\t%s\naien\t%s\naien_version\t%s\n' \
+	"$arm" "$model" "$seed" "$sha" "$(h "$home/gate")" "$(hd "$home/seed/qualification/om2/fixtures")" "$(h "$prompt_file")" \
+	"$(h "$home/omega-guard.ts")" "$(h "$home/context/errors.tsv")" "$(h "$0")" "$(hd "$tasks")" \
 	"$(h "$(command -v aien)")" "$(aien --version 2>&1 | head -n 1)")
 if [ -f "$out/manifest.tsv" ]; then
 	[ "$manifest" = "$(cat "$out/manifest.tsv")" ] ||

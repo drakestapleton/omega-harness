@@ -4,7 +4,7 @@
 # OMC must be the build named in the repository's PIN file (the one place the pin is written).
 # Writes OUTDIR/OMEGA.md (system prompt: rules + language reference + compiled examples),
 # OUTDIR/CONTROL.md (rules only, for the no-context eval arm), OUTDIR/errors.tsv (compiler error
-# meanings from skills/omega-encoding section 11, read by the guard) and OUTDIR/PIN (read by the guard
+# meanings and fixes from data/reference.tsv, read by the guard) and OUTDIR/PIN (read by the guard
 # and the eval runner). Every example must compile with OMC and every observed fact must still hold.
 set -eu
 here=$(cd "$(dirname "$0")" && pwd)
@@ -56,16 +56,14 @@ sed "s/@OMC_SHA256@/$pin_sha/g; s/@OMEGA_MV@/$(printf %.9s "$pin_rev")/g" "$here
 mv "$tmp" "$out/OMEGA.md"
 cp "$tmp.head" "$out/CONTROL.md"
 cp "$here/../PIN" "$out/PIN"
-# Error meanings: the two-column table of section 11 (| code | meaning | code | meaning |), parenthetical
-# detail dropped, one "code<TAB>meaning" line per code ("1, 2" gives two lines). An empty table stops the build.
-awk '/^## 11\. /{on=1} /^## 11a\. /{on=0} on' "$skill/SKILL.md" | awk -F'|' '
-	NF == 6 {
-		for (i = 2; i <= 4; i += 2) {
-			c = $i; m = $(i + 1)
-			gsub(/^ +| +$/, "", c); gsub(/^ +| +$/, "", m)
-			while (match(m, / ?\([^()]*\)/)) m = substr(m, 1, RSTART - 1) substr(m, RSTART + RLENGTH)
-			n = split(c, cs, /, */)
-			for (j = 1; j <= n; j++) if (cs[j] ~ /^[0-9]+$/) print cs[j] "\t" m
-		}
-	}' | sort -n > "$out/errors.tsv"
-[ -s "$out/errors.tsv" ] || { echo "no error table found in $skill/SKILL.md section 11" >&2; exit 1; }
+# Error meanings: meaning and fix of each code from data/reference.tsv (the omega-mcp reference data that
+# tools/check.sh ties to this pin), one "code<TAB>meaning. Fix: fix" line per code. Reference data for another
+# pin, or no error rows, stops the build.
+ref="$here/../data/reference.tsv"
+[ "$(awk -F'\t' '$1 == "/pin/omc_sha256" { print $2 }' "$ref")" = "$pin_sha" ] || { echo "$ref is not for omc $pin_sha" >&2; exit 1; }
+awk -F'\t' '
+	$1 ~ /^\/errors\/[0-9]+\/(meaning|fix)$/ {
+		split($1, p, "/"); v[p[3], p[4]] = $2; codes[p[3]] = 1
+	}
+	END { for (c in codes) print c "\t" v[c, "meaning"] ". Fix: " v[c, "fix"] }' "$ref" | sort -n > "$out/errors.tsv"
+[ -s "$out/errors.tsv" ] || { echo "no /errors rows in $ref" >&2; exit 1; }

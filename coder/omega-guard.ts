@@ -35,7 +35,7 @@ const CONTEXT = process.env.OMEGA_CONTEXT || join(OMEGA_HOME, 'context')
 // Stop refusals before the session may end anyway (eval runs set it; unset means no limit).
 const STOP_LIMIT = Number(process.env.OMEGA_STOP_LIMIT || 0)
 // The pin and the error meanings are not typed here: build-context.sh writes both into the pack from the
-// repository's PIN and from skills/omega-encoding section 11. They are read from OMEGA_HOME/context, not
+// repository's PIN and from data/reference.tsv (meaning and fix of each error code). They are read from OMEGA_HOME/context, not
 // OMEGA_CONTEXT, so the eval control arm (an empty readable context) runs with the same guard.
 const PACK = join(OMEGA_HOME, 'context')
 function readPack(name: string): string {
