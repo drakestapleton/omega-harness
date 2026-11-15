@@ -234,6 +234,21 @@ order 29
 | - (His words name the idea: percent of the effect completed. The list of checkable items, the form of the line and what counts are this rule's reading of them; he did not say them separately.)
 end
 
+rule clean-up-after-yourself
+date 2026-11-14
+said let's focus on cleaning up the disk
+for all watchdog
+order 30
+| ## Clean up after yourself (Drake, 2026-11-08 and 2026-11-14)
+| Drake, 2026-11-08: "let's focus on cleaning up the disk". Drake, 2026-11-14, when the shared disk was 95% full: "clean up the [machine] ... get rid of some of the files that are not being used". The disk had filled with copies agents made and never removed: clones, worktrees, review and sandbox copies, notes folders holding code, and model weights copied instead of linked.
+| - Work only in your own folder, one per task, named for the lane or ledger card. Do not write into another lane's folder or a shared folder you do not own.
+| - Everything you keep goes into the shared git store the forge serves, or onto its ledger card and the board. A copy holds nothing that is not also there: land or record the commits before the task is called done. A push to some other remote, a bundle or a private bare copy is not saved.
+| - Before you report done, delete every copy, clone, worktree, build output and temporary file the task made, and report the space freed in GB (measured with `df` before and after, or `du` of what you removed). A copy that holds something the store does not is archived first (a compressed tar whose listing is checked), then removed.
+| - Never copy model weights. Keep one copy in the machine's models folder and link to it; a second copy of the same weights is a defect.
+| - The daily clean-up program alarms on finished work that left its copy behind, on copies whose work is missing from the store and on copied weights. When it names your copy, land, archive or remove it; do not raise its threshold.
+| - (His words name the goal: clean up the disk and remove files that are not being used. Own folder, everything in the store, delete before done, report GB, link models and the alarm are this rule's reading of them, from the 2026-11-14 disk root cause; he did not say each separately. In the second quote, [machine] stands for the machine's name, which the public rules do not carry.)
+end
+
 rule hardware-first
 date 2026-10-24
 for agents claude codex
