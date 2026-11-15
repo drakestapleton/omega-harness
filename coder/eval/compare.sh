@@ -1,9 +1,12 @@
 #!/bin/sh
 # Compare the two eval arms: refuse unless their manifests are equal in every line but arm and prompt_sha256
-# (same model, seed, compiler, gate, fixtures, guard, error table, runner, tasks and session program), then
+# (same model, seed, compiler, gate, fixtures, both prompt files, guard, error table, runner, tasks and session
+# program), then
 # print the raw per-task verdicts side by side, the totals and the ledger line.
 # usage: sh compare.sh OMEGA_OUTDIR CONTROL_OUTDIR
-# Exit 0 with the table; 1 when the arms are not comparable or a task is missing from either arm.
+# Exit 0 with the table; 1 when the arms are not comparable: different inputs, different or incomplete task
+# sets (every task in the task directory must be scored), or a row with an unknown verdict or a session rc
+# other than 0 or 124.
 set -u
 o=${1:?omega outdir}
 c=${2:?control outdir}
@@ -24,12 +27,20 @@ fi
 ids_o=$(tail -n +2 "$o/results.tsv" | cut -f1 | LC_ALL=C sort)
 ids_c=$(tail -n +2 "$c/results.tsv" | cut -f1 | LC_ALL=C sort)
 [ -n "$ids_o" ] && [ "$ids_o" = "$ids_c" ] || { echo "COMPARE FAIL the arms scored different task sets" >&2; exit 1; }
+n=$(echo "$ids_o" | wc -l | tr -d ' ')
+want=$(sed -n "s/^tasks_count$tab//p" "$o/manifest.tsv")
+[ "$n" = "$want" ] || { echo "COMPARE FAIL $n tasks scored, the task directory holds $want: finish both arms first" >&2; exit 1; }
+for d in "$o" "$c"; do
+	bad=$(tail -n +2 "$d/results.tsv" | awk -F'\t' '
+		($2 != "pass" && $2 != "wrong-output" && $2 != "timeout" && $2 != "crash" && $2 != "compile-fail") ||
+		($5 != "0" && $5 != "124") { print $1 }')
+	[ -z "$bad" ] || { echo "COMPARE FAIL $d/results.tsv has rows with an unknown verdict or a session rc other than 0/124:" $bad >&2; exit 1; }
+done
 printf 'id\tomega\tcontrol\n'
 for id in $ids_o; do
 	printf '%s\t%s\t%s\n' "$id" "$(awk -F'\t' -v i="$id" '$1 == i { print $2 }' "$o/results.tsv")" \
 		"$(awk -F'\t' -v i="$id" '$1 == i { print $2 }' "$c/results.tsv")"
 done
-n=$(echo "$ids_o" | wc -l | tr -d ' ')
 po=$(tail -n +2 "$o/results.tsv" | cut -f2 | grep -cx pass)
 pc=$(tail -n +2 "$c/results.tsv" | cut -f2 | grep -cx pass)
 model=$(sed -n "s/^model$tab//p" "$o/manifest.tsv")

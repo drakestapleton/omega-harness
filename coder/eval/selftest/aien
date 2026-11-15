@@ -1,7 +1,8 @@
 #!/bin/sh
 # Stub session program for selftest.sh only: stands in for `aien --omega` so the runner and scorer can be
 # checked without a model. It records what the session was given in ../session.txt (outside the scored work
-# directory): sha256 of OMEGA_PROMPT, OMEGA_CONTEXT and its entry count, and whether OMEGA_CASES exists.
+# directory): sha256 of OMEGA_PROMPT, OMEGA_CONTEXT and its entry count, whether OMEGA_CASES exists and
+# OMEGA_STOP_LIMIT; the task prompt (its last argument) goes to ../session-prompt.txt.
 # Then it writes a program to ./main.om (ID = the task directory): src-control/ID.om when the prompt is
 # CONTROL.md and that file exists, else src/ID.om, else nothing.
 [ "${1:-}" = --version ] && { echo "selftest-stub 1"; exit 0; }
@@ -12,7 +13,10 @@ id=$(basename "$(dirname "$(pwd)")")
 	echo "context ${OMEGA_CONTEXT:-unset}"
 	echo "context_entries $(ls -A "${OMEGA_CONTEXT:-/nonexistent}" 2> /dev/null | wc -l | tr -d ' ')"
 	if [ -n "${OMEGA_CASES:-}" ] && [ -s "$OMEGA_CASES" ]; then echo "cases yes"; else echo "cases no"; fi
+	echo "stop_limit ${OMEGA_STOP_LIMIT:-unset}"
 } > ../session.txt
+for a in "$@"; do last=$a; done
+printf '%s\n' "$last" > ../session-prompt.txt
 src="$here/src/$id.om"
 [ "$(basename "${OMEGA_PROMPT:-}")" = CONTROL.md ] && [ -f "$here/src-control/$id.om" ] && src="$here/src-control/$id.om"
 [ -f "$src" ] && cp "$src" main.om

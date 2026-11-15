@@ -7,6 +7,8 @@
 # Tasks run one after another (the live 35B takes serial requests only). Each task gets a fresh empty
 # directory; the model must leave main.om there. Scoring is independent of the session: compile with
 # the pinned omc, then run the om2 gate on the task's case line in a fresh scratch directory.
+# Verdicts: pass, wrong-output, timeout, crash, compile-fail (coder/README.md says what each means and what
+# stops the run with exit 3 instead).
 # Per task: OUTDIR/ID/{work/,cases.txt,transcript.jsonl,stderr,guard.log,score.log}; summary OUTDIR/results.tsv;
 # inputs (compiler, gate, prompt, guard, tasks, session program) OUTDIR/manifest.tsv.
 set -u
@@ -25,6 +27,10 @@ got=$(sha256sum "$omc" | cut -d' ' -f1)
 [ "$got" = "$sha" ] || { echo "pinned omc mismatch: $omc sha256 $got, $pin says $sha" >&2; exit 2; }
 cmp -s "$pin" "$home/context/PIN" || { echo "pack built for another pin: rebuild $home/context with build-context.sh" >&2; exit 2; }
 command -v aien > /dev/null || { echo "aien not on PATH" >&2; exit 2; }
+command -v jq > /dev/null || { echo "jq not on PATH (it quotes each task's standard input into the prompt)" >&2; exit 2; }
+# Case lines are read by the gate after cd "$home", so the task directory must be absolute.
+[ -d "$tasks" ] || { echo "no task directory $tasks" >&2; exit 2; }
+tasks=$(cd "$tasks" && pwd)
 model=${OMEGA_EVAL_MODEL:-}
 seed=${OMEGA_EVAL_SEED:-}
 [ -n "$model" ] || { echo "set OMEGA_EVAL_MODEL to the exact model id the aien profile serves" >&2; exit 2; }
@@ -45,9 +51,12 @@ ids=${*:-$(ls "$tasks")}
 # "none" when it fixes none). The runner itself is hashed because it holds the prompt template and the limits.
 h() { if [ -f "$1" ]; then sha256sum "$1" | cut -d' ' -f1; else echo absent; fi; }
 hd() { if [ -d "$1" ]; then (cd "$1" && find . -type f | LC_ALL=C sort | xargs sha256sum) | sha256sum | cut -d' ' -f1; else echo absent; fi; }
-manifest=$(printf 'arm\t%s\nmodel\t%s\nseed\t%s\nomc_sha256\t%s\ngate_sha256\t%s\nfixtures_sha256\t%s\nprompt_sha256\t%s\nguard_sha256\t%s\nerrors_sha256\t%s\nrunner_sha256\t%s\ntasks_sha256\t%s\naien\t%s\naien_version\t%s\n' \
+# Both prompt files are recorded in every manifest (omega_prompt_sha256, control_prompt_sha256), so compare.sh
+# can require the rules text to be the same in both arms; prompt_sha256 is the one this arm was given.
+manifest=$(printf 'arm\t%s\nmodel\t%s\nseed\t%s\nomc_sha256\t%s\ngate_sha256\t%s\nfixtures_sha256\t%s\nprompt_sha256\t%s\nomega_prompt_sha256\t%s\ncontrol_prompt_sha256\t%s\nguard_sha256\t%s\nerrors_sha256\t%s\nrunner_sha256\t%s\ntasks_sha256\t%s\ntasks_count\t%s\naien\t%s\naien_version\t%s\n' \
 	"$arm" "$model" "$seed" "$sha" "$(h "$home/gate")" "$(hd "$home/seed/qualification/om2/fixtures")" "$(h "$prompt_file")" \
-	"$(h "$home/omega-guard.ts")" "$(h "$home/context/errors.tsv")" "$(h "$0")" "$(hd "$tasks")" \
+	"$(h "$home/context/OMEGA.md")" "$(h "$home/context/CONTROL.md")" \
+	"$(h "$home/omega-guard.ts")" "$(h "$home/context/errors.tsv")" "$(h "$0")" "$(hd "$tasks")" "$(ls "$tasks" | wc -l | tr -d ' ')" \
 	"$(h "$(command -v aien)")" "$(aien --version 2>&1 | head -n 1)")
 if [ -f "$out/manifest.tsv" ]; then
 	[ "$manifest" = "$(cat "$out/manifest.tsv")" ] ||
@@ -80,10 +89,11 @@ Write the program to main.om in the working directory, check it with omega_run, 
 		timeout 900 aien --omega -p --mode json --max-time 600 --no-session "$prompt" \
 		> "$d/transcript.jsonl" 2> "$d/stderr")
 	src=$?
-	# 126/127: the session never started (not executable / not found). Scoring that as compile-fail would
-	# count an infrastructure failure against the model; stop without writing a row so a rerun retries it.
-	if [ "$src" -eq 126 ] || [ "$src" -eq 127 ]; then
-		echo "$id: session did not start (rc $src), see $d/stderr; no row written" >&2
+	# A session ends with 0, or 124 when timeout stops it. Anything else (126/127: it never started; another
+	# code: aien failed, for example the model server was unreachable) is not the model's answer: stop without
+	# a row, so the operator sees it at once and a rerun retries the task.
+	if [ "$src" -ne 0 ] && [ "$src" -ne 124 ]; then
+		echo "$id: session ended with rc $src (not 0 or 124), see $d/stderr; no row written" >&2
 		exit 3
 	fi
 	wall=$(($(date +%s) - start))
@@ -110,7 +120,23 @@ Write the program to main.om in the working directory, check it with omega_run, 
 				echo "$id: gate could not run (rc $grc), see $d/score.log; no row written" >&2
 				exit 3
 			fi
-			if [ "$grc" -eq 0 ] && grep -q '^OM2GATE PASS ' "$d/score.log"; then verdict=pass; else verdict=wrong-output; fi
+			# The gate's verdict on this case: PASS, FAIL (wrong exit, stdout or stderr), or INVALID because the
+			# program ran past the deadline (timeout) or died on a signal (crash): all three are the program's.
+			# Any other outcome (unreadable fixture, scratch or exec failure, identity mismatch, no verdict line)
+			# is the machine's: stop without a row.
+			v=$(grep "^VERDICT $id " "$d/score.log" | head -n 1)
+			case $v in
+			"VERDICT $id PASS"*) verdict=pass ;;
+			"VERDICT $id FAIL"*) verdict=wrong-output ;;
+			"VERDICT $id INVALID child deadline exceeded"*) verdict=timeout ;;
+			"VERDICT $id INVALID child signal"*) verdict=crash ;;
+			*) verdict= ;;
+			esac
+			if [ "$verdict" = pass ] && { [ "$grc" -ne 0 ] || ! grep -q '^OM2GATE PASS ' "$d/score.log"; }; then verdict=; fi
+			if [ -z "$verdict" ]; then
+				echo "$id: the gate gave no verdict on the program (rc $grc: ${v:-no VERDICT line}), see $d/score.log; no row written" >&2
+				exit 3
+			fi
 		fi
 	fi
 	refusals=$(grep -c 'stop refused' "$d/guard.log" 2>/dev/null || true)
