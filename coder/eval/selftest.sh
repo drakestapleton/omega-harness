@@ -335,11 +335,11 @@ check "omc not executable wrote no row" "$(rows "$out/x1")" 0
 copyhome; chmod -x "$out/h/gate"; run omega "$out/x2" "$out/h"
 check "gate not executable stops the run" "$?" 3
 check "gate not executable wrote no row" "$(rows "$out/x2")" 0
-for mode in nolog nostop nocheck; do
+for mode in nolog nostop nocheck noreply; do
 	rm -rf "$out/stub" && cp -r "$here/selftest" "$out/stub" && echo "$mode" > "$out/stub/mode"
 	run omega "$out/m$mode" "$home" selftest-stub none "" "" "$out/stub"
-	check "guard log $mode stops the run" "$?" 3
-	check "guard log $mode wrote no row" "$(rows "$out/m$mode")" 0
+	check "stub mode $mode stops the run" "$?" 3
+	check "stub mode $mode wrote no row" "$(rows "$out/m$mode")" 0
 done
 for rc in 1 124; do
 	rm -rf "$out/stub" && cp -r "$here/selftest" "$out/stub" && sed -i "s/^exit 0\$/exit $rc/" "$out/stub/aien"

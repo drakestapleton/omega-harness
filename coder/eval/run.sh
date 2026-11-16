@@ -135,6 +135,12 @@ Write the program to main.om in the working directory, check it with omega_run, 
 		echo "$id: the guard ran without the task check (OMEGA_CHECK), see $d/guard.log; no row written" >&2
 		exit 3
 	fi
+	# A session in which the model never produced one output token measured the server, not the model
+	# (2026-11-15: a busy 35B answered nothing within the timeout). Stop without a row; a rerun retries it.
+	if ! grep -q '"output":[1-9]' "$d/transcript.jsonl"; then
+		echo "$id: the model produced no output tokens (session rc $src), see $d/transcript.jsonl; no row written" >&2
+		exit 3
+	fi
 	wall=$(($(date +%s) - start))
 	orc=NA
 	grc=NA

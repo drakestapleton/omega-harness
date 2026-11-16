@@ -24,7 +24,7 @@ printf '%s\n' "$last" > ../session-prompt.txt
 printf '%s\n' "$args" > ../session-args.txt
 # Guard log lines as the guard writes them at a finish (a mode file in this directory changes that: "nolog"
 # writes no log, as when the guard is not loaded; "nostop" logs a tool call but no finish; "nocheck" writes the
-# finish line of a guard without OMEGA_CHECK).
+# finish line of a guard without OMEGA_CHECK; "noreply" reports zero output tokens, as a model that never answered).
 # Known values for the raw columns: st3 has two refused finishes, st6 leaves junk.txt (and NOTES.md, which is
 # not counted), st2 takes at least one second.
 mode=$(cat "$here/mode" 2> /dev/null)
@@ -49,5 +49,5 @@ if [ -n "${OMEGA_CHECK:-}" ]; then
 	echo "check_score $(echo "$c" | sed -n 's/^SCORE [^ ]* \([^ ]*\) .*/\1/p' | tail -n 1)" >> ../session.txt
 	echo "check_rc $crc" >> ../session.txt
 fi
-echo '{"type":"stub"}'
+if [ "$mode" = noreply ]; then echo '{"type":"stub","usage":{"output":0}}'; else echo '{"type":"stub","usage":{"output":1}}'; fi
 exit 0

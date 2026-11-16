@@ -79,7 +79,9 @@ What is not the model's answer stops the run with exit 3 and no row, so a rerun 
 that ends with a code other than 0 or 124 (for example an unreachable model server), an `omc` or gate that
 cannot execute, a scorer result with no verdict on the program (an unreadable fixture, scratch or exec
 failure, including an exec failure that the trusted `cat.om` also hits), and a session that ended normally
-while the guard log shows no finish (the guard was not loaded) or shows a guard without the task check. A task
+while the guard log shows no finish (the guard was not loaded) or shows a guard without the task check, and a
+session (rc 0 or 124) whose transcript shows no output token from the model (a server that never answered
+measured the server, not the model). A task
 id with no directory, and a task or fixture file name with white space, are refused.
 The session's only time limit is the wall-clock timeout around `aien` (rc 124, scored); `aien`'s own
 `--max-time` is not used, since what it does at the limit is not known here. Session limits, the
