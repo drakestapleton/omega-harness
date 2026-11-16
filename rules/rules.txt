@@ -35,30 +35,47 @@ order 20
 end
 
 rule receipts-not-approvals
-date 2026-11-11
+date 2026-11-16
 said receipts, not approvals
+said Reuse the existing projects, component owners, MJB1/MJR1 protocol, scheduler, authority, journal and merge desk. Preserve active work.
 for all watchdog
 order 22
-| ## Receipts, not approvals (Drake, 2026-11-11)
+| ## Receipts, not approvals (Drake, 2026-11-11; Collective exception 2026-11-16)
 | Drake: "receipts, not approvals" (when he removed the merge desk).
-| There is no merge desk. A lane lands its own exact head on `main` when the repository's own gates pass on a fresh clone, and writes the landing receipt first (commands, exit codes, pins, log sha256) with the landing tool in use. A non-MERGE review verdict for that head stops the landing. A patch is a vehicle, not an approval. Never bypass a gate or overwrite a receipt. Keep independent final-source review of the exact head, dependency ordering between landings, and read-back of every remote write; no skipped gate, fabricated PASS or retry-until-green.
+| Outside the Omega Collective exception below, there is no merge desk. A lane lands its own exact head on `main` when the repository's own gates pass on a fresh clone, and writes the landing receipt first (commands, exit codes, pins, log sha256) with the landing tool in use. A non-MERGE review verdict for that head stops the landing. A patch is a vehicle, not an approval. Never bypass a gate or overwrite a receipt. Keep independent final-source review of the exact head, dependency ordering between landings, and read-back of every remote write; no skipped gate, fabricated PASS or retry-until-green.
 end
 
 # The different-provider part of the 2026-11-11 words below was replaced by Drake on 2026-11-14 (last said line).
 rule own-review
-date 2026-11-14
+date 2026-11-16
 said we no longer have a review desk assignment. Anyone can take acting control of review desk at any time to match with the decentralized nature now that we are out of github.
 said get rid of review desk and we should ALL be doing our own reviews and spinning up subagents of a different provider to do the review to keep it honest.
 said just use Claude Opus 5.5 agents on medium to replace reviewers regardless just to get this moving again.
+said Reuse the existing projects, component owners, MJB1/MJR1 protocol, scheduler, authority, journal and merge desk. Preserve active work.
 for all watchdog
 order 23
-| ## No review desk: review your own work with a fresh Claude Opus 5.5 run (Drake, 2026-11-11 and 2026-11-14)
+| ## No review desk: review your own work with a fresh Claude Opus 5.5 run (Drake, 2026-11-11/14; Collective exception 2026-11-16)
 | Drake, 2026-11-11: "we no longer have a review desk assignment. Anyone can take acting control of review desk at any time to match with the decentralized nature now that we are out of github." and "get rid of review desk and we should ALL be doing our own reviews". Drake, 2026-11-14, replacing the other-provider reviewer: "just use Claude Opus 5.5 agents on medium to replace reviewers regardless just to get this moving again."
-| - There is no review desk and no reviewer assignment. Nothing waits for a desk, a queue or a named reviewer, and no file, tool or ledger line may require one. Any agent may review or land any ready head at any time.
+| - Outside the Omega Collective exception below, there is no review desk and no reviewer assignment. Nothing waits for a desk, a queue or a named reviewer, and no file, tool or ledger line may require one. Any agent may review or land any ready head at any time.
 | - The lane that wrote a change gets it reviewed itself, before landing, by a fresh run of Claude Opus 5.5 (`claude-opus-5-5`) at medium effort, whichever model wrote the change. Fresh means the run starts with no context from the author: a new process or a subagent that does not inherit the author's chat counts; a resumed session or a fork of the author's chat does not. The usual way: `claude -p "<brief>" --model claude-opus-5-5 --effort medium`, with the permission and turn options the review needs (for example `--dangerously-skip-permissions --max-turns 150`). No review waits for another provider's model, account or credit.
 | - The reviewer's brief gives the exact head, the base, the task in the operator's words and these rules, never the author's conclusions, and asks for harsh findings, each with a confidence percent.
 | - The verdict is a file that names the exact head, the reviewer's program, model and effort, and each finding with its confidence percent. A run that ends without a verdict file whose first line names the head is not a review: start a fresh one. The author fixes each finding or answers it in writing in that file's reply; a changed head is reviewed again by another fresh run. The landing receipt names the verdict file. A REJECT, or a finding neither fixed nor answered, stops the landing.
 | - A review by the author, or by any run that shares the author's context, is not the independent review.
+end
+
+rule omega-collective-continuation
+date 2026-11-16
+said Reuse the existing projects, component owners, MJB1/MJR1 protocol, scheduler, authority, journal and merge desk. Preserve active work.
+said Keep Linear current with claims, decisions, PRs, receipts, blockers and concrete next actions.
+said Then update the rules.
+for all watchdog
+order 24
+| ## Omega Collective authority and delivery records (Drake, 2026-11-16)
+| Drake, in the Omega Collective continuation session: "Reuse the existing projects, component owners, MJB1/MJR1 protocol, scheduler, authority, journal and merge desk. Preserve active work."
+| - For Omega Collective work only, use its existing Linear roadmap, linked source Page, Orchestra operating score and authority issue. Their private addresses belong in this machine's `omega-collective-records` overlay rule. Read live issues for sequence, dependencies, component ownership and acceptance gates; do not copy that changing graph into standing rules. Reconcile live claims, resource admission and source/compiler/runtime identities before assigning mutable work. An empty assignee or a stale owner record is not an ownership transfer.
+| - This direction is a scoped exception to the default no-desk rules above: preserve this work's existing reviewed-commit merge process and current integration authority. Reconcile conflicting authority records before promotion. If no current holder answers, continue unblocked host preparation and retain reviewed candidates locally; report the exact authority conflict to Drake. Do not create another queen, desk, scheduler or journal, or reactivate a retired one by inference. This exception changes no other task's landing authority.
+| - Operator instructions and standing protections govern review, publication and runtime access; Linear supplies the work sequence and ownership evidence, not permission to bypass those protections. Fresh independent exact-head review, repository gates, receipts, current forge restrictions and harness protections remain required.
+| - Keep claims, proposed changes, receipts, blockers and next actions in the existing Linear records; preserve the roadmap presentation. Code, history and decisions remain canonical on Interplane. Linear tracks delivery decisions by linking to that record rather than restating it, and grants no runtime lease or acceptance by itself. Historical GitHub and Radicle links remain provenance, never publishing routes. Read the scoped own-model and adapter-retirement requirements from the authority issue and linked roadmap records before execution. Independent phase acceptance and unexecuted hardware gates retain their recorded scope.
 end
 
 rule automate-everything
@@ -264,7 +281,7 @@ order 187
 |
 | ### Issue tracker
 |
-| Issues will live on Interplane, in each repository. Until Interplane's own route exists (the Interplane rule above), put an issue on the board. Radicle issues and GitHub issues across the `aien-dev` repos are history. See `docs/agents/issue-tracker.md`.
+| The Omega Collective authority and delivery-record rule above names this work's existing Linear tracker for every agent program. Other issues will live on Interplane, in each repository; until its own route exists, put those issues on the board. Do not duplicate existing implementation queues. Radicle issues and GitHub issues across the `aien-dev` repos are history. See `docs/agents/issue-tracker.md`.
 |
 | ### Triage labels
 |
