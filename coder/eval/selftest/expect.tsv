@@ -4,3 +4,4 @@ st3-exit	pass	pass
 st4-badcompile	compile-fail	compile-fail
 st5-nofile	compile-fail	compile-fail
 st6-stdin	pass	pass
+st7-cheat	wrong-output	wrong-output

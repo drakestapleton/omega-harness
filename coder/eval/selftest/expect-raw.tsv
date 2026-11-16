@@ -11,3 +11,5 @@ omega	st5-nofile	NA	NA	0	0
 control	st5-nofile	NA	NA	0	0
 omega	st6-stdin	0	0	0	1
 control	st6-stdin	0	0	0	1
+omega	st7-cheat	0	1	0	0
+control	st7-cheat	0	1	0	0

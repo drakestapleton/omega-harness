@@ -1,9 +1,9 @@
 // omega-guard: omp extension for `aien --omega`. Harness configuration, not product code: omp
 // extensions are TypeScript, so this file is the smallest shim between the omp tool loop and the
 // pinned seeded Omega compiler. All checking of programs is done by Omega itself: `omc` compiles,
-// and the OM-2 qualification conductor `seed/qualification/om2/gate.om` (built by the pinned omc)
-// runs and compares task cases. This file only routes paths, starts those two binaries and sandboxes
-// model-written programs with bubblewrap.
+// and the finish check (OMEGA_CHECK; the eval's coder/eval/score.sh runs the OM-2 qualification conductor
+// `seed/qualification/om2/gate.om`, built by the pinned omc) runs and compares task cases. This file only
+// routes paths, starts those programs and sandboxes model-written programs with bubblewrap.
 //
 // Policy
 // - write/edit may touch only `*.om` files (plus NOTES.md) inside the session directory; every other
@@ -13,14 +13,14 @@
 // - After a successful write/edit of a `.om` file the pinned omc compiles it; the result (rc, the
 //   `omc: line N: error K` line, the offending source line and the error's meaning) is appended to
 //   the tool result the model sees.
-// - omega_run compiles a `.om` file and runs it in a bubblewrap sandbox: read-only root, private
-//   /tmp, no network, own pid namespace, 10 s wall limit.
-// - The session cannot end while any touched `.om` file fails to compile, or, when OMEGA_CASES names a
-//   gate case list, until the gate prints `OM2GATE PASS`.
+// - omega_run compiles a `.om` file and runs it in a bubblewrap sandbox that holds only the program and the
+//   session directory (read-only), a private /tmp and /dev: no other file of this machine, no /proc, no
+//   network, own pid namespace, 10 s wall limit.
+// - The session cannot end while any touched `.om` file fails to compile, or, when OMEGA_CHECK is set, until
+//   that command (run with `sh -c` in the session directory) exits 0 and prints a `SCORE <id> pass` line.
 //
-// Environment: OMEGA_HOME (default ~/.local/share/aien-omega: omc, gate, gate fixtures, context/ with PIN
-// and errors.tsv),
-// OMEGA_CASES (optional case list for the stop check; keep it outside the session directory).
+// Environment: OMEGA_HOME (default ~/.local/share/aien-omega: omc, context/ with PIN and errors.tsv),
+// OMEGA_CHECK (optional finish check; it must keep the task's expected output outside the session directory).
 import { spawnSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import { appendFileSync, chmodSync, existsSync, mkdtempSync, readFileSync, realpathSync } from 'node:fs'
@@ -29,7 +29,6 @@ import { basename, isAbsolute, join, resolve, sep } from 'node:path'
 
 const OMEGA_HOME = process.env.OMEGA_HOME || join(homedir(), '.local/share/aien-omega')
 const OMC = join(OMEGA_HOME, 'omc')
-const GATE = join(OMEGA_HOME, 'gate')
 // Readable Omega reference. The eval control arm points this at an empty directory.
 const CONTEXT = process.env.OMEGA_CONTEXT || join(OMEGA_HOME, 'context')
 // Stop refusals before the session may end anyway (eval runs set it; unset means no limit).
@@ -184,10 +183,13 @@ function compile(file: string): Compile {
 }
 
 function sandboxRun(elf: string, base: string, args: string[], stdin: string): { rc: number; out: string; err: string } {
+  // The program is model-written: whatever it can open it can print. Omega programs are static ELFs, so the view
+  // is the session directory (read-only) and the program itself; the context pack, the task files and the rest
+  // of the machine are not in it.
   const r = spawnSync(
     'bwrap',
-    ['--ro-bind', '/', '/', '--dev', '/dev', '--proc', '/proc', '--tmpfs', '/tmp', '--ro-bind', base, base, '--ro-bind', elf, '/tmp/prog',
-      '--unshare-net', '--unshare-pid', '--die-with-parent', '--chdir', base, '--', '/tmp/prog', ...args],
+    ['--dev', '/dev', '--tmpfs', '/tmp', '--ro-bind', base, base, '--ro-bind', elf, '/tmp/prog',
+      '--unshare-net', '--unshare-pid', '--unshare-ipc', '--die-with-parent', '--chdir', base, '--', '/tmp/prog', ...args],
     { input: stdin, timeout: 10_000, maxBuffer: 1 << 22 },
   )
   const cut = (b: Buffer | null) => {
@@ -301,27 +303,20 @@ export default function (pi: Pi) {
       touched.set(f, c.rc)
       if (c.rc !== 0) return refuse(`Not done: ${basename(f)} does not compile.\n${c.report}`)
     }
-    const cases = process.env.OMEGA_CASES
-    if (!cases) {
-      note('stop allowed: every touched .om compiles; no OMEGA_CASES')
+    const check = process.env.OMEGA_CHECK
+    if (!check) {
+      note('stop allowed: every touched .om compiles; no OMEGA_CHECK')
       return undefined
     }
-    const base = root(ctx)
-    const scratchParent = mkdtempSync(join(tmpdir(), 'aien-omega-gate-'))
-    const r = spawnSync(
-      'bwrap',
-      ['--ro-bind', '/', '/', '--dev', '/dev', '--proc', '/proc', '--bind', scratchParent, scratchParent, '--unshare-net', '--unshare-pid',
-        '--die-with-parent', '--chdir', OMEGA_HOME, '--', GATE, OMC, OMC_SHA256, cases, join(scratchParent, 's')],
-      { cwd: base, timeout: 120_000, maxBuffer: 1 << 22 },
-    )
+    const r = spawnSync('sh', ['-c', check], { cwd: root(ctx), timeout: 120_000, maxBuffer: 1 << 22 })
     const out = (r.stdout ?? Buffer.alloc(0)).toString('utf8')
-    if (/^OM2GATE PASS /m.test(out)) {
-      note('stop allowed: OM2GATE PASS')
+    if (r.status === 0 && /^SCORE \S+ pass /m.test(out)) {
+      note('stop allowed: SCORE pass')
       return undefined
     }
-    const verdicts = out.split('\n').filter(l => l.startsWith('VERDICT') || l.startsWith('OM2GATE')).join('\n')
-    return refuse(`Not done: the task check did not pass.\n${verdicts || `gate exit ${r.status}`}\nRead the task again, fix the program, check it with omega_run, then finish.`)
+    const verdicts = out.split('\n').filter(l => l.startsWith('VERDICT') || l.startsWith('SCORE')).join('\n')
+    return refuse(`Not done: the task check did not pass.\n${verdicts || `check exit ${r.status}`}\nRead the task again, fix the program, check it with omega_run, then finish.`)
   })
 }
 
-export { checkRead, checkWrite, writePaths }
+export { checkRead, checkWrite, sandboxRun, writePaths }

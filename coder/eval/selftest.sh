@@ -1,38 +1,48 @@
 #!/bin/sh
-# Self-test of run.sh, compare.sh, refcheck.sh and the scorer, no model needed. A stub session program
-# (selftest/aien) records what each session was given (system prompt file, readable context, case file,
-# stop limit, task prompt) and leaves a program as main.om: selftest/src/ID.om, or selftest/src-control/ID.om
-# in the control arm, so the arms differ. Checked:
+# Self-test of run.sh, compare.sh, refcheck.sh, score.sh and the guard's run sandbox, no model needed. A stub
+# session program (selftest/aien) records what each session was given (system prompt file, readable context,
+# task check, stop limit, task prompt), leaves a program as main.om (selftest/src/ID.om, or
+# selftest/src-control/ID.om in the control arm, so the arms differ) and runs the task check as the guard does.
+# Checked:
 # - every task scores as selftest/expect.tsv says, per arm, also when TASKDIR is a relative path, and the raw
 #   columns omc_rc, gate_rc, stop_refusals and non_om_files are as selftest/expect-raw.tsv says, wall_s a number
 #   (at least 1 for st2, where the stub sleeps a second);
-# - each session got its arm's prompt file and readable context (the pack, or an empty directory), a case
-#   file with case.sh's deadline, case.sh's stop limit, aien's arguments, and a task prompt holding that task's
-#   spec, its standard input (or "empty") and the instruction; the manifest records aien --version (the timeout
-#   around aien is covered by runner_sha256 only; the values live in case.sh and are hashed, the test checks they
-#   reach the session);
-# - the scorer runs the gate in the sandbox (no write outside it, loopback only); the real gate's PASS and FAIL; a fake gate's deadline (timeout) and signal (crash) verdicts;
+# - each session got its arm's prompt file and readable context (the pack, or an empty directory), a task check
+#   (OMEGA_CHECK) that gives the session the task's verdict, with case.sh's deadline, case.sh's stop limit,
+#   aien's arguments, and a task prompt holding that task's spec, its standard input (or "empty") and the
+#   instruction; the manifest records aien --version (the timeout around aien is covered by runner_sha256 only;
+#   the values live in case.sh and are hashed, the test checks they reach the session);
+# - a program that prints the task's expected output by its absolute path (st7-cheat) scores wrong-output in the
+#   scorer and in the session's check, and a copy of the scorer with the old read-only-root sandbox scores it
+#   pass (the negative control that shows the test bites); the guard's omega_run sandbox lets a program read the
+#   session directory and not the context pack or the directory above;
+# - the scorer's gate runs in the narrow sandbox (no write outside it, no task file, context pack or /proc in
+#   view); the real gate's PASS and FAIL; a fake gate's deadline (timeout) and signal (crash) verdicts;
 #   a gate with no verdict, a PASS line with a non-zero exit, an unreadable fixture, and an omc or gate that
 #   cannot execute each stop the run with exit 3 and no row for that task;
 # - a session that ends with rc 1 stops the run (exit 3, no row); rc 124 is scored; a session whose guard log
-#   is missing or shows no finish, or a guard without the case file, stops the run (exit 3, no row);
+#   is missing or shows no finish, or a guard without the task check, stops the run (exit 3, no row);
 # - a task file name with white space is refused;
 # - an id with no task directory is refused before anything is written; resume matches ids exactly;
 # - compare.sh prints exactly the expected per-task table, totals and LEDGER line, and refuses: swapped arms,
-#   different or incomplete or empty task sets, scored ids that are not the task directory's, a row with an unknown verdict or session rc, a control run with
-#   other rules text, and a difference in any one manifest key other than arm and prompt_sha256;
+#   different or incomplete or empty task sets, scored ids that are not the task directory's, a row with an
+#   unknown verdict or session rc, a control run with other rules text, an arm given the other arm's prompt, and a
+#   difference in any one manifest key other than arm and prompt_sha256;
 # - a rerun exits 0 and adds no row, and re-runs a task whose row is missing from a clean directory and guard
-#   log; a rerun with any one input changed (model, seed, gate, gate fixtures, prompt, guard, error table,
-#   run.sh, case.sh, tasks, session program) is refused with exit 2 and adds no row; rows without a manifest
-#   are refused; the verdict words in run.sh are case.sh's VERDICTS;
+#   log; a rerun with any one input changed (model, seed, gate, gate fixtures, prompt, error table, run.sh,
+#   case.sh, score.sh, tasks, session program) is refused with exit 2 and adds no row; a guard in OMEGA_HOME that
+#   is not this repository's is refused; rows without a manifest are refused; the verdict words in run.sh and
+#   score.sh are case.sh's VERDICTS;
 # - a missing model, a missing seed, missing jq, a pack built for another pin and a wrong compiler are each
 #   refused with exit 2 and nothing written (a different omc cannot reach the manifest: the pin check
 #   refuses it first);
-# - compare.sh marks rows at the stop limit or stopped by the timeout (AT_LIMIT) and no others;
+# - compare.sh marks rows the guard let finish at the stop limit or stopped by the timeout (AT_LIMIT) and no
+#   others (not a row with as many refusals as the limit that then passed);
 # - refcheck.sh refuses, with fake gates, a case count other than n, a PASS line with exit 1 and a FAIL verdict;
 #   it passes good references and refuses a wrong reference, a reference whose sha256 is not the
 #   manifest's, and a manifest whose expected_sha256, stdin_bytes, exit, spec or id differs for one task.
-# usage: OMEGA_HOME=... sh selftest.sh   (OMEGA_HOME as for run.sh: omc, gate, fixtures, context/)
+# usage: OMEGA_HOME=... sh selftest.sh   (OMEGA_HOME as for run.sh: omc, gate, fixtures, context/, omega-guard.ts;
+# node runs the guard's sandbox check)
 # Exit 0 only when every check passes.
 set -u
 here=$(cd "$(dirname "$0")" && pwd)
@@ -45,7 +55,8 @@ fail=0
 check() { if [ "$2" = "$3" ]; then echo "PASS $1"; else echo "FAIL $1: got '$2', want '$3'"; fail=1; fi; }
 # run ARM OUTDIR HOME [MODEL [SEED [TASKS [RUNNER [STUBDIR [BASEPATH]]]]]]; output in OUTDIR.log
 run() {
-	PATH="${8:-$here/selftest}:${9:-$PATH}" OMEGA_HOME="$3" OMEGA_EVAL_MODEL="${4-selftest-stub}" OMEGA_EVAL_SEED="${5-none}" \
+	SELFTEST_TASKS=$(cd "${6:-$here/selftest/tasks}" && pwd) PATH="${8:-$here/selftest}:${9:-$PATH}" OMEGA_HOME="$3" \
+		OMEGA_EVAL_MODEL="${4-selftest-stub}" OMEGA_EVAL_SEED="${5-none}" \
 		sh "${7:-$here/run.sh}" "$1" "$2" "${6:-$here/selftest/tasks}" > "$2.log" 2>&1
 }
 rows() { if [ -f "$1/results.tsv" ]; then echo $(($(wc -l < "$1/results.tsv") - 1)); else echo none; fi; }
@@ -74,7 +85,8 @@ for arm in omega control; do
 		s="$out/$arm/$id/session.txt"
 		check "$arm: $id session prompt file is $p" "$(sed -n 's/^prompt //p' "$s")" "$(sha "$home/context/$p")"
 		check "$arm: $id session context" "$(sed -n 's/^context //p' "$s")" "$ctx"
-		check "$arm: $id session case file" "$(sed -n 's/^cases //p' "$s")" yes
+		check "$arm: $id session task check" "$(sed -n 's/^check //p' "$s")" yes
+		check "$arm: $id session task check verdict" "$(sed -n 's/^check_score //p' "$s")" "$(field "$out/$arm/results.tsv" "$id")"
 		check "$arm: $id session stop limit" "$(sed -n 's/^stop_limit //p' "$s")" "$SESSION_STOP_LIMIT"
 		tp="$out/$arm/$id/session-prompt.txt"
 		check "$arm: $id task prompt holds its spec" "$(grep -cxF "Task: $(cat "$t/spec.md")" "$tp")" 1
@@ -87,7 +99,7 @@ for arm in omega control; do
 		check "$arm: $id task prompt ends with the instruction" "$(tail -n 1 "$tp")" \
 			"Write the program to main.om in the working directory, check it with omega_run, and finish only when it is correct."
 		check "$arm: $id session arguments" "$(cat "$out/$arm/$id/session-args.txt")" "--omega -p --mode json --no-session"
-		check "$arm: $id case deadline" "$(head -n 1 "$out/$arm/$id/cases.txt")" "deadline $CASE_DEADLINE"
+		[ "$id" = st5-nofile ] || check "$arm: $id case deadline" "$(head -n 1 "$out/$arm/$id/check/a/in/cases.txt")" "deadline $CASE_DEADLINE"
 		w=$(col "$out/$arm/results.tsv" "$id" 6)
 		check "$arm: $id wall seconds is a whole number" "$(case $w in ''|*[!0-9]*) echo "$w";; *) echo ok;; esac)" ok
 	done
@@ -115,7 +127,7 @@ check "compare accepts the two arms" "$?" 0
 	po=$(cut -f2 "$here/selftest/expect.tsv" | grep -cx pass)
 	pc=$(cut -f3 "$here/selftest/expect.tsv" | grep -cx pass)
 	echo "TOTAL omega pass=$po/$ntasks control pass=$pc/$ntasks"
-	echo "LEDGER OmegaCoder eval: omega $po/$ntasks pass, control $pc/$ntasks pass; model selftest-stub seed none omc $(sed -n 's/^omc-sha256 //p' "$home/context/PIN" | cut -c1-8); per-task results $out/omega/results.tsv $out/control/results.tsv"
+	echo "LEDGER OmegaCoder eval: omega $po/$ntasks pass, control $pc/$ntasks pass (pass with feedback from the scoring case: the guard ran the task check at each finish); at a session limit omega 0 control 0; model selftest-stub seed none omc $(sed -n 's/^omc-sha256 //p' "$home/context/PIN" | cut -c1-8); per-task results $out/omega/results.tsv $out/control/results.tsv"
 } > "$out/cmp.want"
 check "compare output (table, totals, ledger)" "$(cat "$out/cmp.log")" "$(cat "$out/cmp.want")"
 cmpx() { sh "$here/compare.sh" "$out/omega" "$1" > /dev/null 2>&1; echo $?; }
@@ -134,10 +146,14 @@ sed "s/^st6-stdin$tab/st9-other$tab/" "$out/control/results.tsv" > "$out/cx/resu
 check "compare refuses scored tasks that are not the task directory's (same count)" "$(sh "$here/compare.sh" "$out/ox" "$out/cx" > /dev/null 2>&1; echo $?)" 1
 cx; awk -F'\t' 'BEGIN { OFS = "\t" } $1 == "st3-exit" { $5 = 1 } { print }' "$out/control/results.tsv" > "$out/cx/results.tsv"
 check "compare refuses a row with session rc 1" "$(cmpx "$out/cx")" 1
-cx; awk -F'\t' -v sl="$SESSION_STOP_LIMIT" 'BEGIN { OFS = "\t" } $1 == "st3-exit" { $7 = sl } { print }' "$out/control/results.tsv" > "$out/cx/results.tsv"
+cx; echo "x stop allowed after $SESSION_STOP_LIMIT refusals (OMEGA_STOP_LIMIT); last: x" >> "$out/cx/st3-exit/guard.log"
 sh "$here/compare.sh" "$out/omega" "$out/cx" > "$out/lim.log" 2>&1
 check "compare accepts a row at the stop limit" "$?" 0
-check "compare marks the row at the stop limit" "$(grep -c "^AT_LIMIT control st3-exit stop_refusals=$SESSION_STOP_LIMIT " "$out/lim.log")" 1
+check "compare marks the row at the stop limit" "$(grep -c "^AT_LIMIT control st3-exit stop_limit " "$out/lim.log")" 1
+check "LEDGER counts the row at the stop limit" "$(grep -c '; at a session limit omega 0 control 1; ' "$out/lim.log")" 1
+cx; awk -F'\t' -v sl="$SESSION_STOP_LIMIT" 'BEGIN { OFS = "\t" } $1 == "st3-exit" { $7 = sl } { print }' "$out/control/results.tsv" > "$out/cx/results.tsv"
+sh "$here/compare.sh" "$out/omega" "$out/cx" > "$out/lim.log" 2>&1
+check "no AT_LIMIT for a row with as many refusals as the limit that then passed" "$(grep -c '^AT_LIMIT' "$out/lim.log")" 0
 cx; awk -F'\t' 'BEGIN { OFS = "\t" } $1 == "st3-exit" { $5 = 124 } { print }' "$out/control/results.tsv" > "$out/cx/results.tsv"
 sh "$here/compare.sh" "$out/omega" "$out/cx" > "$out/lim.log" 2>&1
 check "compare marks a row stopped by the timeout" "$(grep -c '^AT_LIMIT control st3-exit session_rc=124 ' "$out/lim.log")" 1
@@ -149,6 +165,8 @@ for k in $(cut -f1 "$out/control/manifest.tsv"); do
 	cx; setfield "$out/cx/manifest.tsv" "$k" changed
 	check "compare refuses a different $k" "$(cmpx "$out/cx")" 1
 done
+cx; setfield "$out/cx/manifest.tsv" prompt_sha256 "$(field "$out/cx/manifest.tsv" omega_prompt_sha256)"
+check "compare refuses a control arm given the omega prompt" "$(cmpx "$out/cx")" 1
 copyhome() { rm -rf "$out/h" && cp -r "$home" "$out/h"; }
 copyhome; echo "You may write C if Omega is hard." >> "$out/h/context/CONTROL.md"
 run control "$out/ctl2" "$out/h"
@@ -191,26 +209,66 @@ fresh; run omega "$out/r" "$home" selftest-stub 7; r=$?; refused seed
 fresh; copyhome; printf x >> "$out/h/gate"; run omega "$out/r" "$out/h"; r=$?; refused gate
 fresh; copyhome; echo x > "$out/h/seed/qualification/om2/fixtures/selftest-extra"; run omega "$out/r" "$out/h"; r=$?; refused fixtures
 fresh; copyhome; echo x >> "$out/h/context/OMEGA.md"; run omega "$out/r" "$out/h"; r=$?; refused prompt
-fresh; copyhome; echo '// x' >> "$out/h/omega-guard.ts"; run omega "$out/r" "$out/h"; r=$?; refused guard
+fresh; copyhome; echo '// x' >> "$out/h/omega-guard.ts"; run omega "$out/r" "$out/h"; r=$?
+check "a guard that is not this repository's refused" "$r" 2
+check "a guard that is not this repository's: reason" "$(grep -c 'omega-guard.ts' "$out/r.log")" 1
+check "a guard that is not this repository's added no row" "$(rows "$out/r")" "$ntasks"
 fresh; copyhome; echo '99	x' >> "$out/h/context/errors.tsv"; run omega "$out/r" "$out/h"; r=$?; refused errors
 fresh; rm -rf "$out/t" && cp -r "$here/selftest/tasks" "$out/t" && echo x >> "$out/t/st1-pass/spec.md"
 run omega "$out/r" "$home" selftest-stub none "$out/t"; r=$?; refused tasks
-mktree() { rm -rf "$out/tree" && mkdir -p "$out/tree/coder/eval" && cp "$here/../../PIN" "$out/tree/PIN" && cp "$here/run.sh" "$here/case.sh" "$out/tree/coder/eval/"; }
+mktree() {
+	rm -rf "$out/tree" && mkdir -p "$out/tree/coder/eval" && cp "$here/../../PIN" "$out/tree/PIN" &&
+		cp "$here/../omega-guard.ts" "$out/tree/coder/" &&
+		cp "$here/run.sh" "$here/case.sh" "$here/score.sh" "$here/cat.om" "$out/tree/coder/eval/"
+}
 fresh; mktree; echo '# x' >> "$out/tree/coder/eval/run.sh"
 run omega "$out/r" "$home" selftest-stub none "" "$out/tree/coder/eval/run.sh"; r=$?; refused runner
 fresh; mktree; echo '# x' >> "$out/tree/coder/eval/case.sh"
 run omega "$out/r" "$home" selftest-stub none "" "$out/tree/coder/eval/run.sh"; r=$?; refused "case.sh"
+fresh; mktree; echo '# x' >> "$out/tree/coder/eval/score.sh"
+run omega "$out/r" "$home" selftest-stub none "" "$out/tree/coder/eval/run.sh"; r=$?; refused "score.sh"
 fresh; rm -rf "$out/stub" && cp -r "$here/selftest" "$out/stub" && echo '# x' >> "$out/stub/aien"
 run omega "$out/r" "$home" selftest-stub none "" "" "$out/stub"; r=$?; refused "session program"
 
-# the verdict words run.sh can write are exactly case.sh's VERDICTS (compare.sh and refcheck.sh read case.sh)
-check "run.sh verdicts are case.sh VERDICTS" "$(grep -o 'verdict=[a-z-][a-z-]*' "$here/run.sh" | sed 's/verdict=//' | LC_ALL=C sort -u | tr '\n' ' ')" \
+# the verdict words run.sh and score.sh can write are exactly case.sh's VERDICTS (compare.sh and refcheck.sh read
+# case.sh)
+check "run.sh and score.sh verdicts are case.sh VERDICTS" \
+	"$({ grep -o 'verdict=[a-z-][a-z-]*' "$here/run.sh" | sed 's/verdict=//'; grep -o 'SCORE \$id [a-z-][a-z-]*' "$here/score.sh" | cut -d' ' -f3; } | LC_ALL=C sort -u | tr '\n' ' ')" \
 	"$(echo $VERDICTS | tr ' ' '\n' | LC_ALL=C sort | tr '\n' ' ')"
+
+# a program that copies the task's expected output by its absolute path: the narrow sandbox shows it nothing,
+# and the same scorer with the old read-only root shows it the answer (the negative control)
+check "cheat scores wrong-output (omega)" "$(field "$out/omega/results.tsv" st7-cheat)" wrong-output
+check "cheat's own check scores wrong-output" "$(sed -n 's/^check_score //p' "$out/omega/st7-cheat/session.txt")" wrong-output
+mktree; sed -i 's|bwrap --ro-bind /usr /usr|bwrap --ro-bind / / --ro-bind /usr /usr|' "$out/tree/coder/eval/case.sh"
+check "mutant scorer: read-only root inserted" "$(grep -c 'bwrap --ro-bind / / ' "$out/tree/coder/eval/case.sh")" 1
+SELFTEST_TASKS="$here/selftest/tasks" PATH="$here/selftest:$PATH" OMEGA_HOME="$home" OMEGA_EVAL_MODEL=selftest-stub OMEGA_EVAL_SEED=none \
+	sh "$out/tree/coder/eval/run.sh" omega "$out/mut" "$here/selftest/tasks" st7-cheat > "$out/mut.log" 2>&1
+check "mutant scorer: run exit status" "$?" 0
+check "mutant scorer lets the cheat pass (the test bites)" "$(field "$out/mut/results.tsv" st7-cheat)" pass
+# the guard's omega_run sandbox: the session directory is readable, the context pack and the directory above are not
+if command -v node > /dev/null 2>&1; then
+	gb="$out/gs/session"
+	mkdir -p "$gb" "$out/gs/tmp" && echo inside > "$gb/inside.txt" && echo outside > "$out/gs/outside.txt"
+	for p in "$gb/inside.txt" "$home/context/OMEGA.md" "$gb/../outside.txt"; do
+		sed "s|@TASKS@/st7-cheat/expected.out|$p|" "$here/selftest/src/st7-cheat.om" | "$home/omc" > "$out/gs/peek" 2> /dev/null && chmod +x "$out/gs/peek"
+		TMPDIR="$out/gs/tmp" node --no-warnings --input-type=module -e '
+			const { sandboxRun } = await import(process.argv[1]);
+			const r = sandboxRun(process.argv[3], process.argv[2], [], "");
+			process.stdout.write(String(r.out ?? ""));' "$here/../omega-guard.ts" "$gb" "$out/gs/peek" > "$out/gs/got" 2> "$out/gs/err"
+		echo "$p $(wc -c < "$out/gs/got" | tr -d ' ')" >> "$out/gs/seen"
+	done
+	check "guard sandbox: a program reads the session directory" "$(sed -n 1p "$out/gs/seen")" "$gb/inside.txt 7"
+	check "guard sandbox: a program cannot read the context pack" "$(sed -n 2p "$out/gs/seen")" "$home/context/OMEGA.md 0"
+	check "guard sandbox: a program cannot read the directory above" "$(sed -n 3p "$out/gs/seen")" "$gb/../outside.txt 0"
+else
+	check "node on PATH for the guard sandbox check" no yes
+fi
 
 # the scorer: verdicts the program earns, and machine failures that stop the run
 fakegate() { # fakegate VERDICT-TEXT EXIT [FINAL-LINE]: a gate that answers every case with that verdict
 	copyhome
-	printf '#!/bin/sh\nid=$(sed -n 2p "$3" | cut -d" " -f1)\necho "VERDICT $id %s"\n%s\nexit %s\n' \
+	printf '#!/bin/sh\nid=$(sed -n 2p "$3" | cut -d" " -f1)\nmkdir -p "$4" && : > "$4/2.out"\necho "VERDICT $id %s"\n%s\nexit %s\n' \
 		"$1" "${3:+echo \"$3\"}" "$2" > "$out/h/gate"
 	chmod +x "$out/h/gate"
 }
@@ -222,27 +280,30 @@ check "gate deadline: compile-fail stays compile-fail" "$(field "$out/g1/results
 fakegate "INVALID child signal; wait low byte=11" 3 "OM2GATE INVALID cases=1"
 run omega "$out/g2" "$out/h"
 check "gate signal scores crash" "$(field "$out/g2/results.tsv" st1-pass)" crash
-# the scorer's gate runs in the sandbox: a write outside its scratch fails and it sees no network but loopback
+# the scorer's gate runs in the narrow sandbox: a write outside it fails, and it sees no task file, context pack
+# or /proc
 copyhome
-printf '#!/bin/sh\nid=$(sed -n 2p "$3" | cut -d" " -f1)\ntouch "%s" 2> /dev/null\nwc -l < /proc/net/dev > "$(dirname "$4")/net"\necho "VERDICT $id PASS run exit=0"\necho "OM2GATE PASS cases=1"\nexit 0\n' "$out/escaped" > "$out/h/gate"
+printf '#!/bin/sh\nid=$(sed -n 2p "$3" | cut -d" " -f1)\ntouch "%s" 2> /dev/null\nfor f in "%s" "%s" /proc/self/status; do [ -e "$f" ] && echo "$f"; done >> "$(dirname "$4")/seen"\nmkdir -p "$4" && : > "$4/2.out"\necho "VERDICT $id PASS run exit=0 expected=0 stdout=match stderr=match"\necho "OM2GATE PASS cases=1"\nexit 0\n' \
+	"$out/escaped" "$here/selftest/tasks/st1-pass/expected.out" "$out/h/context/OMEGA.md" > "$out/h/gate"
 chmod +x "$out/h/gate"
 run omega "$out/g6" "$out/h"
 check "sandboxed gate: run exit status" "$?" 0
 check "sandboxed gate: verdict" "$(field "$out/g6/results.tsv" st1-pass)" pass
 check "sandboxed gate cannot write outside its sandbox" "$([ -e "$out/escaped" ] && echo yes || echo no)" no
-check "sandboxed gate sees only loopback (2 header lines + lo)" "$(tr -d ' ' < "$out/g6/st1-pass/sandbox/net")" 3
+check "sandboxed gate ran both stages" "$([ -f "$out/g6/st1-pass/sandbox/a/run/seen" ] && [ -f "$out/g6/st1-pass/sandbox/b/run/seen" ] && echo yes)" yes
+check "sandboxed gate sees no task file, context pack or /proc" "$(cat "$out/g6/st1-pass/sandbox/a/run/seen" "$out/g6/st1-pass/sandbox/b/run/seen")" ""
 copyhome; printf '#!/bin/sh\nexit 0\n' > "$out/h/gate"; chmod +x "$out/h/gate"
 run omega "$out/g3" "$out/h"
 check "gate with no verdict stops the run" "$?" 3
 check "gate with no verdict wrote no row" "$(rows "$out/g3")" 0
-fakegate "PASS run exit=0" 1 "OM2GATE FAIL cases=1"
+fakegate "PASS run exit=0 expected=0 stdout=match stderr=match" 1 "OM2GATE FAIL cases=1"
 run omega "$out/g4" "$out/h"
 check "gate PASS line with exit 1 stops the run" "$?" 3
 check "gate PASS line with exit 1 wrote no row" "$(rows "$out/g4")" 0
 rm -rf "$out/t" && cp -r "$here/selftest/tasks" "$out/t" && rm "$out/t/st1-pass/expected.out" && mkdir "$out/t/st1-pass/expected.out"
 run omega "$out/g5" "$home" selftest-stub none "$out/t"
 check "unreadable fixture stops the run" "$?" 3
-check "unreadable fixture: reason" "$(grep -c 'gate gave no verdict' "$out/g5.log")" 1
+check "unreadable fixture: reason" "$(grep -c 'scorer gave no verdict' "$out/g5.log")" 1
 check "unreadable fixture wrote no row" "$(rows "$out/g5")" 0
 copyhome; chmod -x "$out/h/omc"; run omega "$out/x1" "$out/h"
 check "omc not executable stops the run" "$?" 3
@@ -250,7 +311,7 @@ check "omc not executable wrote no row" "$(rows "$out/x1")" 0
 copyhome; chmod -x "$out/h/gate"; run omega "$out/x2" "$out/h"
 check "gate not executable stops the run" "$?" 3
 check "gate not executable wrote no row" "$(rows "$out/x2")" 0
-for mode in nolog nostop nocases; do
+for mode in nolog nostop nocheck; do
 	rm -rf "$out/stub" && cp -r "$here/selftest" "$out/stub" && echo "$mode" > "$out/stub/mode"
 	run omega "$out/m$mode" "$home" selftest-stub none "" "" "$out/stub"
 	check "guard log $mode stops the run" "$?" 3
@@ -278,7 +339,7 @@ check "missing seed wrote nothing" "$([ -e "$out/noseed" ] && echo yes || echo n
 mkdir -p "$out/nojq"
 for d in $(echo "$PATH" | tr ':' ' '); do
 	[ -d "$d" ] || continue
-	for f in "$d"/*; do b=$(basename "$f"); [ "$b" = jq ] || [ -e "$out/nojq/$b" ] || ln -s "$f" "$out/nojq/$b"; done
+	for f in "$d"/*; do b=$(basename "$f"); [ "$b" = jq ] || [ -e "$out/nojq/$b" ] || [ -L "$out/nojq/$b" ] || ln -s "$f" "$out/nojq/$b"; done
 done
 run omega "$out/jqrun" "$home" selftest-stub none "" "" "" "$out/nojq"
 check "missing jq refused" "$?" 2

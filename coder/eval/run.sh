@@ -6,10 +6,11 @@
 #   TASKDIR holds TASK_ID/{spec.md,stdin,expected.out,expected.exit}; reference solutions live elsewhere
 # Tasks run one after another (the live 35B takes serial requests only). Each task gets a fresh empty
 # directory; the model must leave main.om there. Scoring is independent of the session: compile with
-# the pinned omc, then run the om2 gate on the task's case line in a fresh scratch directory.
+# the pinned omc, then score.sh runs the om2 gate with no expected output in the program's view, then compares
+# the program's saved stdout with the expected output through the gate.
 # Verdicts: pass, wrong-output, timeout, crash, compile-fail (coder/README.md says what each means and what
 # stops the run with exit 3 instead).
-# Per task: OUTDIR/ID/{work/,cases.txt,transcript.jsonl,stderr,guard.log,score.log}; summary OUTDIR/results.tsv;
+# Per task: OUTDIR/ID/{work/,sandbox/,transcript.jsonl,stderr,guard.log,score.log}; summary OUTDIR/results.tsv;
 # inputs (compiler, gate, prompt, guard, tasks, session program) OUTDIR/manifest.tsv.
 set -u
 . "$(dirname "$0")/case.sh"
@@ -27,10 +28,17 @@ sha=$(sed -n 's/^omc-sha256 //p' "$pin")
 got=$(sha256sum "$omc" | cut -d' ' -f1)
 [ "$got" = "$sha" ] || { echo "pinned omc mismatch: $omc sha256 $got, $pin says $sha" >&2; exit 2; }
 cmp -s "$pin" "$home/context/PIN" || { echo "pack built for another pin: rebuild $home/context with build-context.sh" >&2; exit 2; }
+# The session loads $home/omega-guard.ts (aien -e); it must be this repository's guard, or the session would run
+# a check loop this runner does not describe.
+guard="$(cd "$(dirname "$0")/.." && pwd)/omega-guard.ts"
+cmp -s "$guard" "$home/omega-guard.ts" || { echo "$home/omega-guard.ts is not $guard: cp it there" >&2; exit 2; }
+here=$(cd "$(dirname "$0")" && pwd)
+# q: quote one word for sh -c (OMEGA_CHECK is a command line the guard runs)
+q() { printf "'%s'" "$(printf '%s' "$1" | sed "s/'/'\\\\''/g")"; }
 command -v aien > /dev/null || { echo "aien not on PATH" >&2; exit 2; }
 command -v bwrap > /dev/null || { echo "bwrap not on PATH (the gate runs model-written programs inside it)" >&2; exit 2; }
 command -v jq > /dev/null || { echo "jq not on PATH (it quotes each task's standard input into the prompt)" >&2; exit 2; }
-# Case lines are read by the gate after cd "$home", so the task directory must be absolute.
+# score.sh gives the gate absolute paths in its case lines, and the gate runs with cwd "$home".
 [ -d "$tasks" ] || { echo "no task directory $tasks" >&2; exit 2; }
 tasks=$(cd "$tasks" && pwd)
 model=${OMEGA_EVAL_MODEL:-}
@@ -69,7 +77,7 @@ hd() { if [ -d "$1" ]; then (cd "$1" && find . -type f | LC_ALL=C sort | xargs s
 manifest=$(printf 'arm\t%s\nmodel\t%s\nseed\t%s\nomc_sha256\t%s\ngate_sha256\t%s\nfixtures_sha256\t%s\nprompt_sha256\t%s\nomega_prompt_sha256\t%s\ncontrol_prompt_sha256\t%s\nguard_sha256\t%s\nerrors_sha256\t%s\nrunner_sha256\t%s\ntasks_sha256\t%s\ntasks_count\t%s\ntask_ids\t%s\naien\t%s\naien_version\t%s\n' \
 	"$arm" "$model" "$seed" "$sha" "$(h "$home/gate")" "$(hd "$home/seed/qualification/om2/fixtures")" "$(h "$prompt_file")" \
 	"$(h "$home/context/OMEGA.md")" "$(h "$home/context/CONTROL.md")" \
-	"$(h "$home/omega-guard.ts")" "$(h "$home/context/errors.tsv")" "$(cat "$0" "$(dirname "$0")/case.sh" | sha256sum | cut -d' ' -f1)" "$(hd "$tasks")" "$(ls "$tasks" | wc -l | tr -d ' ')" "$(ls "$tasks" | LC_ALL=C sort | tr '\n' ' ' | sed 's/ $//')" \
+	"$(h "$home/omega-guard.ts")" "$(h "$home/context/errors.tsv")" "$(cat "$0" "$here/case.sh" "$here/score.sh" "$here/cat.om" | sha256sum | cut -d' ' -f1)" "$(hd "$tasks")" "$(ls "$tasks" | wc -l | tr -d ' ')" "$(ls "$tasks" | LC_ALL=C sort | tr '\n' ' ' | sed 's/ $//')" \
 	"$(h "$(command -v aien)")" "$(aien --version 2>&1 | head -n 1)")
 # Rows with no manifest were scored with unknown inputs (an older runner wrote results.tsv alone): never adopt them.
 if [ ! -f "$out/manifest.tsv" ] && [ -f "$out/results.tsv" ] && [ "$(wc -l < "$out/results.tsv")" -gt 1 ]; then
@@ -86,12 +94,14 @@ fi
 [ -s "$out/results.tsv" ] ||
 	printf 'id\tverdict\tomc_rc\tgate_rc\tsession_rc\twall_s\tstop_refusals\tnon_om_files\n' > "$out/results.tsv"
 for id in $ids; do
-	if cut -f1 "$out/results.tsv" | grep -qx "$id"; then continue; fi
+	if cut -f1 "$out/results.tsv" | grep -qxF "$id"; then continue; fi
 	t="$tasks/$id"
 	d="$out/$id"
 	rm -rf "$d"
 	mkdir -p "$d/work"
-	{ echo "deadline $CASE_DEADLINE"; caseline "$id" "$d/work/main.om" "$t"; } > "$d/cases.txt"
+	# The finish check: the same scorer, on its own scratch directory under the session's output directory
+	# (outside the session directory, which is all the session's programs can read).
+	check="sh $(q "$here/score.sh") $(q "$home") $(q "$d/work/main.om") $(q "$t") $(q "$id") $(q "$d/check")"
 	if [ -s "$t/stdin" ]; then
 		input="Standard input for the check (JSON string): $(jq -Rs . < "$t/stdin")"
 	else
@@ -102,7 +112,7 @@ $input
 Write the program to main.om in the working directory, check it with omega_run, and finish only when it is correct."
 	start=$(date +%s)
 	(cd "$d/work" && OMEGA_HOME="$home" OMEGA_PROMPT="$prompt_file" OMEGA_CONTEXT="$context" \
-		OMEGA_CASES="$d/cases.txt" OMEGA_STOP_LIMIT="$SESSION_STOP_LIMIT" OMEGA_LOG="$d/guard.log" \
+		OMEGA_CHECK="$check" OMEGA_STOP_LIMIT="$SESSION_STOP_LIMIT" OMEGA_LOG="$d/guard.log" \
 		timeout "$SESSION_TIMEOUT" aien --omega -p --mode json --no-session "$prompt" \
 		> "$d/transcript.jsonl" 2> "$d/stderr")
 	src=$?
@@ -114,14 +124,14 @@ Write the program to main.om in the working directory, check it with omega_run, 
 		exit 3
 	fi
 	# The guard logs a "stop ..." line at every finish. A session that ended normally (rc 0) with none means the
-	# guard was not loaded or never saw the finish, and "no OMEGA_CASES" means the case file did not reach it:
+	# guard was not loaded or never saw the finish, and "no OMEGA_CHECK" means the task check did not reach it:
 	# either way the session ran without the harness, so stop without a row.
 	if [ "$src" -eq 0 ] && ! grep -q 'stop allowed\|stop refused' "$d/guard.log" 2> /dev/null; then
 		echo "$id: guard.log shows no finish (the guard was not loaded?), see $d/guard.log; no row written" >&2
 		exit 3
 	fi
-	if grep -q 'no OMEGA_CASES' "$d/guard.log" 2> /dev/null; then
-		echo "$id: the guard ran without the case file (OMEGA_CASES), see $d/guard.log; no row written" >&2
+	if grep -q 'no OMEGA_CHECK' "$d/guard.log" 2> /dev/null; then
+		echo "$id: the guard ran without the task check (OMEGA_CHECK), see $d/guard.log; no row written" >&2
 		exit 3
 	fi
 	wall=$(($(date +%s) - start))
@@ -141,28 +151,16 @@ Write the program to main.om in the working directory, check it with omega_run, 
 		if [ "$orc" -ne 0 ]; then
 			verdict=compile-fail
 		else
-			mkdir "$d/sandbox"
-			sandboxed_gate "$home" "$d/sandbox" "$omc" "$sha" "$d/cases.txt" "$d/sandbox/scratch" >> "$d/score.log" 2>&1
-			grc=$?
-			if [ "$grc" -eq 126 ] || [ "$grc" -eq 127 ]; then
-				echo "$id: gate could not run (rc $grc), see $d/score.log; no row written" >&2
-				exit 3
-			fi
-			# The gate's verdict on this case: PASS, FAIL (wrong exit, stdout or stderr), or INVALID because the
-			# program ran past the deadline (timeout) or died on a signal (crash): all three are the program's.
-			# Any other outcome (unreadable fixture, scratch or exec failure, identity mismatch, no verdict line)
-			# is the machine's: stop without a row.
-			v=$(grep "^VERDICT $id " "$d/score.log" | head -n 1)
-			case $v in
-			"VERDICT $id PASS"*) verdict=pass ;;
-			"VERDICT $id FAIL"*) verdict=wrong-output ;;
-			"VERDICT $id INVALID child deadline exceeded"*) verdict=timeout ;;
-			"VERDICT $id INVALID child signal"*) verdict=crash ;;
-			*) verdict= ;;
-			esac
-			if [ "$verdict" = pass ] && { [ "$grc" -ne 0 ] || ! grep -q '^OM2GATE PASS ' "$d/score.log"; }; then verdict=; fi
-			if [ -z "$verdict" ]; then
-				echo "$id: the gate gave no verdict on the program (rc $grc: ${v:-no VERDICT line}), see $d/score.log; no row written" >&2
+			# score.sh: exit 0 pass, 1 another verdict on the program, 3 (or anything else) the machine's: stop
+			# without a row.
+			sh "$here/score.sh" "$home" "$d/work/main.om" "$t" "$id" "$d/sandbox" >> "$d/score.log" 2>&1
+			scrc=$?
+			s=$(grep "^SCORE $id " "$d/score.log" | tail -n 1)
+			verdict=$(echo "$s" | cut -d' ' -f3)
+			grc=$(echo "$s" | cut -d' ' -f4)
+			if { [ "$scrc" -ne 0 ] && [ "$scrc" -ne 1 ]; } || [ -z "$verdict" ] || ! echo " $VERDICTS " | grep -qF " $verdict " ||
+				{ [ "$verdict" = pass ] && [ "$scrc" -ne 0 ]; } || { [ "$verdict" != pass ] && [ "$scrc" -ne 1 ]; }; then
+				echo "$id: the scorer gave no verdict on the program (rc $scrc), see $d/score.log; no row written" >&2
 				exit 3
 			fi
 		fi

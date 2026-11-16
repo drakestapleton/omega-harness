@@ -27,7 +27,12 @@ bad() { echo "REFCHECK FAIL $*"; fail=1; }
 [ "$(jq -r '.[].id' "$man" | LC_ALL=C sort)" = "$(ls "$tasks" | LC_ALL=C sort)" ] || bad "manifest ids are not the task directories"
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
-echo "deadline $CASE_DEADLINE" > "$work/cases.txt"
+# The gate sees copies of the tasks and references under $work/in, read-only, and nothing else of this machine
+# (narrow_gate in case.sh).
+mkdir "$work/in" "$work/sandbox"
+cp -R "$tasks" "$work/in/tasks"
+cp -R "$refs" "$work/in/refs"
+echo "deadline $CASE_DEADLINE" > "$work/in/cases.txt"
 n=0
 for id in $(jq -r '.[].id' "$man"); do
 	t="$tasks/$id"
@@ -40,10 +45,9 @@ for id in $(jq -r '.[].id' "$man"); do
 	[ "$(cat "$t/spec.md")" = "$(echo "$row" | jq -r .spec)" ] || bad "$id spec.md differs from spec"
 	if [ ! -f "$refs/$id.om" ]; then bad "$id no reference $refs/$id.om"; continue; fi
 	[ "$(sha256sum < "$refs/$id.om" | cut -d' ' -f1)" = "$(echo "$row" | jq -r .ref_sha256)" ] || bad "$id reference sha256 differs from ref_sha256"
-	caseline "$id" "$refs/$id.om" "$t" >> "$work/cases.txt"
+	caseline "$id" "$work/in/refs/$id.om" "$work/in/tasks/$id" >> "$work/in/cases.txt"
 done
-mkdir "$work/sandbox"
-sandboxed_gate "$home" "$work/sandbox" "$home/omc" "$sha" "$work/cases.txt" "$work/sandbox/scratch" > "$work/gate.log" 2>&1
+narrow_gate "$home" "$work/in" "$work/sandbox" "$home/omc" "$sha" "$work/in/cases.txt" "$work/sandbox/scratch" > "$work/gate.log" 2>&1
 grc=$?
 notpass=$(grep '^VERDICT ' "$work/gate.log" | grep -v '^VERDICT [^ ]* PASS')
 [ -z "$notpass" ] || bad "gate verdicts: $notpass"

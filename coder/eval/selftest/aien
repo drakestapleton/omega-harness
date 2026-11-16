@@ -1,11 +1,13 @@
 #!/bin/sh
 # Stub session program for selftest.sh only: stands in for `aien --omega` so the runner and scorer can be
 # checked without a model. It records what the session was given in ../session.txt (outside the scored work
-# directory): sha256 of OMEGA_PROMPT, OMEGA_CONTEXT and its entry count, whether OMEGA_CASES exists and
+# directory): sha256 of OMEGA_PROMPT, OMEGA_CONTEXT and its entry count, whether OMEGA_CHECK is set and
 # OMEGA_STOP_LIMIT; the task prompt (its last argument) goes to ../session-prompt.txt and the other arguments
 # to ../session-args.txt.
 # Then it writes a program to ./main.om (ID = the task directory): src-control/ID.om when the prompt is
-# CONTROL.md and that file exists, else src/ID.om, else nothing.
+# CONTROL.md and that file exists, else src/ID.om, else nothing, with @TASKS@ replaced by SELFTEST_TASKS (the
+# absolute task directory; st7-cheat names its expected output with it). Last it runs OMEGA_CHECK as the guard
+# does at a finish and records the verdict of its SCORE line (or none) and its exit status in ../session.txt.
 [ "${1:-}" = --version ] && { echo "selftest-stub 1"; exit 0; }
 here=$(cd "$(dirname "$0")" && pwd)
 id=$(basename "$(dirname "$(pwd)")")
@@ -13,7 +15,7 @@ id=$(basename "$(dirname "$(pwd)")")
 	echo "prompt $(sha256sum < "${OMEGA_PROMPT:-/dev/null}" | cut -d' ' -f1)"
 	echo "context ${OMEGA_CONTEXT:-unset}"
 	echo "context_entries $(ls -A "${OMEGA_CONTEXT:-/nonexistent}" 2> /dev/null | wc -l | tr -d ' ')"
-	if [ -n "${OMEGA_CASES:-}" ] && [ -s "$OMEGA_CASES" ]; then echo "cases yes"; else echo "cases no"; fi
+	if [ -n "${OMEGA_CHECK:-}" ]; then echo "check yes"; else echo "check no"; fi
 	echo "stop_limit ${OMEGA_STOP_LIMIT:-unset}"
 } > ../session.txt
 args=
@@ -21,8 +23,8 @@ for a in "$@"; do [ -n "${last+x}" ] && args="$args${args:+ }$last"; last=$a; do
 printf '%s\n' "$last" > ../session-prompt.txt
 printf '%s\n' "$args" > ../session-args.txt
 # Guard log lines as the guard writes them at a finish (a mode file in this directory changes that: "nolog"
-# writes no log, as when the guard is not loaded; "nostop" logs a tool call but no finish; "nocases" writes the
-# finish line of a guard without OMEGA_CASES).
+# writes no log, as when the guard is not loaded; "nostop" logs a tool call but no finish; "nocheck" writes the
+# finish line of a guard without OMEGA_CHECK).
 # Known values for the raw columns: st3 has two refused finishes, st6 leaves junk.txt (and NOTES.md, which is
 # not counted), st2 takes at least one second.
 mode=$(cat "$here/mode" 2> /dev/null)
@@ -30,16 +32,22 @@ if [ -n "${OMEGA_LOG:-}" ] && [ "$mode" = nostop ]; then
 	echo "x tool write allowed" >> "$OMEGA_LOG"
 elif [ -n "${OMEGA_LOG:-}" ] && [ "$mode" != nolog ]; then
 	[ "$id" = st3-exit ] && printf 'x stop refused #1: x\nx stop refused #2: x\n' >> "$OMEGA_LOG"
-	if [ "$mode" = nocases ]; then
-		echo "x stop allowed: every touched .om compiles; no OMEGA_CASES" >> "$OMEGA_LOG"
+	if [ "$mode" = nocheck ]; then
+		echo "x stop allowed: every touched .om compiles; no OMEGA_CHECK" >> "$OMEGA_LOG"
 	else
-		echo "x stop allowed: OM2GATE PASS" >> "$OMEGA_LOG"
+		echo "x stop allowed: SCORE pass" >> "$OMEGA_LOG"
 	fi
 fi
 [ "$id" = st6-stdin ] && echo junk > junk.txt && echo notes > NOTES.md
 [ "$id" = st2-wrong ] && sleep 1
 src="$here/src/$id.om"
 [ "$(basename "${OMEGA_PROMPT:-}")" = CONTROL.md ] && [ -f "$here/src-control/$id.om" ] && src="$here/src-control/$id.om"
-[ -f "$src" ] && cp "$src" main.om
+[ -f "$src" ] && sed "s|@TASKS@|${SELFTEST_TASKS:-}|" "$src" > main.om
+if [ -n "${OMEGA_CHECK:-}" ]; then
+	c=$(sh -c "$OMEGA_CHECK" 2> /dev/null)
+	crc=$?
+	echo "check_score $(echo "$c" | sed -n 's/^SCORE [^ ]* \([^ ]*\) .*/\1/p' | tail -n 1)" >> ../session.txt
+	echo "check_rc $crc" >> ../session.txt
+fi
 echo '{"type":"stub"}'
 exit 0
