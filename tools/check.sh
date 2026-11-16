@@ -135,6 +135,16 @@ cp rules/rules.txt "$tmp/priv.txt" && printf 'rule leak\ndate 2026-11-11\nfor al
 "$tmp/rules" lint "$tmp/priv.txt" > /dev/null
 expect "control: a home path in the public rules is refused" 1 $?
 
+# Tracker addresses and private issue identifiers belong only in the machine overlay.
+for marker in 'https://linear.app/private-workspace/issue/example' 'DRA-EXAMPLE'; do
+    cp rules/rules.txt "$tmp/tracker.txt" && printf 'rule tracker-leak\ndate 2026-11-16\nfor all\norder 1\n| read %s\nend\n' "$marker" >> "$tmp/tracker.txt"
+    "$tmp/rules" lint "$tmp/tracker.txt" > /dev/null
+    expect "control: a private tracker reference in public rules is refused" 1 $?
+    printf 'rule private-tracker\ndate 2026-11-16\nfor all\norder 1\n| read %s\nend\n' "$marker" > "$tmp/tracker-overlay.txt"
+    "$tmp/rules" lint rules/rules.txt "$tmp/tracker-overlay.txt" > /dev/null
+    expect "control: a private tracker reference in the overlay is allowed" 0 $?
+done
+
 cp rules/rules.txt "$tmp/open.txt" && printf 'rule open\ndate 2026-11-11\nfor all\norder 1\n| text\n' >> "$tmp/open.txt"
 "$tmp/rules" lint "$tmp/open.txt" > /dev/null
 expect "control: a rule without end is refused" 1 $?

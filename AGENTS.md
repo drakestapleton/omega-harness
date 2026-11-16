@@ -134,7 +134,7 @@ exit codes, pins, log sha256), land it with the hive landing tools, then confirm
 interplane.io page. A non-MERGE review verdict on that head stops the landing. After the landing, the
 landing tools' `land-hooks.sh` `harness` hook re-installs the skills and the instruction files from the
 landed head (`tools/install.sh --omc auto --rev <head>`; see its header). To report something stale without
-changing it, open a Radicle issue (`rad issue open`).
+changing it, use the existing Interplane issue route; if that route is unavailable, record it on the shared board.
 
 Keep the attribution in `README.md` and `LICENSE` intact. Contributions follow the shared AIEN agent
 rules at https://www.aienos.com/agents/RULES.md.
