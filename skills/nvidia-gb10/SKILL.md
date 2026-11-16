@@ -66,7 +66,8 @@ If a record and this file disagree, the record wins. Section 11 lists what the r
 - "Spark is for development, not serving" (Drake, 2026-11-14): never leave any model running when you are not
   using it; bring yours up and down with a trap; no model service enabled at boot.
   [`HANDOFFS/RULE-spark-no-idle-models.md`; BOARD 2026-11-14T13:36:01Z]
-- Only the coordinator restarts or stops other agents. You never kill another lane's job. [RULES]
+- Never kill, stop or restart another lane's job; coordinate a restart with that lane on the board (any agent
+  may take the coordinator role). [RULES]
 
 ## 3. Before you touch the chip
 
