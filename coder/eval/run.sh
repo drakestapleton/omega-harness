@@ -19,6 +19,7 @@ out=${2:?outdir}
 tasks=${3:?taskdir}
 shift 3
 home=${OMEGA_HOME:-$HOME/.local/share/aien-omega}
+home=$(cd "$home" && pwd) || { echo "no OMEGA_HOME directory $home" >&2; exit 2; }
 omc="$home/omc"
 # The pin is read from the repository's PIN (the one place it is written); the installed pack must
 # have been built for the same pin, or the guard and this scorer would disagree.

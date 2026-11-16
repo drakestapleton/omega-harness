@@ -20,6 +20,11 @@
 #   view); the real gate's PASS and FAIL; a fake gate's deadline (timeout) and signal (crash) verdicts;
 #   a gate with no verdict, a PASS line with a non-zero exit, an unreadable fixture, and an omc or gate that
 #   cannot execute each stop the run with exit 3 and no row for that task;
+# - score.sh with the real gate: a program that exits 127 scores wrong-output, and with a gate whose exec fails
+#   the run stops (exit 3); a program with the right stdout and the wrong exit gets no stage A line about its
+#   stdout; a program that writes 2.5 MiB scores crash and leaves no file over the 1 MiB limit; stage A's
+#   inputs are exactly cases.txt, main.om and stdin; a relative OMEGA_HOME scores the same as an absolute one;
+#   refcheck.sh alarms on an expected output at half the file-size limit;
 # - a session that ends with rc 1 stops the run (exit 3, no row); rc 124 is scored; a session whose guard log
 #   is missing or shows no finish, or a guard without the task check, stops the run (exit 3, no row);
 # - a task file name with white space is refused;
@@ -292,6 +297,25 @@ check "sandboxed gate: verdict" "$(field "$out/g6/results.tsv" st1-pass)" pass
 check "sandboxed gate cannot write outside its sandbox" "$([ -e "$out/escaped" ] && echo yes || echo no)" no
 check "sandboxed gate ran both stages" "$([ -f "$out/g6/st1-pass/sandbox/a/run/seen" ] && [ -f "$out/g6/st1-pass/sandbox/b/run/seen" ] && echo yes)" yes
 check "sandboxed gate sees no task file, context pack or /proc" "$(cat "$out/g6/st1-pass/sandbox/a/run/seen" "$out/g6/st1-pass/sandbox/b/run/seen")" ""
+# score.sh on st3-exit (stdout "three\n", exit 3) with the real gate
+mkdir -p "$out/sc"
+sc() { # sc HOME SRC-NAME: score selftest/src/SRC-NAME.om on st3-exit into $out/sc/SRC-NAME; prints score.sh's exit
+	sh "$here/score.sh" "$1" "$here/selftest/src/$2.om" "$here/selftest/tasks/st3-exit" st3-exit "$out/sc/$2" > "$out/sc/$2.log" 2>&1
+	echo $?
+}
+scored() { sed -n 's/^SCORE st3-exit \([a-z-]*\) .*/\1/p' "$out/sc/$1.log"; }
+check "score.sh: exit 127 is the program's" "$(sc "$home" sc-e127) $(scored sc-e127)" "1 wrong-output"
+check "score.sh: exit 127 ran the exec control" "$(grep -c '^VERDICT st3-exit [A-Z]* run exit=0 ' "$out/sc/sc-e127/c.log")" 1
+fakegate "INVALID exec or redirect failed (child exit 127)" 1 "OM2GATE INVALID cases=1"
+check "score.sh: exit 127 from a gate that cannot exec is the machine's" "$(sc "$out/h" sc-e127)" 3
+check "score.sh: right stdout, wrong exit" "$(sc "$home" sc-rightout) $(scored sc-rightout)" "1 wrong-output"
+check "score.sh: stage A says nothing about stdout" "$(grep -c 'stdout differs\|stdout=match' "$out/sc/sc-rightout.log") $(grep -c 'stdout=(compared in stage B)' "$out/sc/sc-rightout.log")" "0 1"
+check "score.sh: a 2.5 MiB writer scores crash" "$(sc "$home" sc-big) $(scored sc-big)" "1 crash"
+check "score.sh: its stdout stopped at the file-size limit" "$(wc -c < "$out/sc/sc-big/a/run/s/2.out" | tr -d ' ')" "$((CASE_FSIZE_BLOCKS * 512))"
+check "score.sh: st3-exit's own program passes" "$(sc "$home" st3-exit) $(scored st3-exit)" "0 pass"
+check "score.sh: stage A inputs are cases.txt, main.om and stdin" "$(ls "$out/sc/st3-exit/a/in" | tr '\n' ' ')" "cases.txt main.om stdin "
+check "score.sh: a relative OMEGA_HOME passes the same program" \
+	"$(cd "$(dirname "$home")" && sh "$here/score.sh" "./$(basename "$home")" "$here/selftest/src/st3-exit.om" "$here/selftest/tasks/st3-exit" st3-exit "$out/sc/rel" 2>&1 | sed -n 's/^SCORE st3-exit \([a-z-]*\) .*/\1/p')" pass
 copyhome; printf '#!/bin/sh\nexit 0\n' > "$out/h/gate"; chmod +x "$out/h/gate"
 run omega "$out/g3" "$out/h"
 check "gate with no verdict stops the run" "$?" 3
@@ -393,6 +417,9 @@ for edit in '.expected_sha256 = "0"' '.stdin_bytes = 99' '.exit = 9' '.spec = "o
 	mkman; jq "map(if .id == \"st3-exit\" then $edit else . end)" "$out/rt.json" > "$out/rt2.json" && mv "$out/rt2.json" "$out/rt.json"
 	check "refcheck refuses a manifest with $edit for one task" "$(refc)" 1
 done
+head -c "$((CASE_FSIZE_BLOCKS * 256))" /dev/zero > "$out/rt/st1-pass/expected.out"; mkman
+check "refcheck alarms on an expected output at half the file-size limit" "$(refc) $(grep -c 'st1-pass expected.out is .* half or more' "$out/ref.log")" "1 1"
+cp "$here/selftest/tasks/st1-pass/expected.out" "$out/rt/st1-pass/expected.out"
 mkman
 check "refcheck passes again with the manifest restored" "$(refc)" 0
 # fake gates: refcheck must want every case to pass, the case count to be n, and exit 0

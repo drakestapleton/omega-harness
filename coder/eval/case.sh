@@ -13,16 +13,23 @@ VERDICTS="pass wrong-output timeout crash compile-fail"
 # HOME, the gate's working directory), RO read-only and RW writable (its scratch goes inside RW): no task
 # directory, output directory, context pack or home directory, no /proc, no network, its own pid namespace,
 # killed with its parent. score.sh never puts a task's expected output in RO while a model-written program runs.
+# Containment of untrusted code (the rules' exception to no hard caps): every file the gate or the program writes
+# is limited to CASE_FSIZE_BLOCKS 512-byte blocks (1 MiB), so a program that writes without end gets SIGXFSZ and
+# scores crash instead of filling the disk. refcheck.sh alarms when a task's expected output reaches half of it.
+CASE_FSIZE_BLOCKS=2048
 narrow_gate() {
 	_gh=$1
 	_gro=$2
 	_grw=$3
 	shift 3
-	bwrap --ro-bind /usr /usr --ro-bind-try /bin /bin --ro-bind-try /lib /lib --ro-bind-try /lib64 /lib64 \
-		--dev /dev --tmpfs /tmp --ro-bind "$_gh/gate" "$_gh/gate" --ro-bind "$_gh/omc" "$_gh/omc" \
-		--ro-bind "$_gh/seed/qualification/om2/fixtures" "$_gh/seed/qualification/om2/fixtures" \
-		--ro-bind "$_gro" "$_gro" --bind "$_grw" "$_grw" \
-		--unshare-net --unshare-pid --unshare-ipc --die-with-parent --chdir "$_gh" -- ./gate "$@"
+	(
+		ulimit -f "$CASE_FSIZE_BLOCKS" || exit 125
+		exec bwrap --ro-bind /usr /usr --ro-bind-try /bin /bin --ro-bind-try /lib /lib --ro-bind-try /lib64 /lib64 \
+			--dev /dev --tmpfs /tmp --ro-bind "$_gh/gate" "$_gh/gate" --ro-bind "$_gh/omc" "$_gh/omc" \
+			--ro-bind "$_gh/seed/qualification/om2/fixtures" "$_gh/seed/qualification/om2/fixtures" \
+			--ro-bind "$_gro" "$_gro" --bind "$_grw" "$_grw" \
+			--unshare-net --unshare-pid --unshare-ipc --die-with-parent --chdir "$_gh" -- ./gate "$@"
+	)
 }
 # caseline ID SRC TASK: the om2 gate line that runs SRC on TASK's stdin and expects its output and exit (refcheck.sh
 # runs the held-out references, which are not model-written, on these lines)

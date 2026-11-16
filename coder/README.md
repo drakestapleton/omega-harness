@@ -66,13 +66,21 @@ no network, own pid namespace), since the gate is not a sandbox and the program 
 the program on a copy of its standard input with no expected output anywhere it can read, and decides compile,
 exit status, stderr, deadline and signal; stage B runs the trusted `cat.om` on the program's saved stdout against
 the task's expected output, so the byte comparison is still the gate's. Both PASS = pass, a different exit,
-stderr or stdout = wrong-output, past the deadline = timeout, killed by a signal = crash.
+stderr or stdout = wrong-output, past the deadline = timeout, killed by a signal = crash. Stage A's verdict line
+reaches the session with its stdout word replaced by `stdout=(compared in stage B)`, since stage A has no
+expected stdout to compare. The gate reports a program that exits 127 the same way as a failed exec or
+redirect; `score.sh` then runs the trusted `cat.om` the same way, and if the gate gives that a run verdict the
+127 was the program's (wrong-output, since no task expects 127). Every file the gate or the program writes is
+limited to 1 MiB (`CASE_FSIZE_BLOCKS` in `case.sh`, containment of model-written code): a program that writes
+past it is killed by SIGXFSZ and scores crash, and `refcheck.sh` alarms when a task's expected output reaches
+half of the limit. Stage B's verdict line still gives the first differing byte offset of a wrong stdout, which
+is part of the feedback that makes this pass rate not blind.
 What is not the model's answer stops the run with exit 3 and no row, so a rerun retries the task: a session
 that ends with a code other than 0 or 124 (for example an unreachable model server), an `omc` or gate that
 cannot execute, a scorer result with no verdict on the program (an unreadable fixture, scratch or exec
-failure), and a session that ended normally while the guard log shows no finish (the guard was not loaded) or
-shows a guard without the task check. A task id with no directory, and a task or fixture file name with white
-space, are refused.
+failure, including an exec failure that the trusted `cat.om` also hits), and a session that ended normally
+while the guard log shows no finish (the guard was not loaded) or shows a guard without the task check. A task
+id with no directory, and a task or fixture file name with white space, are refused.
 The session's only time limit is the wall-clock timeout around `aien` (rc 124, scored); `aien`'s own
 `--max-time` is not used, since what it does at the limit is not known here. Session limits, the
 case deadline, the case line, the sandbox and the verdict words are in `eval/case.sh`.

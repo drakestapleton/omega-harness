@@ -14,6 +14,7 @@ tasks=${1:?taskdir}
 man=${2:?tasks.json}
 refs=${3:?refdir}
 home=${OMEGA_HOME:-$HOME/.local/share/aien-omega}
+home=$(cd "$home" && pwd) || { echo "REFCHECK FAIL no OMEGA_HOME directory $home" >&2; exit 2; }
 pin="$(cd "$(dirname "$0")/../.." && pwd)/PIN"
 sha=$(sed -n 's/^omc-sha256 //p' "$pin")
 [ -n "$sha" ] && [ "$(sha256sum "$home/omc" | cut -d' ' -f1)" = "$sha" ] || { echo "REFCHECK FAIL $home/omc is not the omc in $pin" >&2; exit 2; }
@@ -43,6 +44,8 @@ for id in $(jq -r '.[].id' "$man"); do
 	[ "$(wc -c < "$t/stdin" | tr -d ' ')" = "$(echo "$row" | jq -r .stdin_bytes)" ] || bad "$id stdin size differs from stdin_bytes"
 	[ "$(cat "$t/expected.exit")" = "$(echo "$row" | jq -r .exit)" ] || bad "$id expected.exit differs from exit"
 	[ "$(cat "$t/spec.md")" = "$(echo "$row" | jq -r .spec)" ] || bad "$id spec.md differs from spec"
+	[ "$(wc -c < "$t/expected.out")" -lt $((CASE_FSIZE_BLOCKS * 256)) ] ||
+		bad "$id expected.out is $(wc -c < "$t/expected.out" | tr -d ' ') bytes, half or more of the scorer's file-size limit (CASE_FSIZE_BLOCKS in case.sh): raise the limit"
 	if [ ! -f "$refs/$id.om" ]; then bad "$id no reference $refs/$id.om"; continue; fi
 	[ "$(sha256sum < "$refs/$id.om" | cut -d' ' -f1)" = "$(echo "$row" | jq -r .ref_sha256)" ] || bad "$id reference sha256 differs from ref_sha256"
 	caseline "$id" "$work/in/refs/$id.om" "$work/in/tasks/$id" >> "$work/in/cases.txt"
