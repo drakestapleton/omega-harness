@@ -2533,7 +2533,7 @@ runs in [`examples/gate.sh`](../../examples/gate.sh) with the programs in the re
 `examples/` directory:
 
 <!-- gen:examples -->
-`examples/gate.sh` reruns 130 programs: 125 in `examples/` and 5 in `skills/*/examples/`.
+`examples/gate.sh` reruns 132 programs: 127 in `examples/` and 5 in `skills/*/examples/`.
 <!-- /gen:examples -->
 
 The gate runs only under the pinned compiler (section 0); the observations

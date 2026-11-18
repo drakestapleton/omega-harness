@@ -256,6 +256,7 @@ A trap ends the process with exit status 100 + N. Output already written stays w
 - A bound is a trap, not a clamp. When the pass count follows outside input (a request, a file, a
   database row), check the length before the loop or exit early below N; one long input otherwise
   stops the process with trap 4 (`mistake_bound_input.om` exits 104, `bound_input_guard.om` exits 0).
+- An outer `for` starts another batch only after its inner `while` exits. For batches of three, reset `q = uint 0` on each outer pass, use `while and gt n 0 lt q 3 bound 3`, and increment `q` for each item consumed. With five items, omitting the counter traps on the first batch (exit 104).
 - No loop runs forever and recursion is bounded by the stack.
 
 ## 7. Arrays, texts, globals, structs
@@ -263,6 +264,7 @@ A trap ends the process with exit status 100 + N. Output already written stays w
 - **Local array:** `a = new T N v`, N elements each v, only in a function's outermost block (error 9
   inside a block). N is a literal or an integer `const`; a variable N is error 16. There is no heap
   and no `free` (error 9).
+- Declare each global before the first function that uses it. In a concatenated build, place its declaring unit first. Using a later global produces error 3.
 - **Global array:** `global NAME T N` at top level, zero-filled, program mode only. **A global is
   never an argument** (error 19); a function uses it by naming it.
 - **Text:** `text NAME "bytes"` is a read-only `uchar` array. Escapes are only `\n \t \\ \"`
@@ -415,7 +417,7 @@ with its exact stderr line in the matching `.expect`, except 24, which needs a g
 | 17 | line after a path end | Delete the unreachable line or move it before the path end. | `err17_after_path` |
 | 18 | missing ret | Add a ret on every path (or make the function void). | `err18_missing_ret` |
 | 19 | global passed or same array twice | Copy the global into a local array (new) or pass distinct arrays. | `err19_global_arg` |
-| 20 | write to a read-only array | Write into a local, global or edit array instead. | `err20_readonly` |
+| 20 | write to a read-only array | Write into a local, global or edit array instead. | `err20_pread_text`, `err20_readonly` |
 | 21 | constant index out of range | Use an index below the length. | `err21_const_index` |
 | 22 | bad text literal | Use only \n \t \\ \" escapes and close the quote. | `err22_text_escape` |
 | 23 | size capacity | Use a smaller array. | `err23_size` |
