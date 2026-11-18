@@ -149,6 +149,83 @@ cp rules/rules.txt "$tmp/open.txt" && printf 'rule open\ndate 2026-11-11\nfor al
 "$tmp/rules" lint "$tmp/open.txt" > /dev/null
 expect "control: a rule without end is refused" 1 $?
 
+# A generic reader gets the complete agents policy unless its own cap requires a shorter file.
+cat > "$tmp/size.rules" <<'RULES'
+rule shared
+date 2026-11-18
+for all
+order 1
+| SHARED POLICY
+end
+rule only-agents
+date 2026-11-18
+for agents
+order 2
+| AGENTS ONLY
+end
+rule limited
+date 2026-11-18
+for generic
+order 3
+| LIMITED ééé
+end
+RULES
+# Make the shared text longer than the compact file's directions.
+for i in 1 2 3 4 5 6 7 8; do
+    sed -i '/^| SHARED POLICY$/a | The shared rules belong in the full agent file.' "$tmp/size.rules"
+done
+size_overlay() {
+    printf 'target agents /full agent.md\ntarget generic /small.md\ntarget generic /large.md\ntarget omp /omp.md\n'
+}
+size_overlay > "$tmp/base.ov"
+check_sizes() (
+    set -e
+    r=$1
+    full=$("$r" render "$tmp/size.rules" "$tmp/base.ov" generic HEAD)
+    printf '%s\n' "$full" | grep -qx 'AGENTS ONLY'
+    printf '%s\n' "$full" | grep -qx 'SHARED POLICY'
+    printf '%s\n' "$full" | grep -qx 'LIMITED ééé'
+    n=$(printf '%s\n' "$full" | LC_ALL=C.UTF-8 wc -m)
+    { size_overlay; printf 'cap %s /small.md\n' "$((n - 1))"; } > "$tmp/size.ov"
+    small=$("$r" render "$tmp/size.rules" "$tmp/size.ov" generic HEAD /small.md)
+    printf '%s\n' "$small" | grep -qx 'LIMITED ééé'
+    printf '%s\n' "$small" | grep -qF '/full agent.md'
+    if printf '%s\n' "$small" | grep -qx 'SHARED POLICY'; then exit 1; fi
+    test "$full" = "$("$r" render "$tmp/size.rules" "$tmp/size.ov" generic HEAD /large.md)"
+    s=$(printf '%s\n' "$small" | LC_ALL=C.UTF-8 wc -m)
+    { size_overlay; printf 'cap %s /small.md\n' "$s"; } > "$tmp/size.ov"
+    "$r" fit "$tmp/size.rules" "$tmp/size.ov" HEAD | grep -q " $s of $s ok$"
+    { size_overlay; printf 'cap %s /small.md\n' "$((s - 1))"; } > "$tmp/size.ov"
+    if "$r" fit "$tmp/size.rules" "$tmp/size.ov" HEAD > "$tmp/fit.out"; then exit 1; fi
+    grep -q ' OVER$' "$tmp/fit.out"
+    if "$r" render "$tmp/size.rules" "$tmp/size.ov" generic HEAD /small.md >/dev/null 2>&1; then exit 1; fi
+    omp=$("$r" render "$tmp/size.rules" "$tmp/base.ov" omp HEAD)
+    n=$(printf '%s\n' "$omp" | LC_ALL=C.UTF-8 wc -m)
+    { size_overlay; printf 'cap %s /omp.md\n' "$n"; } > "$tmp/size.ov"
+    "$r" fit "$tmp/size.rules" "$tmp/size.ov" HEAD | grep -q "fit omp /omp.md $n of $n ok$"
+    printf 'target generic /small.md\ncap %s /small.md\n' "$s" > "$tmp/alone.ov"
+    if "$r" fit "$tmp/size.rules" "$tmp/alone.ov" HEAD >/dev/null; then exit 1; fi
+    if "$r" render "$tmp/size.rules" "$tmp/base.ov" generic HEAD /omp.md >/dev/null 2>&1; then exit 1; fi
+    if "$r" render "$tmp/size.rules" "$tmp/base.ov" omp HEAD /unknown.md >/dev/null 2>&1; then exit 1; fi
+    size_overlay > "$tmp/missing.ov"
+    printf 'cap 100 /unknown.md\n' >> "$tmp/missing.ov"
+    if "$r" fit "$tmp/size.rules" "$tmp/missing.ov" HEAD >/dev/null; then exit 1; fi
+    for invalid in 'cap 2' 'cap 2  /small.md' 'cap -1 /small.md' 'target omp /small.md'; do
+        { size_overlay; printf '%s\n' "$invalid"; } > "$tmp/invalid.ov"
+        if "$r" lint "$tmp/size.rules" "$tmp/invalid.ov" >/dev/null; then exit 1; fi
+    done
+    # Exercise the published class in both generic readers from one overlay.
+    n=$("$r" render rules/rules.txt "$tmp/base.ov" generic HEAD | LC_ALL=C.UTF-8 wc -m)
+    { size_overlay; printf 'cap %s /small.md\n' "$((n - 1))"; } > "$tmp/real.ov"
+    for path in /large.md /small.md; do
+        "$r" render rules/rules.txt "$tmp/real.ov" generic HEAD "$path" > "$tmp/real.md"
+        grep -Fq 'Record every Omega math check under the class' "$tmp/real.md"
+    done
+    exit 0
+)
+check_sizes "$tmp/rules"
+expect "generic coverage, per-path caps, Unicode boundaries and malformed or ambiguous targets" 0 $?
+
 printf '{"a":[1,}' | "$tmp/jflat" > /dev/null 2>&1
 expect "control: malformed JSON is refused" 2 $?
 

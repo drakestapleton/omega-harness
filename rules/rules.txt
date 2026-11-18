@@ -66,7 +66,7 @@ said Run it again on Spark with fresh cases. Have the second agent solve indepen
 said and it doesn't have to be a blanket thing. only require this technique on different or CRITICAL points in the project where MULTIPLE other parts depend on that one part being accurate.
 said I think we should start off with requiring it for everything and make it earn the lower reviewer over time. I want to track Turing gains from this.
 said I want whenever agents are doing math checks to be a class because they are OFTEN coping the wrong number from memory.
-for all watchdog
+for all watchdog generic
 order 23
 | ## Independent-first review for Omega work
 | - Start every Omega deliverable or project decision with full review. A fresh reviewer receives only the task, source inputs and acceptance questions in an order fixed before drafting. Preserve its independent answer and digest in a timestamped receipt before revealing the author's draft or rationale. The reviewer asks the author about the first difference that changes a result, action or acceptance decision. Verify the reply against a test or source. Record any remaining material differences and resolve them before acceptance. Record agreement when appropriate and still run the acceptance checks.

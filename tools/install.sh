@@ -12,7 +12,8 @@
 #       On a Linux AArch64 host: build tools/rules with OMC (its sha256 must be PIN's; `auto` takes
 #       seed/out/omc at PIN's omega-mv commit from the Interplane omega-mv repository), then install
 #       or check every skills directory and instruction file that FILE names (default
-#       ~/.config/omega-harness/local.rules; `skills DIR` and `target PROGRAM PATH` records). Each
+#       ~/.config/omega-harness/local.rules; `skills DIR` and `target PROGRAM PATH` records).
+#       cap CHARS PATH limits a target in decoded characters. All caps are checked before installation. Each
 #       instruction file is rendered from rules/rules.txt plus FILE. A file kept by aien-keep (its
 #       path resolves under /srv/aien-keep/) is replaced only through `sudo aien-keep update` (the
 #       keeper keeps the old copy); any other through a rename, after a dated backup under
@@ -137,13 +138,20 @@ got=$(sha256sum "$omc" 2>/dev/null | cut -d' ' -f1)
 "$omc" < "$tmp/h/tools/rules.om" > "$tmp/rules" && chmod +x "$tmp/rules" || { echo "install: tools/rules.om does not compile" >&2; exit 2; }
 [ -f "$overlay" ] || { echo "install: no overlay $overlay" >&2; exit 2; }
 rhead=$(git -C "$tmp/h" log -1 --format=%H -- rules tools/rules.om)
-"$tmp/rules" targets "$tmp/h/rules/rules.txt" "$overlay" > "$tmp/targets" || { echo "install: rules targets failed" >&2; exit 2; }
+"$tmp/rules" targets "$tmp/h/rules/rules.txt" "$overlay" > "$tmp/targets" || { cat "$tmp/targets" >&2; echo "install: rules targets failed" >&2; exit 2; }
 alarm=$(sed -n 's/^alarm - //p' "$tmp/targets" | head -n 1)
+"$tmp/rules" fit "$tmp/h/rules/rules.txt" "$overlay" "$rhead" > "$tmp/fit" || {
+    cat "$tmp/fit" >&2
+    echo "install: target capacity check failed; nothing installed" >&2
+    [ "$check" = 0 ] && [ -n "$alarm" ] &&
+        echo "$(date -u +%FT%TZ) omega-harness: tools/install.sh at $head refused: $(grep -v ' ok$' "$tmp/fit" | head -n 1)" >> "$alarm"
+    exit 2
+}
 while read -r kind prog path; do
     case $kind in
         skills) do_skills "$path" < /dev/null ;;
         target)
-            "$tmp/rules" render "$tmp/h/rules/rules.txt" "$overlay" "$prog" "$rhead" > "$tmp/out" || { rc=2; continue; }
+            "$tmp/rules" render "$tmp/h/rules/rules.txt" "$overlay" "$prog" "$rhead" "$path" > "$tmp/out" || { rc=2; continue; }
             cmp -s "$tmp/out" "$path" && continue
             if [ "$check" = 1 ]; then echo "DIFFERS $path: not the rendering of rules at $rhead"; rc=1; continue; fi
             case $(readlink -f "$path") in
