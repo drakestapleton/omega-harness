@@ -38,7 +38,7 @@ more. `examples/gate.sh OMC` checks the compiler hash against `PIN` and reruns e
 `examples/` and `skills/*/examples/`; run it after any change to an example or a language rule.
 
 <!-- gen:examples -->
-`examples/gate.sh` reruns 130 programs: 125 in `examples/` and 5 in `skills/*/examples/`.
+`examples/gate.sh` reruns 132 programs: 127 in `examples/` and 5 in `skills/*/examples/`.
 <!-- /gen:examples -->
 
 `PIN` is the one place the compiler pin is written. `data/reference.tsv` is omega-mcp's reference data

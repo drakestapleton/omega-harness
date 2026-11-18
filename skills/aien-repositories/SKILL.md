@@ -82,6 +82,10 @@ Component code and reproducible evidence win for what actually runs. Architectur
 
 Names below are catalog slugs; the `https://github.com/aien-dev/` links are frozen historical citations (see "Where the code lives"). Resolve each repository's canonical copy by RID in the Radicle registry. These are ownership routes, not deployment assertions.
 
+Route `mining,pearl=omega-pearl` to the private repository for the PRL protocol, payout verification and mining pipeline. Route GPU code generation to CUDApp and compiler changes to omega-mv.
+
+For the native tile planner, host controls and GB10 receipts, see the [TileLab reproduction guide](../../examples/TILELAB.md).
+
 ### Core foundations
 
 Ownership rule for the Omega/GPU/compatibility trio (Drake's forwarded omega-bridge assessment, 2026-10-27; [ADR 0042](https://github.com/aien-dev/aien-architecture-mv/blob/main/docs/adr/0042-omega-cudapp-bridge-ownership.md), Accepted by Drake 2026-10-30, merged as [aien-architecture-mv#342](https://github.com/aien-dev/aien-architecture-mv/pull/342) `6b924d4f8e`): **Omega owns computation. CUDApp owns GPU execution. Omega Bridge owns compatibility.** Route new work by that rule, not by where a copy happens to live today. Known copies outside their owner, each with its owner's issue (all open at 2026-10-31): GPU C in omega-mv `src/` ([CUDApp#106](https://github.com/aien-dev/CUDApp/issues/106)), driver client in physics-mv ([CUDApp#107](https://github.com/aien-dev/CUDApp/issues/107)), a second cubin writer ([CUDApp#108](https://github.com/aien-dev/CUDApp/issues/108)), the disassembler in omega-mv ([CUDApp#10](https://github.com/aien-dev/CUDApp/issues/10)), omega-bridge's own seed bootstrap ([omega-mv#870](https://github.com/aien-dev/omega-mv/issues/870)) and front end ([omega-mv#871](https://github.com/aien-dev/omega-mv/issues/871)). Omega main (`91c83438da`) has no `cudapp.lock` yet.

@@ -130,7 +130,7 @@ mistakes, the known defects, and `execenv`. `examples/gate.sh` refuses any compi
 in [`PIN`](PIN), then compiles and runs every program here and in `skills/*/examples/`:
 
 <!-- gen:examples -->
-`examples/gate.sh` reruns 130 programs: 125 in `examples/` and 5 in `skills/*/examples/`.
+`examples/gate.sh` reruns 132 programs: 127 in `examples/` and 5 in `skills/*/examples/`.
 <!-- /gen:examples -->
 
 <!-- gen:pin -->
@@ -154,7 +154,7 @@ It prints `PASS name` or `FAIL name: reason` per program and ends with a line li
 
 <!-- gen:gateline -->
 ```text
-GATE PASS examples=130 pass=130 fail=0 omc=26540e6de62402d5784b30b24d7c6faae488137c1f8a4b3e784fd0b5d5528991
+GATE PASS examples=132 pass=132 fail=0 omc=26540e6de62402d5784b30b24d7c6faae488137c1f8a4b3e784fd0b5d5528991
 ```
 <!-- /gen:gateline -->
 
