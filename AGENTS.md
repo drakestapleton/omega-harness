@@ -2,6 +2,8 @@
 
 Operating instructions for an agent working in this repository. Read this before editing a skill.
 
+Omega Harness supports local Omega and four external providers: Claude, Codex, Grok and Muse. Use this list for worker selection, setup and qualification.
+
 **Standing rules (Drake, 2026-11-11).** Interplane (https://interplane.io, serving the Radicle
 repositories) is the only forge and the canonical source: never push to a GitHub remote, open or update
 a GitHub PR or issue, publish with `gh`, or cite a GitHub branch as current state. New work is a new
