@@ -60,6 +60,22 @@ order 23
 | - The verdict is a file that names the exact head, the reviewer's program, model and effort, and each finding with its confidence percent. A run that ends without a verdict file whose first line names the head is not a review: start a fresh one. The author fixes each finding or answers it in writing in that file's reply; a changed head is reviewed again by another fresh run. The landing receipt names the verdict file. A REJECT, or a finding neither fixed nor answered, stops the landing.
 | - A review by the author, or by any run that shares the author's context, is not the independent review.
 end
+rule corrective-action-must-hold
+date 2026-11-18
+said Jesus... this need a Corrective action put into place
+said This is KILLING our usage
+for all watchdog
+order 23
+| ## A corrective action is small, attacked before it is reviewed, and replaced when it breaks (Drake, 2026-11-18)
+| Drake, 2026-11-18, after one omega-mv change needed reviews VERDICT1 to VERDICT9 of dra485-finish-20261117, most of them on its own corrective action: "this need a Corrective action put into place" and "This is KILLING our usage".
+| What went wrong, so it is not repeated: the corrective action grew into a repository-wide always-run gate that tried to judge every lane's hand-written prose, which can never be complete and would have blocked other lanes; it was tested only on inputs its author wrote; a broken method was extended instead of replaced; and fix commits added new defects of the kind they fixed.
+| - Size: a corrective action is the smallest check that catches the kind in the files of this change and its lane. It becomes an always-run gate for other lanes only when the kind has occurred there. When a kind cannot be caught mechanically (for example a false sentence in prose), the action is a review lesson plus generation of the numbers, not a gate that judges prose. Before adding a gate, check that a landed commit of another lane still passes it.
+| - Attack it before review with inputs you did not write: each kind found by earlier reviews of the change, in other wording, other case, other file and another path through the code, run through the real entry point the gate runs. Each kind becomes one test in the repository; when the method is replaced, remove the tests that only exercised the old method.
+| - Break your own tool once before review: change it so it should stop catching, and check that its own tests then fail.
+| - When a review breaks a corrective action, do not extend it. Name in one sentence why the method can never be complete (for example: "a word list cannot recognise every false sentence"), pick a method that does not depend on listing cases, and say why that one terminates.
+| - Before every re-review, re-read your own fix commit as the reviewer would: every number, count, copy and file it touches, and the manifests or checksums of anything it edited.
+| - Cost stop. The review count of a change is the number of verdict files for the same branch, re-reviews after a fix or a rebase included; the count is in the verdict file name (VERDICT, VERDICT2, ...). Before starting review 5, stop and report to Drake in plain words: the count, what each round found, what one more round would cost, and your recommendation (land what is proven and record the rest as open, or continue). Continue only on his answer. This is a spending decision, one of the reasons to come to Drake in his operator contract; it follows the root-cause step his contract asks for before a fourth review, and it is applied by the lane itself (no tool counts reviews yet). It does not loosen any gate: nothing lands without a MERGE verdict.
+end
 
 rule omega-collective-continuation
 date 2026-11-16
