@@ -16,13 +16,17 @@ not a spreadsheet cell, not a number produced by fluency.
 - Checking a formula that code implements against its symbolic form.
 - The physics behind a visual or a claim, not only the arithmetic of the numbers already measured.
 
-Record Omega checks in the `math-check` class under the [independent-first review rule](../../rules/rules.txt).
-Open the pinned artifact or original user input when checking a value. If the task asks for a particular
-run, row or unit, verify that selection before entering its value in Wolfram. Preserve enough precision
-to reproduce the reported rounding.
+Label each Omega math check `math-check` in the work item's receipt, including checks embedded
+in another task. Start at full independent review. Each agent opens the original artifact or user
+input, identifies the version, field or row, value and unit, and runs the calculation in Wolfram.
+For symbolic checks, capture the expression and assumptions. Keep the reviewer's answer sealed until
+comparison. Compare both the inputs and the reported result, including units and rounding. Record
+the first material difference and its resolution. An unavailable required source leaves the check
+unverified. Apply the standing independent-first rule to any change of review tier.
 
 Exempt from recomputation: a number that is already measured and filed with its source (quote it with the source);
-integer bookkeeping such as line counts, byte sizes, exit codes, PIDs and commit shas.
+integer bookkeeping such as line counts, byte sizes, exit codes, PIDs and commit shas. Read quoted
+values and identifiers from their original records. When a count becomes an operand, apply the full math check.
 
 ## Tools in this harness
 
