@@ -16,7 +16,12 @@ not a spreadsheet cell, not a number produced by fluency.
 - Checking a formula that code implements against its symbolic form.
 - The physics behind a visual or a claim, not only the arithmetic of the numbers already measured.
 
-Not in scope: a number that is already measured and filed with its source (quote it with the source);
+Record Omega checks in the `math-check` class under the [independent-first review rule](../../rules/rules.txt).
+Open the pinned artifact or original user input when checking a value. If the task asks for a particular
+run, row or unit, verify that selection before entering its value in Wolfram. Preserve enough precision
+to reproduce the reported rounding.
+
+Exempt from recomputation: a number that is already measured and filed with its source (quote it with the source);
 integer bookkeeping such as line counts, byte sizes, exit codes, PIDs and commit shas.
 
 ## Tools in this harness
