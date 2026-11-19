@@ -505,3 +505,16 @@ order 27
 | - For Omega's native `tools/trit` daily interface, use `--inspect` to request record inspection and `--consume` to advance a read cursor silently. Inspection grants no stop authority. Keep the legacy `--ack` output local; never forward it as help. These commands do not supply sender identity, freshness or runtime authorization: establish those separately before any process action.
 | - Measure real wakes, record reads and full task usage when evaluating savings. Include inbox and bootstrap costs. No cost or speed improvement is established by a shorter notification alone. Human communication remains plain, complete prose.
 end
+
+rule bot-wire-wake-hygiene
+date 2026-11-19
+for all watchdog
+order 27
+| ## Bot-wire wake hygiene and Omegese Wire (2026-11-19)
+| Full wire contracts, hashes and claim-ladder boundaries live in `skills/omegese-wire/SKILL.md`.
+| - Maintain one shared rules digest (`RULES-DIGEST.md`). Post rule changes once as a no-wake note rather than broadcasting wakes across bot inboxes.
+| - Batch review wakes: wake a reviewer once per finished revision, inspect deltas only on re-review, and wake nobody for minor wording edits.
+| - Gate non-urgent wakes on usage pace: hold non-urgent wakes when usage pace exceeds the weekly allowance, failing open if the pace record is missing or more than 24h stale.
+| - Keep inbox tags to `task`, `turn`, `fail`, `fyi` and `result`; `fyi` and `result` never wake.
+| - Separate landed v1 wire tools (`tools/trit` and `tools/codebook` in `omega-mv`, R45 Omegese in `aien-train`) from PROPOSED extensions (R45 instruction-id slots `041-099`, unlanded codebook revisions, and Gen 3 error-resistant ternary codebooks).
+end

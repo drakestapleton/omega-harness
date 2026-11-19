@@ -124,6 +124,38 @@ the following explicitly:
   both checker exits 0. These are HOST_SYNTHETIC boundary checks, not a learned
   campaign (NOT_RUN) or physical GB10 qualification (BLOCKED).
 
+### Omegese Wire and Trinary Doctrine (2026-11-19)
+
+For agent wake signaling, signed codebook frames, compact R45 lexical messages,
+and bot-wire wake hygiene, load `skills/omegese-wire/SKILL.md`. Keep these four
+wire tracks distinct on the claim ladder and never conflate them with Neuralese
+(`LTP0`/`NL4`) above:
+
+- **T-002 Trinary Wake (`omega-mv` `tools/trit/`) and Layered Codebook v1
+  (`omega-mv` `tools/codebook/`)**: `MERGED` on `omega-mv` main (inspected at
+  `e703c1b78d85034931904b657bece99e4bc2935e`) and host-`VERIFIED` via
+  `tests/gates/omega-trinary.gate`. Trit semantics follow Trinary Doctrine v1.0
+  (silence = quiet, `1` = task/inspect, `2` = authorized stop request, `0` =
+  help; never forward legacy `--ack` `0` receipts as help). `ocb2:` lines carry
+  full-line HMAC-SHA256 over the 6-field inbox record, lane, `codebook.tsv`
+  SHA-256 (`d2942e9f3c014781f38bc33054e117fef70c52941ad11beeb6f68c89cdac21fb`,
+  50 data rows), and strictly increasing per-sender counter. `TritSignal.lean`
+  proves legacy read/ack and `CodebookProof.lean` proves v1 prefix-free/demotion
+  invariants; daily `--inspect`/`--consume` are host-tested (`test-daily.py`,
+  `mutate-daily.py`), not Lean-proved. Separate the landed v1 `codebook.tsv`
+  from the unlanded r8/r9 review candidate (`EXERCISED`, not `MERGED`).
+- **R45 Omegese Wire (`aien-train` `docs/omegese45/`)**: `IMPLEMENTED` and
+  `EXERCISED` on Grace CPU (`vocab.tsv` SHA-256
+  `c1d7e15466e6585a776314c5c05f35466b2697d9631ad2e11c7918a434a4c18d`, 41 rows;
+  frames `G`/`A`/`R`/`P`; deterministic `.om` translator `en2goal`/`goal2en`/
+  `rep2en`). Distinct from Trinary Doctrine's durable-record + 1-trit wake flow.
+- **Neuralese (`LTP0`/`NL4`, above)**: latent/model-bound envelopes decoded into
+  checked Omega operations; separate from Omegese Wire signaling and R45 frames.
+- **Open `PROPOSED` tracks**: R45 `inst` slots `041-099` (DRA-504, canceled for
+  internal bots on 2026-11-10 in favor of Trinary Doctrine) and the Gen 3
+  error-resistant ternary codebook (5-digit `{00000,11111,22222}` vs 3-digit
+  `{000,111,222}` Hamming bounds). Neither is implemented or landed.
+
 ### Native GPU realization records (2026-10-28)
 
 The canonical consumer integration is [CUDApp #169](https://github.com/aien-dev/CUDApp/pull/169),
