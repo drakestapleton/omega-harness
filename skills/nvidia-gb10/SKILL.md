@@ -88,6 +88,8 @@ If a record and this file disagree, the record wins. Section 11 lists what the r
 - `spark-window open NAME [--ledger ID] [--lease MIN] [--gb10 exclusive|shared|none] [--quiet exclusive|none] [--wait]`
 - `spark-window run CMD...` sets `SPARK_WINDOW`, `SPARK_WINDOW_DIR` and, if it holds the chip, `AIEN_GB10_LOCK_HELD=1`.
 - `spark-window close [ID]`, `status`, `id`, `locks [gb10|quiet]`.
+- Always capture the window id and close with an `EXIT` trap (`WID=$(spark-window open <name> --lease 15 --gb10 exclusive --quiet exclusive | tail -n 1); trap 'spark-window close "$WID" >/dev/null 2>&1 || true' EXIT`). `--lease` takes integer minutes (`15`, not `15m`) and `NAME` is positional.
+- **Verify CLI flags before passing `--sim` to any GPU test binary**: some tests (e.g. `gpu_qmma_probe_test`) only support `--host-only` and treat unknown flags as a live-GPU run. Check `main()` or `--help` first so a host check never opens the GB10 outside a window.
 - One window at a time. Exclusive windows are for timing receipts only and last at most 20 min; an overrun gets
   NO VERDICT. `--quiet none` is for value checks and must never produce a number reported as a speed.
 - `open` waits for a quiet machine (gives up after 2700 s by default: load at most 10, at most 3 quiet-lock
@@ -348,7 +350,9 @@ What those pages say that matters here (fetched 2026-11-14, each from the URL na
 ## 13. Own-driver (aien-gpu) GB20B boot checklist
 
 Before editing `aien-gpu` or scheduling a Window 0 cold boot on the Spark, read
-[gb20b-gsp-boot.md](./references/gb20b-gsp-boot.md). Summary:
+[gb20b-gsp-boot.md](./references/gb20b-gsp-boot.md). For the 4x-verified bit-for-bit structure of
+`gsp_ga10x.bin` (`580.173.02`) and firmware study hygiene rules (`0700` local-only, zero repo contamination),
+read [gsp-firmware-580-173-02.md](./references/gsp-firmware-580-173-02.md). Summary:
 
 - **Check prior work first:** prior pure-Omega GB20B SEC2/COTv2 work (`ogd-qual-gsp` / `omega-gpu-driver`
   `GB20B.md`) and `HANDOFFS/L332/` receipts already document the `580.173.02` HAL bindings; do not port from
