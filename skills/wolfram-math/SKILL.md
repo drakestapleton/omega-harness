@@ -67,6 +67,9 @@ Mounted as MCP tools by the hosted service `https://agenttools.wolfram.com/mcp`:
 
 - One call per question, and quote the query with the result where the work lives:
   `WolframLanguageEvaluator: Integrate[x^2, {x, 0, 1}] -> 1/3`.
+- **Persist receipts in the repository or evidence directory before citing "Wolfram verified" in any committed
+  file.** A session-only Wolfram call whose raw query and reply are not saved alongside the deliverable (or backed
+  by committed `aien-calc` receipts) cannot be audited in a fresh-clone review and must be omitted or withdrawn.
 - Prefer exact results. Take `N[...]` only when a decimal is what the reader needs, and say which form
   you used. `Quantity` and `UnitConvert` carry the unit into the text; a bare number without a unit is
   not a result.

@@ -226,6 +226,27 @@ Automatic actors you will meet:
     rc 0 with correct numbers. [BOARD 2026-11-14T19:33:26Z]
 16. A long job launched over ssh hangs; use `nohup setsid ... </dev/null >log 2>&1 &`.
     [cortex omp-learn-0bcfaab846d0e636]
+17. Own-driver (`aien_gpu.ko`) Stage B stops immediately on a warm Spark (`mmio_us=230`, `polls=0,0,0,0`,
+    `gsp_mb0=0x80000000`) and reloading `nvidia.ko` then fails (`ksec2PollForCanSend_IMPL: Timed out waiting for
+    SEC2 command queue to be empty`, `0x110094=0xbadf4100`); unloading `nvidia.ko` leaves GSP suspended
+    (`LIBOS_INTERRUPT_PROCESSOR_SUSPENDED`), and SEC2 only cold-starts GSP once per reset; never hot-swap
+    `aien_gpu` onto a warm `nvidia`-booted Spark — own-driver GSP boot requires a cold boot with `nvidia`
+    blacklisted (Window 0) and explicit operator approval for the restart. Also stop `aien-run-spark-sensors.service`
+    beside `nvidia-persistenced` if unloading `nvidia*`, or `rmmod` returns `EBUSY`.
+    [BOARD 2026-11-18T23:08:51Z, 23:17:45Z, 23:18:38Z]
+18. Sysfs PCIe FLR (`echo 1 > /sys/bus/pci/devices/000f:01:00.0/reset`) drops SSH and forces a full SoC reboot
+    (~60 s) instead of resetting only the GPU; `PDB_PROP_GPU_TRIGGER_PCIE_FLR` is `GB10B`-only (`NV_FALSE` on
+    `GB20B`, `open-gpu-kernel-modules 580.173.02` `g_gpu_nvoc.c`); never use sysfs FLR as a non-reboot recovery or
+    hand-back step on the Spark. [BOARD 2026-11-18T23:17:45Z, 23:42:35Z]
+19. Driver patches, built `.ko` modules, staged GSP packages, and live logs disappear after a GPU swap/reboot;
+    they were staged under `/tmp`; always stage driver checkouts, built modules, firmware packages, `.om` binaries,
+    and checksum manifests in persistent storage and write live logs into `HANDOFFS` before any module swap or
+    reboot. [BOARD 2026-11-18T23:17:45Z]
+20. Cold-boot Stage B fails at `stage=7` (`polls=0,0,0,1`, `hwcfg2=0xbadf4100`, `gsp_mb0=0xbadf4100`) even with
+    `NO_NVIDIA_LOADED`; the driver used `GB10B` HALs (`SEC2 MAILBOX0` poll, `COTv1`, `GB10B` images,
+    `.fwsignature_gb10y`) on a `GB20B` die (`BOOT_42=0x1bba1000`), and step 8 mistook PRI target-mask lockdown
+    (`0xbadf4100`) for lockdown release; port every HAL to `GB20B` (see `./references/gb20b-gsp-boot.md`) before
+    spending a Window 0 reboot. [HANDOFFS/L332/window0-20261118T234217Z; BOARD 2026-11-18T23:44:02Z, 23:51Z]
 
 ## 8. What we do not use
 
@@ -237,8 +258,10 @@ Automatic actors you will meet:
 - Still used, and say so: NVIDIA's open kernel modules 580.173.02 (nvidia, nvidia-uvm) and NVIDIA's signed GSP
   firmware. "No CUDA" does not mean "no driver". Never claim "no NVIDIA code at all".
   [cortex omp-learn-6ef9994f2b45d5ef, omp-learn-b654f9a92d110794; operator memory note `sovereignty-no-outside-deps.md`]
-- Own kernel driver work (L332 and related) is not qualified on hardware as of the 2026-10-30 record.
-  [cortex omp-learn-8e437914757898e2]
+- Own kernel driver work (L332 / `aien-gpu`) as of 2026-11-18: Stage A (`aien_gpu.ko` PCI bind, `BOOT_0=0x1bb000a1`,
+  `BOOT_42=0x1bba1000`, 7-unit Omega self-test, firmware hash check) and pure-`.om` `doctor` passed on live Spark
+  silicon (`HANDOFFS/L332/window0-20261118T234217Z`), while Stage B (`GB20B` SEC2/GSP boot) and Stage C remain
+  `HOST_TESTED` + `QEMU` (`hardware=NOT_RUN` pending a reviewed Window 0 cold boot).
 - NVIDIA user-space CUDA appears only as the comparison arm in head-to-heads. [`HANDOFFS/H2H9B/PROTOCOL.md`]
 
 ## 9. Where evidence goes
@@ -256,15 +279,18 @@ Automatic actors you will meet:
 - Changing GPU clocks or power limits. [BOARD 2026-11-09T00:28:25Z]
 - Unbinding the GPU from nvidia.ko, a VFIO bind, or any device write outside the driver (stops every GPU user;
   recorded as needing Drake's go). Rebooting the Spark or booting it natively. The signed boot chain is never
-  written. [cortex omp-learn-b654f9a92d110794, omp-learn-8e437914757898e2; operator memory note `aienos-native-boot-status.md`]
+  written. Stopping another lane's job is not approval to restart the Spark, and sysfs PCIe FLR on `000f:01:00.0`
+  reboots the whole SoC (trap 18): both require Drake's explicit go for a planned restart.
+  [cortex omp-learn-b654f9a92d110794, omp-learn-8e437914757898e2; BOARD 2026-11-18T23:18:38Z; operator memory note `aienos-native-boot-status.md`]
 - Re-enabling any model service at boot. [`HANDOFFS/RULE-spark-no-idle-models.md`]
 - Not Drake: using an idle chip, stopping the idle shared model under a board claim. [RULES]
 
 ## 11. Where the records disagree or are unconfirmed
 
-- Chip name: registers decode to GB20B; older notes and NVIDIA's UVM comments say GB10B. That UVM's GB10B
-  sticky-L2 quirk does not apply here is INFERRED, not measured (L1267). The cache traps in section 7 were
-  measured on this chip either way.
+- Chip name: bare-metal `GPUID.TXT` (2026-11-12) and live `aien_gpu.ko` Stage A (2026-11-18) both confirmed
+  `BOOT_0=0x1bb000a1`, `BOOT_42=0x1bba1000` (`GB20B`, arch `0x1B`, impl `0xB`; `g_hal_archimpl.h:96`). Driver boot
+  HALs must target `GB20B`, not `GB10B` (section 13). Whether NVIDIA UVM's GB10B sticky-L2 quirk applies remains
+  INFERRED, not measured (L1267); the cache traps in section 7 were measured on this chip either way.
 - Which lock the MODEL_PORT server holds: chip-watchdog's header says the live server uses its own lock, and older
   start recipes set `AIEN_SERVE_GPU_LOCK=/tmp/aien-serve-MODEL_PORT.lock`; the motor-revival unit does not set it, and
   on 2026-11-15T01:54Z the server held `/tmp/aien-gb10.lock` exclusively. Whether the watchdog would kill an
@@ -318,4 +344,22 @@ What those pages say that matters here (fetched 2026-11-14, each from the URL na
   `NV_ESC_CHECK_VERSION_STR`, `NV_ESC_IOCTL_XFER_CMD`, `NV_ESC_EXPORT_TO_DMABUF_FD`, `NV_ESC_WAIT_OPEN_COMPLETE`
   on `/dev/nvidia0`. [same repo, _autodocs/QUICK_REFERENCE.md] The `_autodocs` pages are generated summaries;
   for anything our driver code depends on, read the header in the pinned source instead.
+
+## 13. Own-driver (aien-gpu) GB20B boot checklist
+
+Before editing `aien-gpu` or scheduling a Window 0 cold boot on the Spark, read
+[gb20b-gsp-boot.md](./references/gb20b-gsp-boot.md). Summary:
+
+- **Check prior work first:** prior pure-Omega GB20B SEC2/COTv2 work (`ogd-qual-gsp` / `omega-gpu-driver`
+  `GB20B.md`) and `HANDOFFS/L332/` receipts already document the `580.173.02` HAL bindings; do not port from
+  `GB10B` scratch assumptions.
+- **Cold boot only (Window 0):** never hot-swap `aien_gpu` after `nvidia.ko` (trap 17) and never issue sysfs FLR
+  on `000f:01:00.0` (trap 18). Stage all artifacts and checksums outside `/tmp` (trap 19); `spark-window` state
+  resets across a reboot, so reclaim/track it on the board and remove any one-boot `nvidia` blacklist before the
+  restore reboot (`BOARD 2026-11-18T23:42:35Z`).
+- **Verify all GB20B HALs + ABI + mutants before spending a reboot:** `.fwsignature_gb20y`, `GspRmBoot_GB20B`
+  (`monCodeOff=0xf000`), `GspRmFmcGfwProdSigned_GB20B`, FWSEC `0x5e0==0xFF`, `COTv2` (`860 B`, `FRTS=0`), SEC2
+  `MSGQ` (`0x840c80/84`, `TAIL` before `HEAD` ack), Stage C bit-30 `RUNLIST_DOORBELL_ENABLE` (`| 0x40000000`),
+  backwards-compatible `AGPU_ABI_VERSION=1` (version sub-blocks instead), `_Static_assert` wire layouts, and full
+  fresh-clone + QEMU + mutation gates.
 

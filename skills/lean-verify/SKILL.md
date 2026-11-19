@@ -138,6 +138,10 @@ ssh <spark> 'cd ~/workspace/lean-verify && PATH=$HOME/.elan/bin:$PATH taskset -c
 
 Put new proofs under `LeanVerify/` and import them from `LeanVerify.lean` so `lake build` checks them all.
 
+When a proof supports a deliverable in another repository, commit a self-contained copy of the `.lean` file and
+its model-to-system note inside that repository (for example `docs/proofs/`) so a fresh-clone reviewer can run
+`lean` directly on it without depending on an external workspace.
+
 ## Repair
 
 - Server does not start: `ssh <spark> ~/workspace/lean-verify/.mcp-venv/bin/lean-lsp-mcp --version` must print `lean-lsp-mcp 0.33.0`. Reinstall the pinned set with `python3 -m venv .mcp-venv && .mcp-venv/bin/pip install -r .mcp-venv-freeze.txt` (network needed once).
