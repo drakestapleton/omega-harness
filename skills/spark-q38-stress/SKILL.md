@@ -35,6 +35,10 @@ Preserve the ten-second gaps after the graph and exact-output runs. Check the ac
 
 ## Compare the receipts
 
-Report graph and exact-output counts, eight-stream parity and sustained token steps. Compare aggregate tokens/s, mean and p95 GPU step time, and the two eight-stream batch medians side by side. For attention, compare the two battery counts, timing violations and median, sweep coverage, and split medians at both dimensions. Report differences in binaries, machine conditions or window verdicts that affect interpretation. Preserve raw logs, JSON and telemetry beside the report.
+When repeating the November 19 C-to-OM comparison, use the original C baseline (799adb6d8) and first OM-2 run (eb8918dcf) as separate columns beside the candidate commit. Cite the receipt or supplied capture for each historical column. Identify the candidate actually linked into the test. Lead with the graph and exact-output counts, bit-identical logit checks, detected mutant, four-head/two-layer stroke timing and both eight-stream token comparisons.
+
+Show seven-repetition batched BF16 medians for N=2, 4, 6 and 8, then the sustained 64×8 exact-head mean and aggregate tokens/s. Calculate latency speedup as baseline divided by candidate. Use the `PTIMER [N=8 bat plain_bf16]` block for the per-kernel table. Include lm_head time and launches, attention, argmax, GDN, mix, o_proj, gate_up and four-layer trunk total. Keep PTIMER microseconds distinct from wall-clock milliseconds. Describe speedups as measured ratios and identify kernel changes as causes only when separately verified.
+
+Report sustained token steps. Compare aggregate tokens/s, mean and p95 GPU step time, and the two eight-stream batch medians side by side. For attention, compare the two battery counts, timing violations and median, sweep coverage, and split medians at both dimensions. Report differences in binaries, machine conditions or window verdicts that affect interpretation. Preserve raw logs, JSON and telemetry beside the report.
 
 The historical workload uses seeded weights, three GDN layers, one attention layer and the full output head. Its Qwen graph uses head dimension 256. The separate paged-attention batteries exercise dimensions 64 and 128. Report measurements at the workload and dimension actually tested.
