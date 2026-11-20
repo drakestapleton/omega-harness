@@ -22,7 +22,7 @@ The skills live under `skills/<name>/SKILL.md` in the Agent Skills layout (front
 `description`, then the body):
 
 <!-- gen:skills -->
-9 skills, each `skills/<name>/SKILL.md`; the use column is the skill's own frontmatter `description`:
+11 skills, each `skills/<name>/SKILL.md`; the use column is the skill's own frontmatter `description`:
 
 | Skill | Use |
 |---|---|
@@ -31,8 +31,10 @@ The skills live under `skills/<name>/SKILL.md` in the Agent Skills layout (front
 | `skills/nvidia-gb10/SKILL.md` | Load before touching the NVIDIA GPU in Drake's DGX Spark (the GB10 chip). Covers running or benchmarking a model on the Spark GPU, the shared model service, the chip lock and timing windows, NVIDIA driver debugging, writing kernels for the chip, and the mistakes already made there. |
 | `skills/omega-communication/SKILL.md` | Communicate Omega and AIEN work precisely: status and evidence labels, reports, PR text, agent handoffs, receipts, semantic needs, wire formats and corrections. Use when reporting, briefing agents, reviewing or publishing claims. |
 | `skills/omega-encoding/SKILL.md` | Write .om that the seeded Omega compiler actually accepts: syntax, types, traps, bounds, register limits, host I/O, byte encoding, compiler errors, verified examples. Use before writing, reviewing or explaining any Omega program. |
+| `skills/omega-gpu-om/SKILL.md` | >- |
 | `skills/omega-harness/SKILL.md` | Operate in Omega and the AIEN repositories. Use for any Omega or .om task, compiler or migration work, AIEN architecture, repository routing, or project status claim. Covers source pins, .om-first implementation, compile and run evidence, safe effects, communication and stopping repeated errors. |
 | `skills/omegese-wire/SKILL.md` | Omegese Wire protocols and wake hygiene: Trinary Doctrine (tools/trit), signed 3-digit layered codebook (tools/codebook), R45 Omegese (aien-train/docs/omegese45), bot-wire wake hygiene, and PROPOSED open tracks (R45 inst 041-099 and Gen 3 error-resistant codebook). Use when implementing, verifying, or routing agent wake signals, codebook frames, or R45 wire messages. |
+| `skills/spark-q38-stress/SKILL.md` | Replay the physical Spark GB10 Qwen four-layer, eight-stream stress test and paged-attention suite, then compare throughput, latency and correctness with a named earlier run. |
 | `skills/wolfram-math/SKILL.md` | Mandatory mathematics through Wolfram. Use for any computation, derivation, identity, unit conversion, numeric constant, formula check or quantitative claim, and to set up or repair the Wolfram tools so an agent never computes by hand. |
 | `skills/writing-omega/SKILL.md` | Portable guide to writing Omega (.om) programs that the seeded omc compiler accepts and runs correctly: program shape, types, words, traps, compiler errors 1..30, common mistakes with the exact refusal, and tested examples. Use before writing or reviewing any .om program on any machine. |
 <!-- /gen:skills -->
