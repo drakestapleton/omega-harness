@@ -19,8 +19,9 @@ description: >-
 - `export fn` return types must be `ulong`, `long`, `int`, `bool`, or `void` (`to uint` fails with exit 110).
 - Place `export fn` definitions after internal helper `fn`s (calling an `export fn` internally fails `error 16`).
 - Generated C ABI v2 signature puts `uint64_t *result` **first**, followed by `(ptr, len)` pairs for every `view`/`edit` array.
-- Avoid OM-2 reserved keywords as identifiers (`out`, `ops`, `at` → `error 16`); use `rem` instead of `mod` (`error 3`); declare `new T N v` only at function top scope (`error 9`).
-- Avoid `error 12` (16-register pool) in large emitters: keep helper signatures ≤ 4–5 params, store vreg handles in `meta[384..511]` and scratch in `meta[16..63]`, and split nested `for` loops or 6-arg emitter calls into small helpers.
+- Avoid OM-2 reserved keywords as identifiers (`out`, `ops`, `at` → `error 16`; `layout` → `error 29`); use `rem` instead of `mod` (`error 3`); declare `new T N v` only at function top scope (`error 9`).
+- Avoid `error 12` (16-register pool) in large emitters: keep helper signatures ≤ 4–5 params, store vreg handles in `meta[384..511]` and scratch in `meta[16..63]`, read `sp`/`meta` on demand, split chained `if or ...` conditions into separate `if`s, and split nested `for` loops or 6-arg emitter calls into small helpers.
+- Preserve the exact C vreg allocation order (including scalars initialized on declaration lines before `for` loops) so `omega_bw_regalloc_solve` produces bit-identical SM121 SASS SHA-256 against the C emitter.
 - Verify `BlackwellIROpcode` integer values against `src/omega_blackwell_codegen.h` before encoding (`IMAD=8`, `IMAD_WIDE=9`, `FFMA=33`, `LDG_E_64=56`, `LDG_E_128=57`, `LDS128=58`).
 
 ## Wire Format & Fail-Closed Boundary Rules
@@ -30,7 +31,11 @@ description: >-
 - Chain `omega2_bw_sched_stalls` directly on `ins[8192]` after `omega_bw_ir_from_om` without re-packing.
 
 ## Mandatory 4-Stage Verification Before Landing
+### Spark Scratch & Pinned Dependencies
+- Do not rely on `~/workspace/physics` or `~/workspace/omega-bridge` being at the pinned commits: materialize `native.om` at `om/omega-bridge.lock` (`git -C ~/workspace/omega-bridge show <sha>:src/native.om > /tmp/omega-bridge-pin/src/native.om`) and clone `~/git/physics-mv.git` at `physics.lock` into `/tmp/physics-pin`.
+- Run baseline diff, `om/units.sh`, and host/sim/hazard tests in a scratch clone (`/tmp/bw-mig-*`) so `~/canon/omega-mv` stays clean.
+
 1. **Regeneration**: `om/units.sh --check` PASS on Spark.
 2. **Correctness & Hazards**: Run the target's host + warp-simulator suite (`test-gpu-bf16-gemv`, `test-gpu-fp8gemm`, `test-gpu-fp8`, `gpu_pfhost_test --sim`, etc.) AND `make test-bw-hazard` (0 new findings).
 3. **Boundary & Error Paths**: Run `test_bw_om_codegen_bounds` (hostile `meta`/`ins` rejection + invalid spec error-path preservation).
-4. **Compiled Kernel Diff vs Parent**: Compare `insns`, peak/declared GPRs, SM121 occupancy, avg stall cycles, and encoded SM121 SASS SHA-256 against the pre-migration parent commit. If claiming speed, also run live GB10 benchmarks inside an exclusive `spark-window`.
+4. **Compiled Kernel Diff vs Parent**: Compare `insns`, peak/declared GPRs, SM121 occupancy, avg stall cycles, and encoded SM121 SASS SHA-256 against the pre-migration parent commit. For live GB10 silicon validation, build `--chip` test binaries **before** opening `spark-window` (`--gb10 exclusive --quiet exclusive` with an `EXIT` trap that closes the window and posts `RELEASE` to `~/handoffs/BOARD.md`), then run one binary at a time with a brief pause (`sleep 2`) between processes.
