@@ -58,3 +58,9 @@ Do not port or test `GB10B` (`0x1A`) paths on the Spark die (`BOOT_0=0x1bb000a1`
   that explicitly in `docs/STATUS.md`.
 - **Snapshot clean committed SHAs across agents:** Never snapshot or review another agent's dirty working tree;
   coordinate one writer per mutable branch on `HANDOFFS/BOARD.md` and run cross-checks against committed hashes.
+- **CRITICAL multi-pass verification & Claude-quota fallback:** For critical reverse-engineering or boot-path
+  audits, require independent zero-code-reuse verification against raw inputs (re-verifying hashes, byte sums,
+  `any(b != 0)` on zero-padding, endianness, and cross-report pointers). If a `HANDOFFS/BOARD.md` verification
+  handoff to Claude cannot run due to Claude usage limits, spawn a completely fresh (un-forked) independent
+  Gemini verifier to execute the handoff from scratch and post its verdict to
+  `HANDOFFS/<lane>/independent-gemini-verification.md` + `HANDOFFS/BOARD.md`.

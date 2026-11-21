@@ -1,0 +1,24 @@
+# NVIDIA GSP Firmware `580.173.02` (`gsp_ga10x.bin`) Clean-Room Reference
+
+4x-verified bit-for-bit on `spark` (2026-11-19: worker self-check, Pass-2 `verifier`, Pass-3 red-team `auditor`, Pass-4 fresh independent Gemini verifier; 100.000000% byte accounting, 0 open defects). Full reports and scripts live locally on `spark` at `~/work/gsp-bit-breakdown/01-container-sigs/`..`08-independent-verify/` (verdict: `HANDOFFS/gsp-bit-breakdown-verify-20261119/independent-gemini-verification.md`).
+
+## 1. Standing Firmware Study Hygiene Rules
+
+- **Local study only (`0700`/`0600`):** Keep all copies and extracted artifacts strictly on `spark` under owner-only (`0700`) directories (`~/work/gsp-firmware-contents/` read-only, `~/work/gsp-bit-breakdown/`).
+- **Zero repo/handoff contamination:** NEVER commit, push, or copy NVIDIA firmware bytes or extracted binary blobs into `omega-mv`, `aienux`, any git repo, or `HANDOFFS/`. Only clean-room interface facts, offsets, and hashes belong in docs/handoffs.
+- **No GPU access for offline analysis:** Static firmware dissection never opens `/dev/nvidia*` or takes the chip lock.
+- **Immutable signed chain:** Silicon SEC2 / Boot ROM verifies NVIDIA's cryptographic signatures; our driver loads unmodified signed firmware from `/lib/firmware/nvidia/580.173.02/` and replaces only the host-side driver.
+- **Evidence discipline:** Label every claim `MEASURED` (verified from bytes), `SOURCE` (open driver source with `file:line`), or `NOT DETERMINED`.
+
+## 2. Verified Structure (`MEASURED`)
+
+- **Outer container:** `/lib/firmware/nvidia/580.173.02/gsp_ga10x.bin`, `75,012,080` B (`0x47897f0`), SHA-256 `32cb7cf3e77f97e92f6e92135939ccb3ba382748144569c0dfccf3338d43d963`. ELF64 RISC-V relocatable wrapper (`e_shoff=75,010,992`, `e_shnum=17`, 2 all-zero gaps `1` B + `5` B).
+- **10 `.fwsignature_*` blocks (`4,096` B each):** `40/40` unique 384 B signatures across all 10 families (`0x885..0xfff` 100% `0x00`). Spark (`GB20B`) uses `.fwsignature_gb20y`, NOT `.fwsignature_gb10y`.
+- **Starters (outside `gsp_ga10x.bin`, extracted from driver source):** `4/4` GB10B/GB20B FMC images verified `SHA-384(UCODE_IMAGE.bin) == UCODE_HASH.bin`.
+- **`.fwimage` (`0x40`, `74,969,088` B = `0x477f000`, SHA-256 `931add19...46aa07`):**
+  - `00_libos_root_boot_code.bin` (`0x0..0x6c000`, `442,368` B): S-mode RV64IMC `Libos-Root`; reads `NV_PMC_BOOT_42` (`0x2000000000000a00`), splits `GB10x`/`GB10y` at `0x1aa` and `GB20x`/`GB20y` at `0x1ba` (`GB20B=0x1bb -> kernel_gb20y.elf`), programs MPU CSRs `0x5ca..0x5d1` + `satp=0xf000000000000000`, delegates PMP/partition-switch to M-mode Separation Kernel via SBI `a7=0x090001eb`.
+  - `01_file_directory.bin` (`0x6c000..0x6e000`, `8,192` B): `4,096` B zero page + `1,832` B BootFS directory at `0x6d000` (magic `0x81b26a705c10e14d`, 12 records / 23 mappings tiling all `74,518,528` B of remaining `.fwimage` with 0 gaps/overlaps) + `2,264` B zero tail.
+  - **6 LibOS kernels (`ga10x`, `gh100`, `gb10x`, `gb10y`, `gb20x`, `gb20y`):** RV64IMC+Zicsr (`e_entry=0xffffffff93000000`, `stvec=0xffffffff93000120`, U-mode syscall via `c.unimp`). `kernel_gb20y.elf` (Spark) uses unified SYSMEM MPU #0 aperture `0x9400000000000000` (`-27<<58`, 21 CSRs, 9 ecalls, +15 `.rodata` strings for `TaskDebug`/TCM GDMA bounce) vs `gb20x`'s discrete FB `0x7400000000000000` (`+29<<58`, 25 CSRs, 11 ecalls).
+  - **4 non-RM task ELFs (`1,392,640` B, LibOS v3 RV64C, `PT_LOAD` `0x01000000`/`0x04000000` + `PT_LOOS` `0x20000000` `.logging`):** `08_debug.elf` (debugger stub), `09_init.elf` (dual-mode RM vs VGPU partition init; maps `RMARGS`/`HEAPFREE`/7 log buffers), `11_vgpu.elf` (vGPU host plugin), `12_mnoc.elf` (Management NoC pure-IPC connection/channel multiplexer & router; 0 MMIO/IRQ, 4 static slab pools, 122-slot shuttle table).
+  - **`10_rm.elf` (`16,904,192` B, SHA-256 `1c987efb...998312`):** Contains `24` gzip-compressed 512 KiB tables (`31,349` B -> `12,582,912` B, 18 unique SHAs) = 1-bit-per-4B GPU BAR0 register access bitmaps (12 pairs); `2,230` `RS_EXPORTED_METHOD` RM controls across 64 classes; `808` RM registry keys; `794` `BINDATA_ARCHIVE` pointers (`0x01e7ce10..0x01e81790`); `1,012` `getBinStorage` getters; `357` embedded uncompressed blobs (`0x01ca20f8..0x01e7c67c`); RFC 1951 deflate engine (`0x010474d0..0x01048200`, tables `0x04003010..0x0400310c`).
+  - **`13_rm.bindata.bin` (`55,136,256` B, SHA-256 `5555ed2b...38237d`):** Mapped at VA `0x04400000..0x07895000`; self-indexed by a 1,257-record × 24 B (`<IIQQ`) table at `0x348cef0..0x34944c8` (`30,168` B): `493` `flags=3` headerless-gzip blobs (raw RFC 1951 deflate + 8 B CRC32/ISIZE, 493/493 verify 100%, `13.89 MB -> 22.75 MB`), `407` `flags=2` uncompressed blobs (`41.21 MB`, including `131` high-entropy `H>=7.9` encrypted sub-microcodes = `41.16 MB`), and `357` `flags=2` records pointing into `10_rm.elf` `.rodata`.
