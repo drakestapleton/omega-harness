@@ -5,8 +5,11 @@ import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 export type ApprovalMode = 'default' | 'auto-edit' | 'yolo' | 'omega-only';
+export type ProviderKind = 'inkling' | 'gemini';
 
 export interface OmegaConfig {
+  provider: ProviderKind;
+  endpoint: string;
   apiKey?: string;
   model: string;
   approvalMode: ApprovalMode;
@@ -16,6 +19,8 @@ export interface OmegaConfig {
 }
 
 export interface PersistedConfig {
+  provider?: ProviderKind;
+  endpoint?: string;
   apiKey?: string;
   model?: string;
   approvalMode?: ApprovalMode;
@@ -23,14 +28,22 @@ export interface PersistedConfig {
   defaultSkills?: string[];
 }
 
-export const DEFAULT_MODEL = 'gemini-2.5-pro';
+export const DEFAULT_PROVIDER: ProviderKind = 'inkling';
+export const DEFAULT_INKLING_ENDPOINT = 'http://127.0.0.1:8080';
+export const DEFAULT_INKLING_MODEL = 'inkling-2-mini';
+export const DEFAULT_GEMINI_MODEL = 'gemini-2.5-pro';
 
-export const RECOMMENDED_MODELS = [
-  { id: 'gemini-2.5-pro', note: 'Best for complex Omega & systems engineering' },
-  { id: 'gemini-2.5-flash', note: 'Fast everyday coding & iteration' },
-  { id: 'gemini-2.5-flash-lite', note: 'Lightweight, lowest latency' },
-  { id: 'gemini-3-pro-preview', note: 'Preview next-gen reasoning' },
-];
+export const RECOMMENDED_MODELS: Record<ProviderKind, Array<{ id: string; note: string }>> = {
+  inkling: [
+    { id: 'inkling-2-mini', note: 'Inkling-2-Mini (pure seeded-Omega GB10 zero-CUDA server)' },
+  ],
+  gemini: [
+    { id: 'gemini-2.5-pro', note: 'Best for complex Omega & systems engineering' },
+    { id: 'gemini-2.5-flash', note: 'Fast everyday coding & iteration' },
+    { id: 'gemini-2.5-flash-lite', note: 'Lightweight, lowest latency' },
+    { id: 'gemini-3-pro-preview', note: 'Preview next-gen reasoning' },
+  ],
+};
 
 export function getConfigDir(): string {
   const xdg = process.env.XDG_CONFIG_HOME;
@@ -45,7 +58,6 @@ export function detectHarnessRoot(): string {
   if (process.env.OMEGA_HARNESS_ROOT && fs.existsSync(process.env.OMEGA_HARNESS_ROOT)) {
     return path.resolve(process.env.OMEGA_HARNESS_ROOT);
   }
-  // cli/dist/config.js or cli/src/config.ts -> ../../ is omega-harness root
   const thisDir = path.dirname(fileURLToPath(import.meta.url));
   const candidate = path.resolve(thisDir, '..', '..');
   if (fs.existsSync(path.join(candidate, 'PIN')) && fs.existsSync(path.join(candidate, 'skills'))) {
@@ -77,7 +89,10 @@ export function detectOmcPath(configured?: string): string | undefined {
   }
 
   try {
-    const found = execFileSync('which', ['omc'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
+    const found = execFileSync('which', ['omc'], {
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+    }).trim();
     if (found) return found;
   } catch {
     // not in PATH
@@ -110,18 +125,38 @@ export function writePersistedConfig(patch: Partial<PersistedConfig>): void {
 
 export function loadConfig(overrides: Partial<OmegaConfig> = {}): OmegaConfig {
   const persisted = readPersistedConfig();
+
+  const envProvider = process.env.OMEGA_PROVIDER?.toLowerCase();
+  const provider: ProviderKind =
+    overrides.provider ||
+    (envProvider === 'gemini' || envProvider === 'inkling' ? envProvider : undefined) ||
+    persisted.provider ||
+    DEFAULT_PROVIDER;
+
+  const endpoint = (
+    overrides.endpoint ||
+    process.env.INKLING_URL ||
+    process.env.OMEGA_ENDPOINT ||
+    persisted.endpoint ||
+    DEFAULT_INKLING_ENDPOINT
+  ).replace(/\/+$/, '');
+
   const apiKey =
     overrides.apiKey ||
-    process.env.GEMINI_API_KEY ||
-    process.env.GOOGLE_API_KEY ||
+    (provider === 'inkling'
+      ? process.env.INKLING_API_KEY
+      : process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY) ||
     persisted.apiKey;
+
+  const defaultModelForProvider =
+    provider === 'inkling' ? DEFAULT_INKLING_MODEL : DEFAULT_GEMINI_MODEL;
 
   const model =
     overrides.model ||
     process.env.OMEGA_MODEL ||
-    process.env.GEMINI_MODEL ||
+    (provider === 'inkling' ? process.env.INKLING_MODEL : process.env.GEMINI_MODEL) ||
     persisted.model ||
-    DEFAULT_MODEL;
+    defaultModelForProvider;
 
   const approvalMode: ApprovalMode =
     overrides.approvalMode ||
@@ -133,6 +168,8 @@ export function loadConfig(overrides: Partial<OmegaConfig> = {}): OmegaConfig {
   const defaultSkills = overrides.defaultSkills || persisted.defaultSkills || [];
 
   return {
+    provider,
+    endpoint,
     apiKey,
     model,
     approvalMode,

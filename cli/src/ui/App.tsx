@@ -9,12 +9,15 @@ import {
   renderBanner,
 } from '../brand.js';
 import {
+  DEFAULT_GEMINI_MODEL,
+  DEFAULT_INKLING_MODEL,
   RECOMMENDED_MODELS,
   detectGitBranch,
   formatShortPath,
   writePersistedConfig,
   type ApprovalMode,
   type OmegaConfig,
+  type ProviderKind,
 } from '../config.js';
 import {
   buildSystemPrompt,
@@ -29,6 +32,7 @@ import {
   type TokenUsage,
   type ToolEvent,
 } from '../agent.js';
+import { probeInkling, type InklingHealth } from '../inkling.js';
 import { SLASH_COMMANDS, matchSlashCommands } from '../commands.js';
 import { Markdown } from './Markdown.js';
 
@@ -114,12 +118,15 @@ export const App: React.FC<AppProps> = ({
   const { stdout } = useStdout();
   const columns = stdout?.columns || 80;
 
+  const [provider, setProvider] = useState<ProviderKind>(config.provider);
+  const [endpoint, setEndpoint] = useState<string>(config.endpoint);
   const [apiKey, setApiKey] = useState<string | undefined>(config.apiKey);
   const [model, setModel] = useState<string>(config.model);
   const [approvalMode, setApprovalMode] = useState<ApprovalMode>(config.approvalMode);
   const [activeSkills, setActiveSkills] = useState<string[]>(
     Array.from(new Set([...config.defaultSkills, ...initialSkills]))
   );
+  const [inklingHealth, setInklingHealth] = useState<InklingHealth | null>(null);
   const [usage, setUsage] = useState<TokenUsage>({
     promptTokens: 0,
     outputTokens: 0,
@@ -147,7 +154,7 @@ export const App: React.FC<AppProps> = ({
   const [liveTools, setLiveTools] = useState<ToolEvent[]>([]);
   const [pendingApproval, setPendingApproval] = useState<PendingApproval | null>(null);
 
-  const agentRef = useRef<OmegaAgent | null>(apiKey ? new OmegaAgent(apiKey) : null);
+  const agentRef = useRef<OmegaAgent>(new OmegaAgent(apiKey));
   const abortRef = useRef<AbortController | null>(null);
   const initialSentRef = useRef(false);
 
@@ -157,6 +164,21 @@ export const App: React.FC<AppProps> = ({
       { ...item, id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}` },
     ]);
   }, []);
+
+  const refreshInklingHealth = useCallback(
+    async (ep = endpoint, key = apiKey) => {
+      const h = await probeInkling(ep, key);
+      setInklingHealth(h);
+      return h;
+    },
+    [endpoint, apiKey]
+  );
+
+  useEffect(() => {
+    if (provider === 'inkling') {
+      void refreshInklingHealth(endpoint, apiKey);
+    }
+  }, [provider, endpoint, apiKey, refreshInklingHealth]);
 
   useEffect(() => {
     if (!busy) {
@@ -172,10 +194,10 @@ export const App: React.FC<AppProps> = ({
 
   const runPrompt = useCallback(
     async (text: string) => {
-      if (!apiKey || !agentRef.current) {
+      if (provider === 'gemini' && !apiKey) {
         pushItem({
           kind: 'error',
-          text: 'No Gemini API key configured. Run `/auth <YOUR_GEMINI_API_KEY>` or export GEMINI_API_KEY.',
+          text: 'No Gemini API key configured. Run `/auth <API_KEY>` or switch to `/provider inkling`.',
         });
         return;
       }
@@ -200,6 +222,9 @@ export const App: React.FC<AppProps> = ({
 
       try {
         const finalText = await agentRef.current.sendTurn(text, {
+          provider,
+          endpoint,
+          apiKey,
           model,
           systemInstruction,
           toolContext: {
@@ -236,6 +261,9 @@ export const App: React.FC<AppProps> = ({
         if (finalText.trim()) {
           pushItem({ kind: 'assistant', text: finalText });
         }
+        if (provider === 'inkling') {
+          void refreshInklingHealth(endpoint, apiKey);
+        }
       } catch (err: unknown) {
         for (const t of finishedTools) {
           pushItem({ kind: 'tool', tool: t });
@@ -249,15 +277,28 @@ export const App: React.FC<AppProps> = ({
         setBusy(false);
       }
     },
-    [activeSkills, apiKey, approvalMode, config.harnessRoot, config.omcPath, cwd, model, pinInfo, pushItem]
+    [
+      activeSkills,
+      apiKey,
+      approvalMode,
+      config.harnessRoot,
+      config.omcPath,
+      cwd,
+      endpoint,
+      model,
+      pinInfo,
+      provider,
+      pushItem,
+      refreshInklingHealth,
+    ]
   );
 
   useEffect(() => {
-    if (initialPrompt && !initialSentRef.current && apiKey) {
+    if (initialPrompt && !initialSentRef.current) {
       initialSentRef.current = true;
       void runPrompt(initialPrompt);
     }
-  }, [initialPrompt, apiKey, runPrompt]);
+  }, [initialPrompt, runPrompt]);
 
   const handleSlashCommand = useCallback(
     async (raw: string) => {
@@ -283,6 +324,69 @@ export const App: React.FC<AppProps> = ({
             '  Ctrl+C             Cancel active generation (or exit when idle)',
           ];
           pushItem({ kind: 'system', text: lines.join('\n') });
+          return;
+        }
+
+        case '/status': {
+          const h = await refreshInklingHealth(endpoint, apiKey);
+          const lines = [
+            `Provider:        ${provider}`,
+            `Inkling URL:     ${h.endpoint}`,
+            `Status:          ${h.online ? 'ONLINE' : `OFFLINE (${h.error || 'unreachable'})`}`,
+            `Engine:          ${h.engine}`,
+            `Model:           ${h.model || model}`,
+            ...(h.slotsMax !== undefined
+              ? [`KV Slots:        ${h.slotsActive ?? 0} / ${h.slotsMax} active`]
+              : []),
+            ...(!h.online
+              ? [
+                  '',
+                  'To connect to Inkling-2-Mini on Spark:',
+                  '  1. On Spark: spark-window run build/inkling2/inkling2-serve',
+                  '  2. Tunnel:   ssh -N -L 8080:127.0.0.1:8080 spark',
+                ]
+              : []),
+          ];
+          pushItem({ kind: h.online ? 'system' : 'error', text: lines.join('\n') });
+          return;
+        }
+
+        case '/endpoint': {
+          if (!arg) {
+            pushItem({
+              kind: 'system',
+              text: `Current Inkling endpoint: ${endpoint}\nSwitch with: /endpoint http://127.0.0.1:8080`,
+            });
+            return;
+          }
+          const clean = arg.replace(/\/+$/, '');
+          setEndpoint(clean);
+          writePersistedConfig({ endpoint: clean });
+          const h = await refreshInklingHealth(clean, apiKey);
+          pushItem({
+            kind: h.online ? 'system' : 'error',
+            text: `Endpoint set to ${clean} (${h.online ? `ONLINE · ${h.engine}` : `OFFLINE: ${h.error}`})`,
+          });
+          return;
+        }
+
+        case '/provider': {
+          if (!arg || (arg !== 'inkling' && arg !== 'gemini')) {
+            pushItem({
+              kind: 'system',
+              text: `Active provider: ${provider}\nAvailable: inkling (default) | gemini\nUsage: /provider <inkling|gemini>`,
+            });
+            return;
+          }
+          const next = arg as ProviderKind;
+          const nextModel = next === 'inkling' ? DEFAULT_INKLING_MODEL : DEFAULT_GEMINI_MODEL;
+          setProvider(next);
+          setModel(nextModel);
+          writePersistedConfig({ provider: next, model: nextModel });
+          pushItem({
+            kind: 'system',
+            text: `Switched provider to ${next} (model: ${nextModel}).`,
+          });
           return;
         }
 
@@ -322,10 +426,11 @@ export const App: React.FC<AppProps> = ({
 
         case '/model': {
           if (!arg) {
+            const recs = RECOMMENDED_MODELS[provider];
             const lines = [
-              `Active model: ${model}`,
+              `Active model (${provider}): ${model}`,
               'Recommended models:',
-              ...RECOMMENDED_MODELS.map((m) => `  • ${m.id.padEnd(24)} ${m.note}`),
+              ...recs.map((m) => `  • ${m.id.padEnd(24)} ${m.note}`),
               'Switch with: /model <model-id>',
             ];
             pushItem({ kind: 'system', text: lines.join('\n') });
@@ -414,18 +519,19 @@ export const App: React.FC<AppProps> = ({
         }
 
         case '/clear':
-          agentRef.current?.clearHistory();
+          agentRef.current.clearHistory();
           setItems([{ id: `banner-${Date.now()}`, kind: 'banner' }]);
           return;
 
         case '/compact': {
-          if (!agentRef.current) {
-            pushItem({ kind: 'error', text: 'No active session to compact.' });
-            return;
-          }
           setBusy(true);
           try {
-            const summary = await agentRef.current.compactHistory(model);
+            const summary = await agentRef.current.compactHistory({
+              provider,
+              model,
+              endpoint,
+              apiKey,
+            });
             pushItem({ kind: 'system', text: `Session compacted:\n${summary}` });
           } catch (err: unknown) {
             pushItem({ kind: 'error', text: err instanceof Error ? err.message : String(err) });
@@ -436,11 +542,12 @@ export const App: React.FC<AppProps> = ({
         }
 
         case '/stats': {
-          const turns = agentRef.current?.getTurnCount() ?? 0;
-          const calls = agentRef.current?.toolCallCount ?? 0;
+          const turns = agentRef.current.getTurnCount();
+          const calls = agentRef.current.toolCallCount;
           pushItem({
             kind: 'system',
             text: [
+              `Provider:     ${provider}${provider === 'inkling' ? ` (${endpoint})` : ''}`,
               `Model:        ${model}`,
               `Mode:         ${approvalMode}`,
               `Turns:        ${turns}`,
@@ -456,23 +563,21 @@ export const App: React.FC<AppProps> = ({
           if (!arg) {
             const status = apiKey
               ? `Configured (${apiKey.slice(0, 6)}…${apiKey.slice(-4)})`
-              : 'Not configured';
+              : provider === 'inkling'
+                ? 'Not required for local Inkling (optional bearer token)'
+                : 'Not configured';
             pushItem({
               kind: 'system',
-              text: `Gemini API key: ${status}\nSet with: /auth <YOUR_GEMINI_API_KEY>  (saved to ~/.config/omega-harness/config.json, mode 0600)`,
+              text: `API key: ${status}\nSet with: /auth <KEY>  (saved to ~/.config/omega-harness/config.json, mode 0600)`,
             });
             return;
           }
           writePersistedConfig({ apiKey: arg });
           setApiKey(arg);
-          if (agentRef.current) {
-            agentRef.current.setApiKey(arg);
-          } else {
-            agentRef.current = new OmegaAgent(arg);
-          }
+          agentRef.current.setApiKey(arg);
           pushItem({
             kind: 'system',
-            text: '✓ Gemini API key saved to ~/.config/omega-harness/config.json (0600). Ready to operate!',
+            text: '✓ API key saved to ~/.config/omega-harness/config.json (0600).',
           });
           return;
         }
@@ -481,7 +586,23 @@ export const App: React.FC<AppProps> = ({
           pushItem({ kind: 'error', text: `Unknown command "${cmd}". Type /help for available commands.` });
       }
     },
-    [activeSkills, apiKey, approvalMode, config.harnessRoot, config.omcPath, cwd, exit, model, pinInfo, pushItem, skills, usage]
+    [
+      activeSkills,
+      apiKey,
+      approvalMode,
+      config.harnessRoot,
+      config.omcPath,
+      cwd,
+      endpoint,
+      exit,
+      model,
+      pinInfo,
+      provider,
+      pushItem,
+      refreshInklingHealth,
+      skills,
+      usage,
+    ]
   );
 
   const handleSubmit = useCallback(
@@ -552,6 +673,17 @@ export const App: React.FC<AppProps> = ({
   const slashSuggestions = useMemo(() => matchSlashCommands(input), [input]);
   const bannerLines = useMemo(() => renderBanner(columns), [columns]);
 
+  const inklingBadge =
+    provider === 'inkling'
+      ? inklingHealth === null
+        ? 'probing…'
+        : inklingHealth.online
+          ? inklingHealth.slotsMax !== undefined
+            ? `online · ${inklingHealth.slotsActive ?? 0}/${inklingHealth.slotsMax} slots`
+            : 'online'
+          : 'offline'
+      : 'gemini-sdk';
+
   return (
     <Box flexDirection="column">
       <Static items={items}>
@@ -569,20 +701,15 @@ export const App: React.FC<AppProps> = ({
                     </Text>
                     <Text color={THEME.muted}>
                       {' '}
-                      v{CLI_VERSION} · Gemini SDK · {skills.length} skills ·{' '}
-                      {pinInfo.localOmcPath ? 'omc ready' : 'omc not found'}
+                      v{CLI_VERSION} · {provider === 'inkling' ? `Inkling (${endpoint})` : 'Gemini SDK'} ·{' '}
+                      {skills.length} skills · {pinInfo.localOmcPath ? 'omc ready' : 'omc not found'}
                     </Text>
                   </Text>
                   <Text color={THEME.muted}>
-                    Type a prompt, <Text color={THEME.accent}>/help</Text> for commands,{' '}
-                    <Text color={THEME.accent}>@file</Text> to attach context,{' '}
-                    <Text color={THEME.accent}>Ctrl+C</Text> to cancel/exit.
+                    Type a prompt, <Text color={THEME.accent}>/status</Text> for Inkling health,{' '}
+                    <Text color={THEME.accent}>/help</Text> for commands,{' '}
+                    <Text color={THEME.accent}>@file</Text> to attach context.
                   </Text>
-                  {!apiKey ? (
-                    <Text color={THEME.warning}>
-                      ! No GEMINI_API_KEY set. Run `/auth &lt;API_KEY&gt;` to connect.
-                    </Text>
-                  ) : null}
                 </Box>
               </Box>
             );
@@ -678,11 +805,20 @@ export const App: React.FC<AppProps> = ({
         </Box>
       ) : null}
 
+      {/* Offline hint banner for Inkling when idle */}
+      {!busy && provider === 'inkling' && inklingHealth && !inklingHealth.online ? (
+        <Box paddingLeft={1} marginBottom={0}>
+          <Text color={THEME.warning}>
+            ! Inkling offline at {endpoint} — tunnel Spark: `ssh -N -L 8080:127.0.0.1:8080 spark` (or `/endpoint &lt;url&gt;`)
+          </Text>
+        </Box>
+      ) : null}
+
       {/* Spinner when waiting */}
       {busy && !pendingApproval ? (
         <Box marginBottom={0} paddingLeft={1}>
           <Text color={THEME.symbol}>
-            <Spinner type="dots" /> {SYMBOL} Thinking… ({elapsedSec}s) · Ctrl+C to cancel
+            <Spinner type="dots" /> {SYMBOL} {provider === 'inkling' ? 'Inkling' : 'Gemini'} thinking… ({elapsedSec}s) · Ctrl+C to cancel
           </Text>
         </Box>
       ) : null}
@@ -699,7 +835,7 @@ export const App: React.FC<AppProps> = ({
           {slashSuggestions.slice(0, 7).map((c) => (
             <Text key={c.name}>
               <Text color={THEME.symbol} bold>
-                {c.usage.padEnd(32)}
+                {c.usage.padEnd(34)}
               </Text>
               <Text color={THEME.muted}>{c.description}</Text>
             </Text>
@@ -724,7 +860,7 @@ export const App: React.FC<AppProps> = ({
             value={input}
             onChange={setInput}
             onSubmit={handleSubmit}
-            placeholder="Ask Omega Harness anything, or type /help..."
+            placeholder="Ask Inkling anything, or type /help..."
           />
         )}
       </Box>
@@ -742,6 +878,18 @@ export const App: React.FC<AppProps> = ({
           {activeSkills.length > 0 ? ` · ${activeSkills.length} pinned` : ''}
           {' · '}
           <Text color={THEME.symbol}>{model}</Text>
+          {' · '}
+          <Text
+            color={
+              provider === 'inkling'
+                ? inklingHealth?.online
+                  ? THEME.success
+                  : THEME.warning
+                : THEME.muted
+            }
+          >
+            {inklingBadge}
+          </Text>
           {usage.totalTokens > 0 ? ` · ${usage.totalTokens.toLocaleString()} tok` : ''}
         </Text>
       </Box>

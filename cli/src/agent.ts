@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { GoogleGenAI, type Content, type FunctionCall, type Part } from '@google/genai';
-import type { ApprovalMode } from './config.js';
+import type { ProviderKind } from './config.js';
 import {
   TOOL_DECLARATIONS,
   executeTool,
@@ -9,6 +9,11 @@ import {
   needsApproval,
   type ToolContext,
 } from './tools.js';
+import {
+  callInklingChat,
+  probeInkling,
+  type InklingMessage,
+} from './inkling.js';
 
 export interface TokenUsage {
   promptTokens: number;
@@ -69,14 +74,17 @@ export function expandAtMentions(prompt: string, cwd: string): { expanded: strin
 }
 
 export class OmegaAgent {
-  private ai: GoogleGenAI;
-  private history: Content[] = [];
+  private ai: GoogleGenAI | null = null;
+  private geminiHistory: Content[] = [];
+  private inklingHistory: InklingMessage[] = [];
   private sessionAlwaysAllowed = new Set<string>();
   public usage: TokenUsage = { promptTokens: 0, outputTokens: 0, totalTokens: 0 };
   public toolCallCount = 0;
 
-  constructor(apiKey: string) {
-    this.ai = new GoogleGenAI({ apiKey });
+  constructor(apiKey?: string) {
+    if (apiKey) {
+      this.ai = new GoogleGenAI({ apiKey });
+    }
   }
 
   setApiKey(apiKey: string): void {
@@ -84,15 +92,33 @@ export class OmegaAgent {
   }
 
   clearHistory(): void {
-    this.history = [];
+    this.geminiHistory = [];
+    this.inklingHistory = [];
   }
 
   getTurnCount(): number {
-    return this.history.filter((c) => c.role === 'user').length;
+    return Math.max(
+      this.geminiHistory.filter((c) => c.role === 'user').length,
+      this.inklingHistory.filter((m) => m.role === 'user').length
+    );
   }
 
-  async compactHistory(model: string): Promise<string> {
-    if (this.history.length < 4) {
+  async compactHistory(opts: {
+    provider: ProviderKind;
+    model: string;
+    endpoint: string;
+    apiKey?: string;
+  }): Promise<string> {
+    if (opts.provider === 'inkling') {
+      if (this.inklingHistory.length < 4) {
+        return 'Conversation is already short; nothing to compact.';
+      }
+      const recent = this.inklingHistory.slice(-4);
+      this.inklingHistory = recent;
+      return `Kept last ${recent.length} messages in Inkling session context.`;
+    }
+
+    if (!this.ai || this.geminiHistory.length < 4) {
       return 'Conversation is already short; nothing to compact.';
     }
     const summaryPrompt: Content = {
@@ -104,11 +130,11 @@ export class OmegaAgent {
       ],
     };
     const resp = await this.ai.models.generateContent({
-      model,
-      contents: [...this.history, summaryPrompt],
+      model: opts.model,
+      contents: [...this.geminiHistory, summaryPrompt],
     });
     const summary = resp.text || 'Session compacted.';
-    this.history = [
+    this.geminiHistory = [
       { role: 'user', parts: [{ text: '[Compacted session context]' }] },
       { role: 'model', parts: [{ text: summary }] },
     ];
@@ -118,6 +144,9 @@ export class OmegaAgent {
   async sendTurn(
     userPrompt: string,
     opts: {
+      provider: ProviderKind;
+      endpoint: string;
+      apiKey?: string;
       model: string;
       systemInstruction: string;
       toolContext: ToolContext;
@@ -125,8 +154,178 @@ export class OmegaAgent {
       signal?: AbortSignal;
     }
   ): Promise<string> {
+    if (opts.provider === 'inkling') {
+      return this.sendInklingTurn(userPrompt, opts);
+    }
+    return this.sendGeminiTurn(userPrompt, opts);
+  }
+
+  private async runToolWithApproval(
+    name: string,
+    args: Record<string, unknown>,
+    toolContext: ToolContext,
+    callbacks: AgentCallbacks
+  ): Promise<{ approved: boolean; ok: boolean; output: string }> {
+    const event: ToolEvent = {
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      name,
+      args,
+      argsPreview: formatToolArgsPreview(name, args),
+      status: 'pending',
+    };
+    this.toolCallCount += 1;
+    callbacks.onToolStart(event);
+
+    const requiresPrompt =
+      needsApproval(name, toolContext.approvalMode) &&
+      !this.sessionAlwaysAllowed.has(name);
+
+    let approved = true;
+    if (requiresPrompt) {
+      const decision = await callbacks.onRequestApproval(event);
+      if (decision === 'always') {
+        this.sessionAlwaysAllowed.add(name);
+      } else if (decision === 'deny') {
+        approved = false;
+      }
+    }
+
+    if (!approved) {
+      callbacks.onToolUpdate({
+        ...event,
+        status: 'denied',
+        preview: 'Denied by operator',
+      });
+      return { approved: false, ok: false, output: 'Tool execution denied by operator.' };
+    }
+
+    callbacks.onToolUpdate({ ...event, status: 'running' });
+    const result = await executeTool(name, args, toolContext);
+    callbacks.onToolUpdate({
+      ...event,
+      status: result.ok ? 'success' : 'error',
+      preview: result.preview,
+    });
+    return { approved: true, ok: result.ok, output: result.output };
+  }
+
+  private async sendInklingTurn(
+    userPrompt: string,
+    opts: {
+      endpoint: string;
+      apiKey?: string;
+      model: string;
+      systemInstruction: string;
+      toolContext: ToolContext;
+      callbacks: AgentCallbacks;
+      signal?: AbortSignal;
+    }
+  ): Promise<string> {
+    const health = await probeInkling(opts.endpoint, opts.apiKey);
+    if (!health.online) {
+      throw new Error(
+        `Cannot reach Inkling server at ${opts.endpoint} (${health.error || 'offline'}). ` +
+          `Start inkling2-serve on Spark and tunnel: ssh -N -L 8080:127.0.0.1:8080 spark`
+      );
+    }
+
     const { expanded } = expandAtMentions(userPrompt, opts.toolContext.cwd);
-    this.history.push({ role: 'user', parts: [{ text: expanded }] });
+    this.inklingHistory.push({ role: 'user', content: expanded });
+
+    const engine = health.engine === 'inkling2-serve' ? 'inkling2-serve' : 'openai-compat';
+    let fullAssistantText = '';
+    const maxRounds = engine === 'inkling2-serve' ? 1 : 24;
+
+    for (let round = 0; round < maxRounds; round++) {
+      if (opts.signal?.aborted) throw new Error('Cancelled by user');
+
+      const messages: InklingMessage[] = [
+        { role: 'system', content: opts.systemInstruction },
+        ...this.inklingHistory,
+      ];
+
+      const { parsed, usage } = await callInklingChat({
+        endpoint: opts.endpoint,
+        model: opts.model,
+        messages,
+        tools: TOOL_DECLARATIONS,
+        apiKey: opts.apiKey,
+        engine,
+        signal: opts.signal,
+        onTextDelta: opts.callbacks.onTextDelta,
+      });
+
+      if (usage) {
+        this.usage = {
+          promptTokens: this.usage.promptTokens + usage.promptTokens,
+          outputTokens: this.usage.outputTokens + usage.outputTokens,
+          totalTokens: this.usage.totalTokens + usage.totalTokens,
+        };
+        opts.callbacks.onUsageUpdate?.(this.usage);
+      }
+
+      if (parsed.text) {
+        fullAssistantText += (fullAssistantText ? '\n' : '') + parsed.text;
+      }
+
+      this.inklingHistory.push({
+        role: 'assistant',
+        content: parsed.text,
+        ...(parsed.toolCalls.length > 0
+          ? {
+              tool_calls: parsed.toolCalls.map((tc) => ({
+                id: tc.id,
+                type: 'function' as const,
+                function: { name: tc.name, arguments: JSON.stringify(tc.args) },
+              })),
+            }
+          : {}),
+      });
+
+      if (parsed.toolCalls.length === 0) {
+        break;
+      }
+
+      for (const tc of parsed.toolCalls) {
+        const res = await this.runToolWithApproval(
+          tc.name,
+          tc.args,
+          opts.toolContext,
+          opts.callbacks
+        );
+        this.inklingHistory.push({
+          role: 'tool',
+          name: tc.name,
+          tool_call_id: tc.id,
+          content: res.output,
+        });
+      }
+    }
+
+    return fullAssistantText;
+  }
+
+  private async sendGeminiTurn(
+    userPrompt: string,
+    opts: {
+      apiKey?: string;
+      model: string;
+      systemInstruction: string;
+      toolContext: ToolContext;
+      callbacks: AgentCallbacks;
+      signal?: AbortSignal;
+    }
+  ): Promise<string> {
+    if (!this.ai) {
+      if (opts.apiKey) {
+        this.ai = new GoogleGenAI({ apiKey: opts.apiKey });
+      } else {
+        throw new Error('No Gemini API key configured. Run `/auth <API_KEY>` or switch to `/provider inkling`.');
+      }
+    }
+
+    const { expanded } = expandAtMentions(userPrompt, opts.toolContext.cwd);
+    this.geminiHistory.push({ role: 'user', parts: [{ text: expanded }] });
 
     let fullAssistantText = '';
     const maxRounds = 24;
@@ -138,7 +337,7 @@ export class OmegaAgent {
 
       const stream = await this.ai.models.generateContentStream({
         model: opts.model,
-        contents: this.history,
+        contents: this.geminiHistory,
         config: {
           systemInstruction: opts.systemInstruction,
           tools: [{ functionDeclarations: TOOL_DECLARATIONS }],
@@ -187,74 +386,27 @@ export class OmegaAgent {
         modelParts.unshift({ text: roundText });
       }
       if (modelParts.length > 0) {
-        this.history.push({ role: 'model', parts: modelParts });
+        this.geminiHistory.push({ role: 'model', parts: modelParts });
       }
 
       if (collectedCalls.length === 0) {
         break;
       }
 
-      // Execute each function call and send back functionResponse parts
       const responseParts: Part[] = [];
       for (const call of collectedCalls) {
         const name = call.name || 'unknown';
         const args = (call.args || {}) as Record<string, unknown>;
-        const event: ToolEvent = {
-          id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-          name,
-          args,
-          argsPreview: formatToolArgsPreview(name, args),
-          status: 'pending',
-        };
-        this.toolCallCount += 1;
-        opts.callbacks.onToolStart(event);
-
-        const requiresPrompt =
-          needsApproval(name, opts.toolContext.approvalMode) &&
-          !this.sessionAlwaysAllowed.has(name);
-
-        let approved = true;
-        if (requiresPrompt) {
-          const decision = await opts.callbacks.onRequestApproval(event);
-          if (decision === 'always') {
-            this.sessionAlwaysAllowed.add(name);
-          } else if (decision === 'deny') {
-            approved = false;
-          }
-        }
-
-        if (!approved) {
-          opts.callbacks.onToolUpdate({
-            ...event,
-            status: 'denied',
-            preview: 'Denied by operator',
-          });
-          responseParts.push({
-            functionResponse: {
-              name,
-              response: { ok: false, error: 'Tool execution denied by operator.' },
-            },
-          });
-          continue;
-        }
-
-        opts.callbacks.onToolUpdate({ ...event, status: 'running' });
-        const result = await executeTool(name, args, opts.toolContext);
-        opts.callbacks.onToolUpdate({
-          ...event,
-          status: result.ok ? 'success' : 'error',
-          preview: result.preview,
-        });
-
+        const res = await this.runToolWithApproval(name, args, opts.toolContext, opts.callbacks);
         responseParts.push({
           functionResponse: {
             name,
-            response: { ok: result.ok, output: result.output },
+            response: res.approved ? { ok: res.ok, output: res.output } : { ok: false, error: res.output },
           },
         });
       }
 
-      this.history.push({ role: 'user', parts: responseParts });
+      this.geminiHistory.push({ role: 'user', parts: responseParts });
     }
 
     return fullAssistantText;

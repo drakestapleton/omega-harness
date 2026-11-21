@@ -8,12 +8,14 @@ import {
   loadConfig,
   writePersistedConfig,
   type ApprovalMode,
+  type ProviderKind,
 } from './config.js';
 import {
   buildSystemPrompt,
   discoverSkills,
   readPinInfo,
 } from './harness.js';
+import { probeInkling } from './inkling.js';
 import { OmegaAgent } from './agent.js';
 import { App } from './ui/App.js';
 
@@ -22,6 +24,9 @@ interface ParsedArgs {
   version: boolean;
   listSkills: boolean;
   showPin: boolean;
+  showStatus: boolean;
+  provider?: ProviderKind;
+  endpoint?: string;
   prompt?: string;
   model?: string;
   apiKey?: string;
@@ -37,6 +42,7 @@ function parseArgs(argv: string[]): ParsedArgs {
     version: false,
     listSkills: false,
     showPin: false,
+    showStatus: false,
     skills: [],
     positional: [],
   };
@@ -59,12 +65,19 @@ function parseArgs(argv: string[]): ParsedArgs {
       out.listSkills = true;
     } else if (a === '--pin') {
       out.showPin = true;
+    } else if (a === '--status') {
+      out.showStatus = true;
     } else if (a === '-y' || a === '--yolo') {
       out.approvalMode = 'yolo';
     } else if (a === '--auto-edit') {
       out.approvalMode = 'auto-edit';
     } else if (a === '--omega-only') {
       out.approvalMode = 'omega-only';
+    } else if (a === '--provider' && argv[i + 1]) {
+      const p = argv[++i].toLowerCase();
+      if (p === 'inkling' || p === 'gemini') out.provider = p;
+    } else if ((a === '-e' || a === '--endpoint') && argv[i + 1]) {
+      out.endpoint = argv[++i];
     } else if ((a === '-m' || a === '--model') && argv[i + 1]) {
       out.model = argv[++i];
     } else if ((a === '-p' || a === '--prompt') && argv[i + 1]) {
@@ -83,24 +96,31 @@ function parseArgs(argv: string[]): ParsedArgs {
 function printHelp(): void {
   console.log(renderBanner(80).join('\n'));
   console.log('');
-  console.log(chalk.cyan.bold(`${SYMBOL} Omega Harness CLI v${CLI_VERSION}`) + chalk.gray(' — powered by Google GenAI SDK'));
+  console.log(
+    chalk.cyan.bold(`${SYMBOL} Omega Harness CLI v${CLI_VERSION}`) +
+      chalk.gray(' — hooked to Inkling-2-Mini (with Gemini SDK fallback)')
+  );
   console.log('');
   console.log('Usage:');
   console.log('  omega [options] [initial prompt]');
-  console.log('  omega -p "<prompt>"               Non-interactive headless mode (supports piped stdin)');
-  console.log('  omega config set apiKey <key>     Save Gemini API key to ~/.config/omega-harness/config.json');
-  console.log('  omega config set model <id>       Save default Gemini model');
+  console.log('  omega --status                        Check Inkling-2-Mini server health & KV slots');
+  console.log('  omega -p "<prompt>"                   Non-interactive headless mode (supports piped stdin)');
+  console.log('  omega config set endpoint <url>       Save default Inkling HTTP endpoint');
+  console.log('  omega config set provider <name>      Save default provider (inkling | gemini)');
   console.log('');
   console.log('Options:');
-  console.log('  -m, --model <id>        Gemini model ID (default: gemini-2.5-pro)');
+  console.log('  -e, --endpoint <url>    Inkling HTTP endpoint (default: http://127.0.0.1:8080 or INKLING_URL)');
+  console.log('      --provider <name>   Backend provider: inkling (default) | gemini');
+  console.log('  -m, --model <id>        Model ID (default: inkling-2-mini)');
   console.log('  -p, --prompt <text>     Run in non-interactive mode and print response to stdout');
   console.log('  -y, --yolo              Auto-approve all tool calls');
   console.log('      --auto-edit         Auto-approve file writes and edits');
   console.log('      --omega-only        Restrict writes to .om / NOTES.md with auto-omc checks');
   console.log('  -s, --skill <name>      Pin an Omega Harness skill into the system prompt (repeatable)');
+  console.log('      --status            Probe Inkling server health and exit');
   console.log('      --skills            List all available Omega Harness skills and exit');
   console.log('      --pin               Show omega-harness PIN and local omc status and exit');
-  console.log('      --api-key <key>     Override GEMINI_API_KEY for this invocation');
+  console.log('      --api-key <key>     Optional bearer token (Inkling) or Gemini API key');
   console.log('  -v, --version           Print version');
   console.log('  -h, --help              Show this help');
 }
@@ -120,8 +140,8 @@ async function runHeadless(
   cwd: string,
   skills: string[]
 ): Promise<void> {
-  if (!config.apiKey) {
-    console.error(`${SYMBOL} error: No Gemini API key configured. Export GEMINI_API_KEY or run \`omega config set apiKey <key>\`.`);
+  if (config.provider === 'gemini' && !config.apiKey) {
+    console.error(`${SYMBOL} error: No Gemini API key configured. Export GEMINI_API_KEY or use --provider inkling.`);
     process.exit(1);
   }
 
@@ -138,6 +158,9 @@ async function runHeadless(
 
   const agent = new OmegaAgent(config.apiKey);
   await agent.sendTurn(fullPrompt, {
+    provider: config.provider,
+    endpoint: config.endpoint,
+    apiKey: config.apiKey,
     model: config.model,
     systemInstruction,
     toolContext: {
@@ -157,7 +180,6 @@ async function runHeadless(
         }
       },
       onRequestApproval: async () => {
-        // In headless mode without --yolo, deny mutating tools safely
         return config.approvalMode === 'yolo' ? 'allow' : 'deny';
       },
     },
@@ -186,12 +208,19 @@ async function main(): Promise<void> {
       return;
     }
     if (action === 'set' && key && value) {
-      if (key === 'apiKey' || key === 'model' || key === 'approvalMode' || key === 'omcPath') {
+      if (
+        key === 'provider' ||
+        key === 'endpoint' ||
+        key === 'apiKey' ||
+        key === 'model' ||
+        key === 'approvalMode' ||
+        key === 'omcPath'
+      ) {
         writePersistedConfig({ [key]: value });
         console.log(`${SYMBOL} saved ${key} in ${getConfigPath()}`);
         return;
       }
-      console.error(`Unknown config key: ${key}. Valid keys: apiKey, model, approvalMode, omcPath`);
+      console.error(`Unknown config key: ${key}. Valid keys: provider, endpoint, apiKey, model, approvalMode, omcPath`);
       process.exit(1);
     }
     if (action === 'get' && key) {
@@ -209,10 +238,29 @@ async function main(): Promise<void> {
   }
 
   const config = loadConfig({
+    provider: args.provider,
+    endpoint: args.endpoint,
     model: args.model,
     apiKey: args.apiKey,
     approvalMode: args.approvalMode,
   });
+
+  if (args.showStatus) {
+    const h = await probeInkling(config.endpoint, config.apiKey);
+    console.log(`${SYMBOL} Provider:     ${config.provider}`);
+    console.log(`  Inkling URL:  ${h.endpoint}`);
+    console.log(`  Status:       ${h.online ? chalk.green('ONLINE') : chalk.red(`OFFLINE (${h.error || 'unreachable'})`)}`);
+    console.log(`  Engine:       ${h.engine}`);
+    console.log(`  Model:        ${h.model || config.model}`);
+    if (h.slotsMax !== undefined) {
+      console.log(`  KV Slots:     ${h.slotsActive ?? 0} / ${h.slotsMax} active`);
+    }
+    if (!h.online) {
+      console.log(chalk.gray('  Tunnel Spark: ssh -N -L 8080:127.0.0.1:8080 spark'));
+      process.exitCode = 1;
+    }
+    return;
+  }
 
   if (args.listSkills) {
     const skills = discoverSkills(config.harnessRoot);

@@ -6,9 +6,12 @@ export interface SlashCommandDef {
 
 export const SLASH_COMMANDS: SlashCommandDef[] = [
   { name: '/help', usage: '/help', description: 'Show commands and keyboard shortcuts' },
+  { name: '/status', usage: '/status', description: 'Probe Inkling server health and active KV slots' },
+  { name: '/endpoint', usage: '/endpoint [url]', description: 'Show or switch the Inkling HTTP endpoint' },
+  { name: '/provider', usage: '/provider [inkling|gemini]', description: 'Switch backend between Inkling (default) and Gemini' },
+  { name: '/model', usage: '/model [id]', description: 'Show or switch the active model ID' },
   { name: '/skills', usage: '/skills', description: 'List Omega Harness skills and active pins' },
   { name: '/skill', usage: '/skill <name>', description: 'Pin or unpin a skill in the system prompt' },
-  { name: '/model', usage: '/model [id]', description: 'Show or switch the active Gemini model' },
   { name: '/mode', usage: '/mode [default|auto-edit|yolo|omega-only]', description: 'Switch tool approval / guard mode' },
   { name: '/pin', usage: '/pin', description: 'Show omega-harness PIN and local omc status' },
   { name: '/compile', usage: '/compile <file.om>', description: 'Compile an .om file locally with omc' },
@@ -16,7 +19,7 @@ export const SLASH_COMMANDS: SlashCommandDef[] = [
   { name: '/compact', usage: '/compact', description: 'Compact conversation history to free context' },
   { name: '/clear', usage: '/clear', description: 'Clear conversation history and transcript' },
   { name: '/stats', usage: '/stats', description: 'Show session token usage and tool stats' },
-  { name: '/auth', usage: '/auth [api-key]', description: 'Show or set your Gemini API key' },
+  { name: '/auth', usage: '/auth [key]', description: 'Show or set bearer/Gemini API key' },
   { name: '/exit', usage: '/exit', description: 'Exit Ω Omega Harness CLI' },
   { name: '/quit', usage: '/quit', description: 'Exit Ω Omega Harness CLI' },
 ];
