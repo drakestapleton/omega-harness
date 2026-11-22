@@ -30,6 +30,20 @@ description: >-
 - In C wrappers (`omega_blackwell_codegen_*.c`): `memset` `ins` and `meta` to 0 before calling `omega2_cg_*_emit`, and call `omega_bw_ir_init(prog)` on any error path so callers never observe a partial `BlackwellIRProgram`.
 - Chain `omega2_bw_sched_stalls` directly on `ins[8192]` after `omega_bw_ir_from_om` without re-packing.
 
+## SM121 (GB10) Direct SASS Emitter Hazards & Proven Patterns
+When writing direct SM121 emitters (e.g. `om/gpu/q36/emit_{fast,prefill}.om` using `bw_enc_sm121.om`):
+- **`LDS.32`/`STS.32` address-register clobber hazard (silent corruption / `NaN`, 0 Xid):** `LDS` (`op 49`) and `STS` (`op 50`) read their address register asynchronously on scoreboard 1 (`rbar=1`). Never modify an address register (e.g. `IADD addr, addr, 4`) or load into a register that was an address source of an in-flight `LDS` before `qW1`/`qW0`. Compute disjoint address registers first, issue batched `LDS`/`STS`, then emit one `qW0`/`qW1`.
+- **SM121 fixed ALU latency is 6 cycles (`qAlu4 = qcw 6 7 7 0 0`):** Direct dependent `SHF`/`SHR`/`LOP3`/`I2F`/`FMUL`/`FFMA`/`F2FP` pairs need `>= 6` cycles of total stall separation; `stall 4` on a direct dependency silently reads stale values (`NaN`). For two independent chains, `qAlu3` (`3`) + `qAlu3` (`3`) gives `6` cycles of separation; keep `qAlu4` (`6`) on the final producer before a joint consumer.
+- **Never nest `qBssy`/`qBsync` (`B0` hardcoded):** Nesting two `qBssy` pairs deadlocks the warp silently with zero Xid. Use predicated instructions (`@P0` / `@!P0` via `q36Guard = 2` / `1`) or sequential flat `qBssy` blocks.
+- **Encoder operand & alignment traps:**
+  - `op 52` (`SHF.L.U32`) computes `o[2] << o[3]` (not `o[4] << o[3]`).
+  - `op 57` (`LDG.E.128`) requires a 4-aligned destination (`reg % 4 == 0`); `op 56` (`LDG.E.64`) requires 2-aligned (`reg % 2 == 0`); unaligned destinations hang the GPU.
+  - `op 3` (`S2R`) requires scoreboard 0 (`qcw 4 0 7 0 1`) + `qW0` before reading the destination.
+- **Verified GB10 throughput patterns:**
+  - Use `HMMA.16816.F32.BF16` (`op 16`) + `F2FP.BF16.F32.PACK_AB` (`op 61`) for dense W4/BF16 GEMMs, hot-first deduplicated MoE (`EXP_ORDER` with `cnt > 32` first to eliminate tail-straggler waves), and full Flash-Attention-2 (`Q@K^T` + `P@V` with half-warp `SHFL.BFLY` online softmax).
+  - For `D = 128` recurrent reductions (e.g. GDN), assign 1 warp (`32` lanes × `4` dims/lane via `LDG.E.128`) and reduce with `qWarpBflySum` (**0 `BAR.SYNC`, 0 SMEM**).
+  - Avoid high-SMEM / high-register scalar GQA-8 fusion when KV fits GB10's 24 MiB L2; occupancy + L2 hits beat scalar fusion, and `HMMA.16816` Flash-Attention beats both.
+
 ## Mandatory 4-Stage Verification Before Landing
 ### Spark Scratch & Pinned Dependencies
 - Do not rely on `~/workspace/physics` or `~/workspace/omega-bridge` being at the pinned commits: materialize `native.om` at `om/omega-bridge.lock` (`git -C ~/workspace/omega-bridge show <sha>:src/native.om > /tmp/omega-bridge-pin/src/native.om`) and clone `~/git/physics-mv.git` at `physics.lock` into `/tmp/physics-pin`.
