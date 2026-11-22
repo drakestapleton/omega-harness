@@ -96,6 +96,9 @@ If a record and this file disagree, the record wins. Section 11 lists what the r
   jobs), then waits for the chip lock with no timeout. [cortex omp-learn-923b7b170bf8244f, read from source 2026-10-30]
 - `STATE/aien-coordinator/CHIP-RESERVED` is a courtesy note that spark-window prints; it is not a gate.
   [RULES; TEAM-MEMORY:11]
+- `spark-receipt` syntax: always invoke inside `spark-window run` with positional `NAME` (`spark-window run spark-receipt NAME -- CMD`), never `--window` or `--out`, so `window_id` is recorded cleanly.
+- Live 35B `q36-serve` teacher launches: use `~/.local/bin/q36-35b --port PORT` (`--model-dir`, not `--model`) and allow a **90–120 s cold-load readiness wait** when page cache is cold (34.7 GB safetensors observed at `43–72 s`).
+- Never run 165-task `ollm-gb10 gsample` loops inside a 20m exclusive GPU window; run 16-way parallel CPU `ollm sample` outside the window instead.
 
 Automatic actors you will meet:
 - `chip-watchdog` (`BIN/chip-watchdog`, seen running on 2026-11-15): every 5 s it checks the
