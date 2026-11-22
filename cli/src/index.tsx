@@ -16,6 +16,7 @@ import {
   readPinInfo,
 } from './harness.js';
 import { probeInkling } from './inkling.js';
+import { rebuildSparkInkling, stackDown, stackUp } from './stack.js';
 import { OmegaAgent } from './agent.js';
 import { App } from './ui/App.js';
 
@@ -25,6 +26,10 @@ interface ParsedArgs {
   listSkills: boolean;
   showPin: boolean;
   showStatus: boolean;
+  stackCommand?: 'up' | 'down' | 'rebuild';
+  launchAfterUp: boolean;
+  rebuildOnUp: boolean;
+  sparkHost: string;
   provider?: ProviderKind;
   endpoint?: string;
   prompt?: string;
@@ -43,6 +48,9 @@ function parseArgs(argv: string[]): ParsedArgs {
     listSkills: false,
     showPin: false,
     showStatus: false,
+    launchAfterUp: false,
+    rebuildOnUp: false,
+    sparkHost: process.env.OMEGA_SPARK_HOST || 'spark',
     skills: [],
     positional: [],
   };
@@ -55,7 +63,17 @@ function parseArgs(argv: string[]): ParsedArgs {
     }
   }
 
-  for (let i = 0; i < argv.length; i++) {
+  let startIdx = 0;
+  if (argv[0] === 'up' || argv[0] === 'down' || argv[0] === 'rebuild') {
+    out.stackCommand = argv[0];
+    startIdx = 1;
+  } else if (argv[0] === 'start') {
+    out.stackCommand = 'up';
+    out.launchAfterUp = true;
+    startIdx = 1;
+  }
+
+  for (let i = startIdx; i < argv.length; i++) {
     const a = argv[i];
     if (a === '-h' || a === '--help') {
       out.help = true;
@@ -67,6 +85,12 @@ function parseArgs(argv: string[]): ParsedArgs {
       out.showPin = true;
     } else if (a === '--status') {
       out.showStatus = true;
+    } else if (a === '--launch') {
+      out.launchAfterUp = true;
+    } else if (a === '--rebuild') {
+      out.rebuildOnUp = true;
+    } else if (a === '--host' && argv[i + 1]) {
+      out.sparkHost = argv[++i];
     } else if (a === '-y' || a === '--yolo') {
       out.approvalMode = 'yolo';
     } else if (a === '--auto-edit') {
@@ -102,8 +126,12 @@ function printHelp(): void {
   );
   console.log('');
   console.log('Usage:');
-  console.log('  omega [options] [initial prompt]');
-  console.log('  omega --status                        Check Inkling-2-Mini server health & KV slots');
+  console.log('  omega [options] [initial prompt]      Launch interactive Ω TUI');
+  console.log('  omega start                           Boot Inkling-2-Mini + Arboris on Spark, tunnel, and launch TUI');
+  console.log('  omega up [--rebuild]                  Start Inkling-2-Mini + Arboris on Spark + SSH tunnel');
+  console.log('  omega down                            Stop Inkling-2-Mini on Spark + close SSH tunnel');
+  console.log('  omega rebuild                         Recompile pure-Omega inkling2-serve on Spark');
+  console.log('  omega --status                        Check Inkling-2-Mini health, KV slots & Arboris hits');
   console.log('  omega -p "<prompt>"                   Non-interactive headless mode (supports piped stdin)');
   console.log('  omega config set endpoint <url>       Save default Inkling HTTP endpoint');
   console.log('  omega config set provider <name>      Save default provider (inkling | gemini)');
@@ -244,6 +272,28 @@ async function main(): Promise<void> {
     apiKey: args.apiKey,
     approvalMode: args.approvalMode,
   });
+
+  if (args.stackCommand === 'rebuild') {
+    const res = rebuildSparkInkling(args.sparkHost);
+    console.log(res.output);
+    return;
+  }
+
+  if (args.stackCommand === 'down') {
+    stackDown({ sparkHost: args.sparkHost, endpoint: config.endpoint, apiKey: config.apiKey });
+    return;
+  }
+
+  if (args.stackCommand === 'up') {
+    const ok = await stackUp({
+      sparkHost: args.sparkHost,
+      endpoint: config.endpoint,
+      apiKey: config.apiKey,
+      rebuild: args.rebuildOnUp,
+    });
+    if (!ok) process.exit(1);
+    if (!args.launchAfterUp) return;
+  }
 
   if (args.showStatus) {
     const h = await probeInkling(config.endpoint, config.apiKey);

@@ -15,28 +15,23 @@ Interactive terminal CLI for operating **Inkling-2-Mini** through Omega Harness,
 ## Build & Install
 
 ```sh
-cd cli
-npm install
-npm run build
-ln -sf "$PWD/dist/index.js" ~/.local/bin/omega
+sh cli/install.sh
 ```
 
-## Connecting to Inkling-2-Mini on Spark
-
-Start `inkling2-serve` on Spark inside an authorized GPU window and forward port `8080` to your Mac:
+Or package a self-contained release bundle (`.tar.gz` + `.sha256` + `MANIFEST.txt`):
 
 ```sh
-ssh -N -L 8080:127.0.0.1:8080 spark
-omega --status
-omega
+sh cli/package.sh
 ```
 
-Or point to any other host/port:
+## One-Command Stack Lifecycle (Inkling-2-Mini + Arboris + SM121 Speedups)
 
 ```sh
-omega -e http://127.0.0.1:18091
-# or persist it:
-omega config set endpoint http://127.0.0.1:18091
+omega start          # Boot Inkling-2-Mini + Arboris on Spark, open :8080 tunnel, launch Ω TUI
+omega up             # Boot Spark server + tunnel only (auto-builds if missing)
+omega up --rebuild   # Recompile pure-Omega inkling2-serve on Spark and restart
+omega --status       # Check health, N=8 KV slots & live Arboris top-8/top-16 hit rates
+omega down           # Stop Spark server cleanly + close tunnel (keeps Spark GPU idle)
 ```
 
 ## Usage
