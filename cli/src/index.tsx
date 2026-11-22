@@ -255,6 +255,12 @@ async function main(): Promise<void> {
     if (h.slotsMax !== undefined) {
       console.log(`  KV Slots:     ${h.slotsActive ?? 0} / ${h.slotsMax} active`);
     }
+    if (h.arborisTransitions !== undefined) {
+      const denom = Math.max(1, h.arborisTransitions * 8);
+      const pct8 = h.arborisTransitions > 0 ? ((100 * (h.arborisTop8Hits ?? 0)) / denom).toFixed(1) : '0.0';
+      const pct16 = h.arborisTransitions > 0 ? ((100 * (h.arborisTop16Hits ?? 0)) / denom).toFixed(1) : '0.0';
+      console.log(`  Arboris:      ACTIVE (transitions=${h.arborisTransitions}, top8=${pct8}%, top16=${pct16}%)`);
+    }
     if (!h.online) {
       console.log(chalk.gray('  Tunnel Spark: ssh -N -L 8080:127.0.0.1:8080 spark'));
       process.exitCode = 1;

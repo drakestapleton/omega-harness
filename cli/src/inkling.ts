@@ -156,6 +156,9 @@ export interface InklingHealth {
   model?: string;
   slotsActive?: number;
   slotsMax?: number;
+  arborisTransitions?: number;
+  arborisTop8Hits?: number;
+  arborisTop16Hits?: number;
   engine: 'inkling2-serve' | 'openai-compat' | 'offline';
   error?: string;
 }
@@ -221,6 +224,9 @@ export async function probeInkling(endpoint: string, apiKey?: string): Promise<I
         model,
         slotsActive,
         slotsMax,
+        arborisTransitions: typeof data.arboris_transitions === 'number' ? data.arboris_transitions : undefined,
+        arborisTop8Hits: typeof data.arboris_top8_hits === 'number' ? data.arboris_top8_hits : undefined,
+        arborisTop16Hits: typeof data.arboris_top16_hits === 'number' ? data.arboris_top16_hits : undefined,
         engine: isNativeServe ? 'inkling2-serve' : 'openai-compat',
       };
     }
@@ -344,7 +350,7 @@ export function buildNativeServePayload(model: string, userPrompt: string): stri
     .replace(/"/g, "'")
     .replace(/\r?\n+/g, ' ')
     .trim()
-    .slice(0, 980);
+    .slice(0, 1980);
   return JSON.stringify({
     model,
     messages: [{ role: 'user', content: sanitized }],

@@ -338,6 +338,11 @@ export const App: React.FC<AppProps> = ({
             ...(h.slotsMax !== undefined
               ? [`KV Slots:        ${h.slotsActive ?? 0} / ${h.slotsMax} active`]
               : []),
+            ...(h.arborisTransitions !== undefined
+              ? [
+                  `Arboris:         ACTIVE (transitions=${h.arborisTransitions}, top8=${h.arborisTransitions > 0 ? ((100 * (h.arborisTop8Hits ?? 0)) / (h.arborisTransitions * 8)).toFixed(1) : '0.0'}%, top16=${h.arborisTransitions > 0 ? ((100 * (h.arborisTop16Hits ?? 0)) / (h.arborisTransitions * 8)).toFixed(1) : '0.0'}%)`,
+                ]
+              : []),
             ...(!h.online
               ? [
                   '',
