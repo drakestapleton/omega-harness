@@ -6,7 +6,11 @@ export interface SlashCommandDef {
 
 export const SLASH_COMMANDS: SlashCommandDef[] = [
   { name: '/help', usage: '/help', description: 'Show commands and keyboard shortcuts' },
-  { name: '/status', usage: '/status', description: 'Probe Inkling server health and active KV slots' },
+  { name: '/status', usage: '/status', description: 'Probe Inkling server health, KV slots & Arboris hits' },
+  { name: '/tools', usage: '/tools', description: 'List all 27 available agent tools' },
+  { name: '/agents', usage: '/agents', description: 'List active and completed Inkling subagents' },
+  { name: '/tasks', usage: '/tasks', description: 'Show current session task checklist' },
+  { name: '/memory', usage: '/memory [key]', description: 'Show persistent cross-session memories' },
   { name: '/endpoint', usage: '/endpoint [url]', description: 'Show or switch the Inkling HTTP endpoint' },
   { name: '/provider', usage: '/provider [inkling|gemini]', description: 'Switch backend between Inkling (default) and Gemini' },
   { name: '/model', usage: '/model [id]', description: 'Show or switch the active model ID' },
@@ -17,6 +21,7 @@ export const SLASH_COMMANDS: SlashCommandDef[] = [
   { name: '/compile', usage: '/compile <file.om>', description: 'Compile an .om file locally with omc' },
   { name: '/run', usage: '/run <file.om>', description: 'Compile and run an .om file locally' },
   { name: '/compact', usage: '/compact', description: 'Compact conversation history to free context' },
+  { name: '/resume', usage: '/resume [name]', description: 'Resume saved conversation session (default: latest)' },
   { name: '/clear', usage: '/clear', description: 'Clear conversation history and transcript' },
   { name: '/stats', usage: '/stats', description: 'Show session token usage and tool stats' },
   { name: '/auth', usage: '/auth [key]', description: 'Show or set bearer/Gemini API key' },

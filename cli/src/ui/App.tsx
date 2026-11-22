@@ -33,6 +33,8 @@ import {
   type ToolEvent,
 } from '../agent.js';
 import { probeInkling, type InklingHealth } from '../inkling.js';
+import { TOOL_DECLARATIONS } from '../tools.js';
+import { formatMemories } from '../state.js';
 import { SLASH_COMMANDS, matchSlashCommands } from '../commands.js';
 import { Markdown } from './Markdown.js';
 
@@ -53,6 +55,7 @@ export interface AppProps {
   cwd: string;
   initialPrompt?: string;
   initialSkills?: string[];
+  resumeSession?: string;
 }
 
 const ToolCard: React.FC<{ tool: ToolEvent }> = ({ tool }) => {
@@ -113,6 +116,7 @@ export const App: React.FC<AppProps> = ({
   cwd,
   initialPrompt,
   initialSkills = [],
+  resumeSession,
 }) => {
   const { exit } = useApp();
   const { stdout } = useStdout();
@@ -261,6 +265,11 @@ export const App: React.FC<AppProps> = ({
         if (finalText.trim()) {
           pushItem({ kind: 'assistant', text: finalText });
         }
+        try {
+          agentRef.current.saveSession('latest');
+        } catch {
+          // ignore persistence error
+        }
         if (provider === 'inkling') {
           void refreshInklingHealth(endpoint, apiKey);
         }
@@ -292,6 +301,19 @@ export const App: React.FC<AppProps> = ({
       refreshInklingHealth,
     ]
   );
+
+  useEffect(() => {
+    if (resumeSession) {
+      const res = agentRef.current.loadSession(resumeSession);
+      if (res.ok) {
+        setUsage({ ...agentRef.current.usage });
+        pushItem({
+          kind: 'system',
+          text: `Resumed session "${resumeSession}" (${res.turns} previous turns, saved ${res.savedAt || 'earlier'}).`,
+        });
+      }
+    }
+  }, [resumeSession, pushItem]);
 
   useEffect(() => {
     if (initialPrompt && !initialSentRef.current) {
@@ -335,6 +357,12 @@ export const App: React.FC<AppProps> = ({
             `Status:          ${h.online ? 'ONLINE' : `OFFLINE (${h.error || 'unreachable'})`}`,
             `Engine:          ${h.engine}`,
             `Model:           ${h.model || model}`,
+            ...(h.contextWindow !== undefined
+              ? [`Context:         ${h.contextWindow.toLocaleString()} tokens/slot`]
+              : []),
+            ...(h.kvPrefixHits !== undefined
+              ? [`KV Cache Hits:   ${h.kvPrefixHits}`]
+              : []),
             ...(h.slotsMax !== undefined
               ? [`KV Slots:        ${h.slotsActive ?? 0} / ${h.slotsMax} active`]
               : []),
@@ -353,6 +381,33 @@ export const App: React.FC<AppProps> = ({
               : []),
           ];
           pushItem({ kind: h.online ? 'system' : 'error', text: lines.join('\n') });
+          return;
+        }
+
+        case '/tools': {
+          const lines = [
+            `Ω Available Agent Tools (${TOOL_DECLARATIONS.length}):`,
+            ...TOOL_DECLARATIONS.map((t) => `  • ${(t.name || '').padEnd(26)} ${t.description || ''}`),
+          ];
+          pushItem({ kind: 'system', text: lines.join('\n') });
+          return;
+        }
+
+        case '/agents': {
+          const out = agentRef.current.state.formatSubagents();
+          pushItem({ kind: 'system', text: `Ω Subagents:\n${out}` });
+          return;
+        }
+
+        case '/tasks': {
+          const out = agentRef.current.state.formatTodos();
+          pushItem({ kind: 'system', text: `Ω Session Tasks:\n${out}` });
+          return;
+        }
+
+        case '/memory': {
+          const out = formatMemories(arg || undefined);
+          pushItem({ kind: 'system', text: `Ω Persistent Memory:\n${out}` });
           return;
         }
 
@@ -520,6 +575,21 @@ export const App: React.FC<AppProps> = ({
             .filter(Boolean)
             .join('\n');
           pushItem({ kind: res.exitCode === 0 ? 'system' : 'error', text: out });
+          return;
+        }
+
+        case '/resume': {
+          const name = arg || 'latest';
+          const res = agentRef.current.loadSession(name);
+          if (res.ok) {
+            setUsage({ ...agentRef.current.usage });
+            pushItem({
+              kind: 'system',
+              text: `✓ Resumed session "${name}" (${res.turns} turns, saved ${res.savedAt || 'earlier'}).`,
+            });
+          } else {
+            pushItem({ kind: 'error', text: `No saved session named "${name}".` });
+          }
           return;
         }
 

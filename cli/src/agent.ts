@@ -1,9 +1,10 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { GoogleGenAI, type Content, type FunctionCall, type Part } from '@google/genai';
-import type { ProviderKind } from './config.js';
+import { getConfigDir, type ProviderKind } from './config.js';
 import {
   TOOL_DECLARATIONS,
+  VALID_TOOL_NAMES,
   executeTool,
   formatToolArgsPreview,
   needsApproval,
@@ -14,6 +15,7 @@ import {
   probeInkling,
   type InklingMessage,
 } from './inkling.js';
+import { SessionState } from './state.js';
 
 export interface TokenUsage {
   promptTokens: number;
@@ -41,8 +43,7 @@ export interface AgentCallbacks {
 }
 
 /**
- * Expands @path tokens in user prompts into attached file context blocks,
- * matching Gemini CLI's @file ergonomic workflow.
+ * Expands @path tokens in user prompts into attached file context blocks.
  */
 export function expandAtMentions(prompt: string, cwd: string): { expanded: string; attachedFiles: string[] } {
   const attachedFiles: string[] = [];
@@ -78,13 +79,16 @@ export class OmegaAgent {
   private geminiHistory: Content[] = [];
   private inklingHistory: InklingMessage[] = [];
   private sessionAlwaysAllowed = new Set<string>();
+  private subagentInstances = new Map<string, OmegaAgent>();
+  public state: SessionState;
   public usage: TokenUsage = { promptTokens: 0, outputTokens: 0, totalTokens: 0 };
   public toolCallCount = 0;
 
-  constructor(apiKey?: string) {
+  constructor(apiKey?: string, state?: SessionState) {
     if (apiKey) {
       this.ai = new GoogleGenAI({ apiKey });
     }
+    this.state = state || new SessionState();
   }
 
   setApiKey(apiKey: string): void {
@@ -94,6 +98,42 @@ export class OmegaAgent {
   clearHistory(): void {
     this.geminiHistory = [];
     this.inklingHistory = [];
+  }
+
+  saveSession(name = 'latest'): string {
+    const dir = path.join(getConfigDir(), 'sessions');
+    fs.mkdirSync(dir, { recursive: true, mode: 0o700 });
+    const file = path.join(dir, `${name.replace(/[^a-zA-Z0-9_-]/g, '_')}.json`);
+    const payload = {
+      savedAt: new Date().toISOString(),
+      inklingHistory: this.inklingHistory,
+      geminiHistory: this.geminiHistory,
+      usage: this.usage,
+      todos: this.state.todos,
+    };
+    fs.writeFileSync(file, JSON.stringify(payload, null, 2) + '\n', { mode: 0o600 });
+    return file;
+  }
+
+  loadSession(name = 'latest'): { ok: boolean; turns: number; savedAt?: string } {
+    const file = path.join(getConfigDir(), 'sessions', `${name.replace(/[^a-zA-Z0-9_-]/g, '_')}.json`);
+    try {
+      const raw = fs.readFileSync(file, 'utf8');
+      const data = JSON.parse(raw) as {
+        savedAt?: string;
+        inklingHistory?: InklingMessage[];
+        geminiHistory?: Content[];
+        usage?: TokenUsage;
+        todos?: Array<{ id: string; title: string; status: 'pending' | 'in_progress' | 'completed' }>;
+      };
+      if (Array.isArray(data.inklingHistory)) this.inklingHistory = data.inklingHistory;
+      if (Array.isArray(data.geminiHistory)) this.geminiHistory = data.geminiHistory;
+      if (data.usage) this.usage = data.usage;
+      if (Array.isArray(data.todos)) this.state.setTodos(data.todos);
+      return { ok: true, turns: this.getTurnCount(), savedAt: data.savedAt };
+    } catch {
+      return { ok: false, turns: 0 };
+    }
   }
 
   getTurnCount(): number {
@@ -152,12 +192,68 @@ export class OmegaAgent {
       toolContext: ToolContext;
       callbacks: AgentCallbacks;
       signal?: AbortSignal;
+      depth?: number;
     }
   ): Promise<string> {
-    if (opts.provider === 'inkling') {
-      return this.sendInklingTurn(userPrompt, opts);
+    const depth = opts.depth ?? 0;
+
+    // Bind autonomous subagent runner onto this session's state
+    const boundState = opts.toolContext.state || this.state;
+    if (depth < 2) {
+      boundState.runSubagent = async (req) => {
+        let sub = req.existingId ? this.subagentInstances.get(req.existingId) : undefined;
+        if (!sub) {
+          sub = new OmegaAgent(opts.apiKey, new SessionState());
+          this.subagentInstances.set(req.id, sub);
+        }
+        const subSystem =
+          `You are subagent "${req.role}" (${req.id}) spawned by Ω Omega Harness.\n` +
+          `Mode: ${req.mode}. Focus strictly on the assigned task and return a concise, factual report with evidence.\n` +
+          opts.systemInstruction;
+
+        const subStartCalls = sub.toolCallCount;
+        const text = await sub.sendTurn(req.task, {
+          provider: opts.provider,
+          endpoint: opts.endpoint,
+          apiKey: opts.apiKey,
+          model: opts.model,
+          systemInstruction: subSystem,
+          toolContext: {
+            ...opts.toolContext,
+            state: sub.state,
+            readOnlyOnly: req.mode === 'read-only',
+          },
+          signal: opts.signal,
+          depth: depth + 1,
+          callbacks: {
+            onTextDelta: () => {},
+            onToolStart: (ev) =>
+              opts.callbacks.onToolStart({
+                ...ev,
+                name: `${req.id}:${ev.name}`,
+              }),
+            onToolUpdate: (ev) =>
+              opts.callbacks.onToolUpdate({
+                ...ev,
+                name: `${req.id}:${ev.name}`,
+              }),
+            onRequestApproval: opts.callbacks.onRequestApproval,
+            onUsageUpdate: opts.callbacks.onUsageUpdate,
+          },
+        });
+        return { text, toolCalls: sub.toolCallCount - subStartCalls };
+      };
     }
-    return this.sendGeminiTurn(userPrompt, opts);
+
+    const toolContext: ToolContext = {
+      ...opts.toolContext,
+      state: boundState,
+    };
+
+    if (opts.provider === 'inkling') {
+      return this.sendInklingTurn(userPrompt, { ...opts, toolContext });
+    }
+    return this.sendGeminiTurn(userPrompt, { ...opts, toolContext });
   }
 
   private async runToolWithApproval(
@@ -225,7 +321,7 @@ export class OmegaAgent {
     if (!health.online) {
       throw new Error(
         `Cannot reach Inkling server at ${opts.endpoint} (${health.error || 'offline'}). ` +
-          `Start inkling2-serve on Spark and tunnel: ssh -N -L 8080:127.0.0.1:8080 spark`
+          `Run \`omega up\` to boot Inkling-2-Mini + Arboris on Spark.`
       );
     }
 
@@ -234,7 +330,8 @@ export class OmegaAgent {
 
     const engine = health.engine === 'inkling2-serve' ? 'inkling2-serve' : 'openai-compat';
     let fullAssistantText = '';
-    const maxRounds = engine === 'inkling2-serve' ? 1 : 24;
+    const maxRounds = engine === 'inkling2-serve' ? 10 : 24;
+    const seenSignatures = new Set<string>();
 
     for (let round = 0; round < maxRounds; round++) {
       if (opts.signal?.aborted) throw new Error('Cancelled by user');
@@ -244,7 +341,7 @@ export class OmegaAgent {
         ...this.inklingHistory,
       ];
 
-      const { parsed, usage } = await callInklingChat({
+      const { parsed, rawContent, usage } = await callInklingChat({
         endpoint: opts.endpoint,
         model: opts.model,
         messages,
@@ -264,6 +361,9 @@ export class OmegaAgent {
         opts.callbacks.onUsageUpdate?.(this.usage);
       }
 
+      // Filter to valid registered tool names
+      const validCalls = parsed.toolCalls.filter((tc) => VALID_TOOL_NAMES.has(tc.name));
+
       if (parsed.text) {
         fullAssistantText += (fullAssistantText ? '\n' : '') + parsed.text;
       }
@@ -271,9 +371,10 @@ export class OmegaAgent {
       this.inklingHistory.push({
         role: 'assistant',
         content: parsed.text,
-        ...(parsed.toolCalls.length > 0
+        ...(engine === 'inkling2-serve' ? { rawAssistantOutput: rawContent } : {}),
+        ...(validCalls.length > 0
           ? {
-              tool_calls: parsed.toolCalls.map((tc) => ({
+              tool_calls: validCalls.map((tc) => ({
                 id: tc.id,
                 type: 'function' as const,
                 function: { name: tc.name, arguments: JSON.stringify(tc.args) },
@@ -282,11 +383,25 @@ export class OmegaAgent {
           : {}),
       });
 
-      if (parsed.toolCalls.length === 0) {
+      if (validCalls.length === 0) {
         break;
       }
 
-      for (const tc of parsed.toolCalls) {
+      let executedAnyNew = false;
+      for (const tc of validCalls) {
+        const sig = `${tc.name}:${JSON.stringify(tc.args)}`;
+        if (seenSignatures.has(sig)) {
+          // Loop breaker: do not execute identical tool call twice in the same turn
+          this.inklingHistory.push({
+            role: 'tool',
+            name: tc.name,
+            tool_call_id: tc.id,
+            content: `Already executed ${tc.name} with those exact args above. Do NOT call it again; answer the user now.`,
+          });
+          continue;
+        }
+        seenSignatures.add(sig);
+        executedAnyNew = true;
         const res = await this.runToolWithApproval(
           tc.name,
           tc.args,
@@ -299,6 +414,16 @@ export class OmegaAgent {
           tool_call_id: tc.id,
           content: res.output,
         });
+      }
+
+      if (!executedAnyNew) {
+        // Model attempted only duplicate calls — break cleanly after reporting last tool result
+        const lastObs = [...this.inklingHistory].reverse().find((m) => m.role === 'tool' && !m.content.startsWith('Already executed'));
+        if (!fullAssistantText.trim() && lastObs) {
+          fullAssistantText = lastObs.content;
+          opts.callbacks.onTextDelta(lastObs.content);
+        }
+        break;
       }
     }
 

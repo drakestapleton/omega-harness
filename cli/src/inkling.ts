@@ -154,6 +154,8 @@ export interface InklingHealth {
   online: boolean;
   endpoint: string;
   model?: string;
+  contextWindow?: number;
+  kvPrefixHits?: number;
   slotsActive?: number;
   slotsMax?: number;
   arborisTransitions?: number;
@@ -166,6 +168,7 @@ export interface InklingHealth {
 export interface InklingMessage {
   role: 'system' | 'user' | 'assistant' | 'tool';
   content: string;
+  rawAssistantOutput?: string;
   name?: string;
   tool_call_id?: string;
   tool_calls?: Array<{
@@ -222,6 +225,8 @@ export async function probeInkling(endpoint: string, apiKey?: string): Promise<I
         online: true,
         endpoint: base,
         model,
+        contextWindow: typeof data.context_window === 'number' ? data.context_window : undefined,
+        kvPrefixHits: typeof data.kv_prefix_hits === 'number' ? data.kv_prefix_hits : undefined,
         slotsActive,
         slotsMax,
         arborisTransitions: typeof data.arboris_transitions === 'number' ? data.arboris_transitions : undefined,
@@ -273,15 +278,42 @@ export async function probeInkling(endpoint: string, apiKey?: string): Promise<I
 }
 
 /**
- * Parse Inkling-2-Mini native control tokens if emitted inline in text:
+ * Parse Inkling-2-Mini tool calls and control tokens:
  *  - <|content_thinking|>...<|end_message|>
  *  - <|message_model|>NAME<|content_invoke_tool_json|>{"name":...,"args":...}<|end_message|>
- *  - <|content_text|>, <|end_message|>, <|content_model_end_sampling|>
+ *  - <tool>{"name":"...","args":{...}}</tool>
+ *  - Standalone JSON tool call block: {"tool":"...","args":{...}} or {"name":"...","args":{...}}
  */
 export function parseInklingTokens(raw: string): ParsedInklingOutput {
   const toolCalls: Array<{ id: string; name: string; args: Record<string, unknown> }> = [];
   let thinking = '';
   let text = raw;
+
+  const pushCall = (jsonStr: string): boolean => {
+    const candidates = [jsonStr.trim(), jsonStr.trim().replace(/'/g, '"')];
+    for (const cand of candidates) {
+      try {
+        const parsed = JSON.parse(cand) as {
+          name?: string;
+          tool?: string;
+          args?: Record<string, unknown>;
+          arguments?: Record<string, unknown>;
+        };
+        const fnName = parsed.name || parsed.tool;
+        if (fnName && typeof fnName === 'string') {
+          toolCalls.push({
+            id: `ik-tc-${Date.now()}-${toolCalls.length}`,
+            name: fnName,
+            args: parsed.args || parsed.arguments || {},
+          });
+          return true;
+        }
+      } catch {
+        // try next candidate
+      }
+    }
+    return false;
+  };
 
   // Extract thinking blocks
   text = text.replace(/<\|content_thinking\|>([\s\S]*?)(?:<\|end_message\|>|$)/g, (_, inner: string) => {
@@ -289,29 +321,29 @@ export function parseInklingTokens(raw: string): ParsedInklingOutput {
     return '';
   });
 
-  // Extract inline Inkling tool invocations
+  // Extract native Inkling tool invocations
   text = text.replace(
     /(?:<\|message_model\|>[^<]*)?<\|content_invoke_tool_json\|>([\s\S]*?)(?:<\|end_message\|>|$)/g,
-    (_, jsonStr: string) => {
-      try {
-        const parsed = JSON.parse(jsonStr.trim()) as {
-          name?: string;
-          args?: Record<string, unknown>;
-          arguments?: Record<string, unknown>;
-        };
-        if (parsed.name) {
-          toolCalls.push({
-            id: `ik-tc-${Date.now()}-${toolCalls.length}`,
-            name: parsed.name,
-            args: parsed.args || parsed.arguments || {},
-          });
-        }
-      } catch {
-        // leave unparseable block ignored
-      }
-      return '';
-    }
+    (full, jsonStr: string) => (pushCall(jsonStr) ? '' : full)
   );
+
+  // Extract <tool>{...}</tool> tags
+  text = text.replace(/<tool>\s*([\s\S]*?)\s*<\/tool>/gi, (full, jsonStr: string) =>
+    pushCall(jsonStr) ? '' : full
+  );
+
+  // Extract fenced ```json {"tool":...}``` or inline {"tool":"...", "args":{...}} when no other call matched
+  if (toolCalls.length === 0) {
+    text = text.replace(/```(?:json)?\s*(\{[\s\S]*?"(?:tool|name)"[\s\S]*?\})\s*```/g, (full, jsonStr: string) =>
+      pushCall(jsonStr) ? '' : full
+    );
+  }
+  if (toolCalls.length === 0) {
+    const inlineMatch = text.match(/(\{"(?:tool|name)"\s*:\s*"[a-z0-9_]+"(?:\s*,\s*"(?:args|arguments)"\s*:\s*\{[^{}]*\})?\s*\})/);
+    if (inlineMatch && pushCall(inlineMatch[1])) {
+      text = text.replace(inlineMatch[1], '');
+    }
+  }
 
   // Strip remaining Inkling framing tokens
   text = text
@@ -339,18 +371,141 @@ function toOpenAITools(decls: FunctionDeclaration[]) {
   }));
 }
 
+const SHORT_TOOL_DESC: Record<string, string> = {
+  read_file: 'Read file lines',
+  write_file: 'Write file',
+  edit_file: 'Edit text in file',
+  delete_file: 'Delete file',
+  list_dir: 'List directory',
+  glob_files: 'Find files by glob',
+  grep_search: 'Search text in files',
+  run_shell: 'Run shell command',
+  git_status: 'Git status',
+  git_diff: 'Git diff',
+  git_log: 'Git log',
+  git_commit: 'Git commit',
+  web_fetch: 'Fetch URL text',
+  web_search: 'Search the web',
+  todo_write: 'Update task list',
+  todo_read: 'Read task list',
+  memory_save: 'Save memory',
+  memory_read: 'Read memory',
+  spawn_subagent: 'Run subagent on subtask',
+  spawn_parallel_subagents: 'Run parallel subagents',
+  list_subagents: 'List subagents',
+  message_subagent: 'Message subagent',
+  list_skills: 'List Omega skills',
+  load_skill: 'Load Omega skill',
+  omc_compile: 'Compile .om with omc',
+  omc_run: 'Compile and run .om',
+  omega_pin: 'Show PIN and omc hash',
+};
+
+function normalizeSchema(obj: unknown): unknown {
+  if (Array.isArray(obj)) return obj.map(normalizeSchema);
+  if (!obj || typeof obj !== 'object') return obj;
+  const rec = obj as Record<string, unknown>;
+  const out: Record<string, unknown> = {};
+  for (const k of Object.keys(rec).sort()) {
+    if (k === 'description') continue;
+    if (k === 'type' && typeof rec[k] === 'string') {
+      out[k] = rec[k].toLowerCase();
+    } else {
+      out[k] = normalizeSchema(rec[k]);
+    }
+  }
+  return out;
+}
+
 /**
- * Formats a prompt specifically for Omega's native `inkling2-serve` (serve_live.om),
- * whose slFindContent scans for the first `"content"` field up to the next `"` (max 1024 bytes).
+ * Render the EXACT Inkling-2-Mini native chat_template.jinja wire format
+ * for `inkling2-serve` (32,768-tok KV + exact KV/sconv prefix caching + native tool calling).
  */
-export function buildNativeServePayload(model: string, userPrompt: string): string {
-  // Replace double quotes with single quotes so slFindContent doesn't truncate early,
-  // and collapse newlines to spaces within the 1000-byte pBuf budget.
+export function renderInklingChatTemplate(
+  messages: InklingMessage[],
+  tools: FunctionDeclaration[],
+  thinkingEffort = 0
+): string {
+  const parts: string[] = [];
+
+  if (tools.length > 0) {
+    const specs = tools.map((d) => ({
+      description: SHORT_TOOL_DESC[d.name || ''] || (d.description || '').slice(0, 32),
+      name: d.name || '',
+      parameters: normalizeSchema(d.parameters || { type: 'object', properties: {} }),
+      type: 'function',
+    }));
+    parts.push(`<|message_system|>tool_declare<|content_xml|>${JSON.stringify(specs)}<|end_message|>`);
+  }
+
+  let effortEmitted = false;
+  for (const m of messages) {
+    if (!effortEmitted && m.role !== 'system') {
+      parts.push(`<|message_system|><|content_text|>Thinking effort level: ${thinkingEffort}<|end_message|>`);
+      effortEmitted = true;
+    }
+    if (m.role === 'system') {
+      parts.push(`<|message_system|><|content_text|>${m.content}<|end_message|>`);
+    } else if (m.role === 'user') {
+      parts.push(`<|message_user|><|content_text|>${m.content}<|end_message|>`);
+    } else if (m.role === 'assistant') {
+      if (m.rawAssistantOutput !== undefined) {
+        parts.push(`<|message_model|>${m.rawAssistantOutput}<|content_model_end_sampling|>`);
+      } else {
+        if (m.content) {
+          parts.push(`<|message_model|><|content_text|>${m.content}<|end_message|>`);
+        }
+        if (m.tool_calls && m.tool_calls.length > 0) {
+          for (const tc of m.tool_calls) {
+            let parsedArgs: Record<string, unknown> = {};
+            try {
+              parsedArgs = tc.function.arguments ? JSON.parse(tc.function.arguments) : {};
+            } catch {
+              parsedArgs = {};
+            }
+            const callJson = JSON.stringify({ name: tc.function.name, args: parsedArgs });
+            parts.push(`<|message_model|>${tc.function.name}<|content_invoke_tool_json|>${callJson}<|end_message|>`);
+          }
+        }
+        parts.push('<|content_model_end_sampling|>');
+      }
+    } else if (m.role === 'tool') {
+      const tname = m.name || 'tool';
+      parts.push(`<|message_tool|>${tname}<|content_text|>${m.content}<|end_message|>`);
+    }
+  }
+
+  if (!effortEmitted) {
+    parts.push(`<|message_system|><|content_text|>Thinking effort level: ${thinkingEffort}<|end_message|>`);
+  }
+  parts.push('<|message_model|>');
+  return parts.join('');
+}
+
+/**
+ * Formats a request for Omega's native `inkling2-serve` (32K context, 128 KiB request buffer,
+ * full JSON unescaping, native special-token encoding).
+ */
+export function buildNativeServePayload(
+  model: string,
+  userPrompt: string,
+  messages?: InklingMessage[],
+  tools?: FunctionDeclaration[]
+): string {
+  if (messages && messages.length > 0) {
+    const rendered = renderInklingChatTemplate(messages, tools || [], 0);
+    // Stay cleanly inside 120 KiB budget
+    const bounded = rendered.length > 120_000 ? rendered.slice(rendered.length - 120_000) : rendered;
+    return JSON.stringify({
+      model,
+      messages: [{ role: 'user', content: bounded }],
+    });
+  }
   const sanitized = userPrompt
     .replace(/"/g, "'")
     .replace(/\r?\n+/g, ' ')
     .trim()
-    .slice(0, 1980);
+    .slice(0, 120_000);
   return JSON.stringify({
     model,
     messages: [{ role: 'user', content: sanitized }],
@@ -368,6 +523,7 @@ export async function callInklingChat(opts: {
   onTextDelta: (chunk: string) => void;
 }): Promise<{
   parsed: ParsedInklingOutput;
+  rawContent: string;
   usage?: { promptTokens: number; outputTokens: number; totalTokens: number };
 }> {
   const base = opts.endpoint.replace(/\/+$/, '');
@@ -382,7 +538,7 @@ export async function callInklingChat(opts: {
   // Native pure-Omega `inkling2-serve` path (with automatic 503 server_busy retry)
   if (opts.engine === 'inkling2-serve') {
     const lastUser = [...opts.messages].reverse().find((m) => m.role === 'user');
-    const body = buildNativeServePayload(opts.model, lastUser?.content || '');
+    const body = buildNativeServePayload(opts.model, lastUser?.content || '', opts.messages, opts.tools);
 
     let lastStatus = 0;
     for (let attempt = 0; attempt < 5; attempt++) {
@@ -390,7 +546,7 @@ export async function callInklingChat(opts: {
         method: 'POST',
         headers,
         body,
-        timeoutMs: 120_000,
+        timeoutMs: 300_000,
         signal: opts.signal,
       });
       lastStatus = res.status;
@@ -422,7 +578,7 @@ export async function callInklingChat(opts: {
             totalTokens: data.usage.total_tokens || 0,
           }
         : undefined;
-      return { parsed, usage };
+      return { parsed, rawContent, usage };
     }
     throw new Error(`Inkling server busy (HTTP ${lastStatus}) after 5 retries — all 8 KV slots occupied.`);
   }
@@ -494,7 +650,7 @@ export async function callInklingChat(opts: {
           totalTokens: data.usage.total_tokens || 0,
         }
       : undefined;
-    return { parsed, usage };
+    return { parsed, rawContent: msg?.content || '', usage };
   }
 
   // SSE streaming parser
@@ -591,5 +747,5 @@ export async function callInklingChat(opts: {
     parsed.toolCalls.push({ id: entry.id, name: entry.name, args });
   }
 
-  return { parsed, usage };
+  return { parsed, rawContent: rawText, usage };
 }

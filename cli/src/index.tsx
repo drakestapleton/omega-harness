@@ -17,6 +17,7 @@ import {
 } from './harness.js';
 import { probeInkling } from './inkling.js';
 import { rebuildSparkInkling, stackDown, stackUp } from './stack.js';
+import { TOOL_DECLARATIONS } from './tools.js';
 import { OmegaAgent } from './agent.js';
 import { App } from './ui/App.js';
 
@@ -24,8 +25,10 @@ interface ParsedArgs {
   help: boolean;
   version: boolean;
   listSkills: boolean;
+  listTools: boolean;
   showPin: boolean;
   showStatus: boolean;
+  resumeSession?: string;
   stackCommand?: 'up' | 'down' | 'rebuild';
   launchAfterUp: boolean;
   rebuildOnUp: boolean;
@@ -46,6 +49,7 @@ function parseArgs(argv: string[]): ParsedArgs {
     help: false,
     version: false,
     listSkills: false,
+    listTools: false,
     showPin: false,
     showStatus: false,
     launchAfterUp: false,
@@ -81,6 +85,8 @@ function parseArgs(argv: string[]): ParsedArgs {
       out.version = true;
     } else if (a === '--skills') {
       out.listSkills = true;
+    } else if (a === '--tools') {
+      out.listTools = true;
     } else if (a === '--pin') {
       out.showPin = true;
     } else if (a === '--status') {
@@ -91,6 +97,8 @@ function parseArgs(argv: string[]): ParsedArgs {
       out.rebuildOnUp = true;
     } else if (a === '--host' && argv[i + 1]) {
       out.sparkHost = argv[++i];
+    } else if (a === '-r' || a === '--resume') {
+      out.resumeSession = argv[i + 1] && !argv[i + 1].startsWith('-') ? argv[++i] : 'latest';
     } else if (a === '-y' || a === '--yolo') {
       out.approvalMode = 'yolo';
     } else if (a === '--auto-edit') {
@@ -146,6 +154,7 @@ function printHelp(): void {
   console.log('      --omega-only        Restrict writes to .om / NOTES.md with auto-omc checks');
   console.log('  -s, --skill <name>      Pin an Omega Harness skill into the system prompt (repeatable)');
   console.log('      --status            Probe Inkling server health and exit');
+  console.log('      --tools             List all 27 available agent tools and exit');
   console.log('      --skills            List all available Omega Harness skills and exit');
   console.log('      --pin               Show omega-harness PIN and local omc status and exit');
   console.log('      --api-key <key>     Optional bearer token (Inkling) or Gemini API key');
@@ -302,6 +311,12 @@ async function main(): Promise<void> {
     console.log(`  Status:       ${h.online ? chalk.green('ONLINE') : chalk.red(`OFFLINE (${h.error || 'unreachable'})`)}`);
     console.log(`  Engine:       ${h.engine}`);
     console.log(`  Model:        ${h.model || config.model}`);
+    if (h.contextWindow !== undefined) {
+      console.log(`  Context:      ${h.contextWindow.toLocaleString()} tokens/slot`);
+    }
+    if (h.kvPrefixHits !== undefined) {
+      console.log(`  KV Cache:     ${h.kvPrefixHits} prefix hits`);
+    }
     if (h.slotsMax !== undefined) {
       console.log(`  KV Slots:     ${h.slotsActive ?? 0} / ${h.slotsMax} active`);
     }
@@ -314,6 +329,14 @@ async function main(): Promise<void> {
     if (!h.online) {
       console.log(chalk.gray('  Tunnel Spark: ssh -N -L 8080:127.0.0.1:8080 spark'));
       process.exitCode = 1;
+    }
+    return;
+  }
+
+  if (args.listTools) {
+    console.log(chalk.cyan.bold(`${SYMBOL} Omega Harness Agent Tools (${TOOL_DECLARATIONS.length})`));
+    for (const t of TOOL_DECLARATIONS) {
+      console.log(`  ${chalk.bold((t.name || '').padEnd(26))} ${chalk.gray(t.description || '')}`);
     }
     return;
   }
@@ -350,6 +373,7 @@ async function main(): Promise<void> {
       cwd={cwd}
       initialPrompt={initialPrompt}
       initialSkills={args.skills}
+      resumeSession={args.resumeSession}
     />
   );
 }

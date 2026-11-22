@@ -7,7 +7,8 @@ import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { detectHarnessRoot, detectOmcPath, loadConfig } from '../config.js';
 import { discoverSkills, loadErrorTable, readPinInfo } from '../harness.js';
-import { executeTool, needsApproval } from '../tools.js';
+import { executeTool, needsApproval, parseDuckDuckGoHtml, stripHtmlToText, TOOL_DECLARATIONS } from '../tools.js';
+import { SessionState } from '../state.js';
 import { OmegaAgent, expandAtMentions } from '../agent.js';
 import { matchSlashCommands } from '../commands.js';
 import { SYMBOL, renderBanner } from '../brand.js';
@@ -272,6 +273,137 @@ test('slash command matching works', () => {
   assert.ok(m.some((c) => c.name === '/status'));
   assert.ok(m.some((c) => c.name === '/stats'));
   assert.equal(matchSlashCommands('hello').length, 0);
+});
+
+test('all 27 modern agent tools are registered and git/todo/memory/web helpers work', async () => {
+  assert.ok(TOOL_DECLARATIONS.length >= 27, `expected >= 27 tools, got ${TOOL_DECLARATIONS.length}`);
+  assert.equal(stripHtmlToText('<h1>Hi</h1><script>x</script><p>World &amp; Omega</p>'), 'Hi World & Omega');
+
+  const sampleHtml = '<a class="result__a" href="https://interplane.io/drakestapleton/omega-mv">Omega MV</a><a class="result__snippet">Seeded Omega compiler</a>';
+  const ddg = parseDuckDuckGoHtml(sampleHtml, 5);
+  assert.equal(ddg.length, 1);
+  assert.equal(ddg[0].url, 'https://interplane.io/drakestapleton/omega-mv');
+  assert.equal(ddg[0].snippet, 'Seeded Omega compiler');
+
+  const state = new SessionState();
+  const ctx = { cwd: harnessRoot, harnessRoot, approvalMode: 'default' as const, state };
+
+  const gs = await executeTool('git_status', {}, ctx);
+  assert.equal(gs.ok, true);
+
+  const gl = await executeTool('git_log', { count: 2 }, ctx);
+  assert.equal(gl.ok, true);
+
+  const tw = await executeTool('todo_write', {
+    items: [
+      { id: '1', title: 'Wire tools', status: 'completed' },
+      { id: '2', title: 'Test subagents', status: 'in_progress' },
+    ],
+  }, ctx);
+  assert.equal(tw.ok, true);
+  assert.match(tw.output, /\[x\] \(1\) Wire tools/);
+
+  const tr = await executeTool('todo_read', {}, ctx);
+  assert.equal(tr.ok, true);
+  assert.match(tr.output, /\[~\] \(2\) Test subagents/);
+
+  // Read-only subagent refuses mutating tools
+  const roCtx = { ...ctx, readOnlyOnly: true };
+  const refused = await executeTool('delete_file', { path: 'README.md' }, roCtx);
+  assert.equal(refused.ok, false);
+  assert.match(refused.output, /REFUSED/);
+});
+
+test('Inkling-2-Mini spawns autonomous subagents, runs parallel subagents, and breaks duplicate tool loops', async () => {
+  let reqNum = 0;
+  const server = http.createServer((req, res) => {
+    if (req.method === 'GET' && req.url === '/health') {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ status: 'ok', model: 'inkling-2-mini', slots_max: 8, slots_active: 0, arboris_transitions: 48, arboris_top8_hits: 192, arboris_top16_hits: 256 }));
+      return;
+    }
+    if (req.method === 'POST' && req.url === '/v1/chat/completions') {
+      let body = '';
+      req.on('data', (c) => (body += c));
+      req.on('end', () => {
+        reqNum++;
+        const parsed = JSON.parse(body) as { messages: Array<{ content: string }> };
+        const content = parsed.messages[0]?.content || '';
+        let reply = 'Done.';
+        if (content.includes('LOOP_TEST')) {
+          // Intentionally emit identical tool call every time to test loop breaker
+          reply = '<|message_model|>omega_pin<|content_invoke_tool_json|>{"name":"omega_pin","args":{}}<|end_message|>';
+        } else if (content.includes('DELEGATE_TEST') && !content.includes('<|message_tool|>')) {
+          reply = '<|message_model|>spawn_subagent<|content_invoke_tool_json|>{"name":"spawn_subagent","args":{"role":"Researcher","task":"SUBTASK_ALPHA"}}<|end_message|>';
+        } else if (content.includes('DELEGATE_TEST') && content.includes('<|message_tool|>')) {
+          reply = '<|content_text|>Coordinator received subagent report: omega-harness skills found.<|end_message|>';
+        } else if (content.includes('SUBTASK_ALPHA') && !content.includes('<|message_tool|>')) {
+          reply = '<|message_model|>list_skills<|content_invoke_tool_json|>{"name":"list_skills","args":{}}<|end_message|>';
+        } else if (content.includes('SUBTASK_ALPHA') && content.includes('<|message_tool|>')) {
+          reply = '<|content_text|>Subagent found omega-harness skills.<|end_message|>';
+        }
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(
+          JSON.stringify({
+            id: `cmpl-${reqNum}`,
+            object: 'chat.completion',
+            model: 'inkling-2-mini',
+            choices: [{ index: 0, message: { role: 'assistant', content: reply }, finish_reason: 'stop' }],
+          })
+        );
+      });
+      return;
+    }
+    res.writeHead(404);
+    res.end();
+  });
+
+  await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', () => resolve()));
+  const addr = server.address();
+  assert.ok(addr && typeof addr === 'object');
+  const endpoint = `http://127.0.0.1:${addr.port}`;
+
+  try {
+    const agent = new OmegaAgent();
+    const seenTools: string[] = [];
+    const reply = await agent.sendTurn('DELEGATE_TEST', {
+      provider: 'inkling',
+      endpoint,
+      model: 'inkling-2-mini',
+      systemInstruction: 'sys',
+      toolContext: { cwd: harnessRoot, harnessRoot, approvalMode: 'yolo' },
+      callbacks: {
+        onTextDelta: () => {},
+        onToolStart: (ev) => seenTools.push(ev.name),
+        onToolUpdate: () => {},
+        onRequestApproval: async () => 'allow',
+      },
+    });
+    assert.ok(seenTools.includes('spawn_subagent'), `expected spawn_subagent in ${seenTools.join(',')}`);
+    assert.ok(seenTools.some((t) => t.endsWith(':list_skills')), `expected subagent list_skills in ${seenTools.join(',')}`);
+    assert.match(reply, /Coordinator received subagent report/);
+    assert.equal(agent.state.subagents.size, 1);
+
+    // Loop-breaker check: identical repeated tool call stops cleanly instead of spinning 10 rounds
+    const beforeReqs = reqNum;
+    const loopReply = await agent.sendTurn('LOOP_TEST', {
+      provider: 'inkling',
+      endpoint,
+      model: 'inkling-2-mini',
+      systemInstruction: 'sys',
+      toolContext: { cwd: harnessRoot, harnessRoot, approvalMode: 'yolo' },
+      callbacks: {
+        onTextDelta: () => {},
+        onToolStart: () => {},
+        onToolUpdate: () => {},
+        onRequestApproval: async () => 'allow',
+      },
+    });
+    assert.ok(reqNum - beforeReqs <= 3, `loop breaker should stop within 2-3 rounds, took ${reqNum - beforeReqs}`);
+    assert.match(loopReply, /PIN omega-mv:/);
+  } finally {
+    server.close();
+  }
 });
 
 test('CLI binary smoke tests (--version, --help, --skills, --pin)', () => {

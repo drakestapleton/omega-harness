@@ -282,52 +282,30 @@ export function buildSystemPrompt(opts: {
   pinInfo: PinInfo;
 }): string {
   const skills = discoverSkills(opts.harnessRoot);
-  const skillIndex = skills
-    .map((s) => `- **${s.name}**: ${s.description}`)
-    .join('\n');
+  const skillNames = skills.map((s) => s.name).join(', ');
 
   const loadedSkillBlocks: string[] = [];
   for (const name of opts.activeSkills) {
     const loaded = readSkillContent(opts.harnessRoot, name);
     if (loaded) {
-      // Keep active skill content bounded so we leave room for conversation
       const body =
-        loaded.content.length > 24000
-          ? loaded.content.slice(0, 24000) + '\n\n...[truncated; use read_file for full skill]...'
+        loaded.content.length > 16000
+          ? loaded.content.slice(0, 16000) + '\n...[truncated; use read_file for full skill]...'
           : loaded.content;
       loadedSkillBlocks.push(`### Active Skill: ${loaded.meta.name}\n\n${body}`);
     }
   }
 
-  const omcStatus = opts.pinInfo.localOmcPath
-    ? `available at ${opts.pinInfo.localOmcPath}${opts.pinInfo.pinMatches ? ' (matches PIN)' : ' (local build; differs from Linux AArch64 PIN)'}`
-    : 'not detected on PATH';
-
   const omegaOnlyNote =
     opts.approvalMode === 'omega-only'
-      ? '\n- **OMEGA-ONLY MODE ACTIVE**: You may only write/edit `.om` files and `NOTES.md`. Every `.om` write is automatically compiled with `omc`.'
+      ? ' OMEGA-ONLY MODE: write/edit only .om files and NOTES.md.'
       : '';
 
   return [
-    `You are Ω Omega Harness CLI, Drake Stapleton's systems-engineering coding agent for Omega (.om) and the AIEN ecosystem.`,
-    ``,
-    `## Operating Environment`,
-    `- Working directory: \`${opts.cwd}\``,
-    `- Omega Harness root: \`${opts.harnessRoot}\``,
-    `- Local \`omc\` compiler: ${omcStatus}`,
-    `- Approval mode: \`${opts.approvalMode}\`${omegaOnlyNote}`,
-    ``,
-    `## Core Discipline`,
-    `- Follow Human-Directed Agentic Engineering (HDAE): inspect actual source files before editing, verify with real tool runs, and never fabricate compiler or test output.`,
-    `- Separate status labels strictly: PROPOSED, IMPLEMENTED, HOST_TESTED, EXERCISED, QUALIFIED, NOT_RUN, BLOCKED_HARDWARE.`,
-    `- Interplane (https://interplane.io) is the canonical forge. Never push to GitHub unless explicitly requested.`,
-    `- For Omega (.om) tasks, call \`load_skill\` on \`writing-omega\` or \`omega-encoding\` before writing non-trivial \`.om\`, and verify with \`omc_compile\` / \`omc_run\`.`,
-    `- Be concise, direct, and actionable. Cite file paths clearly.`,
-    ``,
-    `## Available Omega Harness Skills (call \`load_skill\` when relevant)`,
-    skillIndex || '(no skills found)',
-    ...(loadedSkillBlocks.length > 0
-      ? ['', '## Pinned Skills for This Session', ...loadedSkillBlocks]
-      : []),
+    `You are Ω Omega Harness CLI, Drake Stapleton's systems-engineering coding agent (Inkling-2-Mini on GB10).`,
+    `cwd: ${opts.cwd} | harness: ${opts.harnessRoot} | mode: ${opts.approvalMode}.${omegaOnlyNote}`,
+    `Use your tools (files, shell, git, web, todo, memory, omc, spawn_subagent, spawn_parallel_subagents) to verify facts and execute work. Never fabricate outputs. Interplane is the canonical forge.`,
+    `Available skills (use load_skill): ${skillNames || 'none'}.`,
+    ...(loadedSkillBlocks.length > 0 ? ['', ...loadedSkillBlocks] : []),
   ].join('\n');
 }

@@ -28,12 +28,14 @@ cd ~/canon/omega-mv
     gpu/nvidia/native/blackwell/batch.om \\
     om/encoder/bw_enc_sm121.om \\
     om/gpu/inkling2/emit_fast.om \\
+    om/gpu/inkling2/emit_batch.om \\
     om/arboris_online.om \\
     om/gpu/inkling2/arboris/prefetch.om \\
     om/gpu/inkling2/decoder/safetensors.om \\
     om/gpu/inkling2/decoder/tokenizer.om \\
     om/gpu/inkling2/decoder/decode.om \\
     om/gpu/inkling2/multistream/batcher.om \\
+    om/gpu/inkling2/decoder/prefill_b8.om \\
     om/gpu/inkling2/multistream/serve_live.om
 ) > /tmp/inkling2-serve-build.om
 seed/out/omc < /tmp/inkling2-serve-build.om > ~/.local/opt/inkling2/inkling2-serve.new

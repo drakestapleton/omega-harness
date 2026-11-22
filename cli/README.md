@@ -10,7 +10,13 @@ Interactive terminal CLI for operating **Inkling-2-Mini** through Omega Harness,
   - Optional Gemini SDK (`@google/genai`) backend available via `--provider gemini` or `/provider gemini`.
 - **Omega Harness skills**: automatically discovers every skill in `../skills/*/SKILL.md` (`load_skill`, `/skills`, `/skill <name>`).
 - **Omega compiler integration**: `omc_compile`, `omc_run`, `/compile`, `/run`, and `--omega-only` mode (`.om` / `NOTES.md` writes only, automatic `omc` compilation, error enrichment from `../data/reference.tsv`).
-- **Workspace tools & Gemini-CLI ergonomics**: `read_file`, `write_file`, `edit_file`, `list_dir`, `glob_files`, `grep_search`, `run_shell`, `omega_pin`, `@path` inline file attachments, live `/` slash-command autocomplete, prompt history, and headless `-p` mode.
+- **27 modern agent tools** (`omega --tools` / `/tools`):
+  - **File & Code**: `read_file`, `write_file`, `edit_file`, `delete_file`, `list_dir`, `glob_files`, `grep_search`
+  - **Execution & Git**: `run_shell`, `git_status`, `git_diff`, `git_log`, `git_commit`
+  - **Web**: `web_fetch`, `web_search`
+  - **Planning & Memory**: `todo_write`, `todo_read` (`/tasks`), `memory_save`, `memory_read` (`/memory`)
+  - **Autonomous Inkling Subagents**: `spawn_subagent`, `spawn_parallel_subagents`, `list_subagents` (`/agents`), `message_subagent` — spins up isolated Inkling-2-Mini subagents using the same model across `inkling2-serve`'s `N=8` static KV slots
+  - **Omega Harness Native**: `list_skills`, `load_skill`, `omc_compile`, `omc_run`, `omega_pin`
 
 ## Build & Install
 
