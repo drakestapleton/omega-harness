@@ -142,6 +142,16 @@ When a proof supports a deliverable in another repository, commit a self-contain
 its model-to-system note inside that repository (for example `docs/proofs/`) so a fresh-clone reviewer can run
 `lean` directly on it without depending on an external workspace.
 
+## Fast External-Repo Bridges & Lean 4.32 / Mathlib Pitfalls
+
+- **Large upstream Lean repos:** Never rebuild thousands of internal modules to prove a bridge against a public interface (e.g., `OpenAI-YM-20261028` spans 9,470 modules / ~184 min). Copy or import only the self-contained Mathlib-only public closure (`PublicTheory.lean`, `PublicWilson.lean`, `ChallengeSpec.lean`), pin the exact `lean-toolchain`, fetch prebuilt Mathlib oleans with `lake exe cache get`, and run incremental `lake build <Target>` (~3–7 s on Spark).
+- **Recurring Lean 4.32 / Mathlib fixes:**
+  - Prefer `HasDerivAt.congr_deriv` over `convert` (avoids `Real.instAddCommGroup` vs `Real.normedCommRing.toAddCommGroup` unification failures).
+  - Avoid bare `rw [← Real.sqrt_sq ...]` when the constant also appears elsewhere in the goal; use `calc (3 : ℝ) = Real.sqrt (3 ^ 2) := (Real.sqrt_sq ...).symm _ ≤ ...`.
+  - Bind explicit `Integrable (fun x => f x - g x) μ` hypotheses before `integral_sub` / `integral_add` (avoids function-space `(f - g) x` vs `fun x => f x - g x` rewrite mismatches).
+  - Use `Metric.mem_nhdsWithin_iff` (not `Metric.eventually_nhdsWithin_iff`), pass `(μ := volume)` to `intervalIntegral.norm_integral_le_integral_norm`, and pass `(f := fun t x => ...)` explicitly to `integral_integral_swap`.
+  - Never use `∂` in variable names (parser token); use `/-!` (never `/--`) for standalone section comments.
+
 ## Repair
 
 - Server does not start: `ssh <spark> ~/workspace/lean-verify/.mcp-venv/bin/lean-lsp-mcp --version` must print `lean-lsp-mcp 0.33.0`. Reinstall the pinned set with `python3 -m venv .mcp-venv && .mcp-venv/bin/pip install -r .mcp-venv-freeze.txt` (network needed once).
