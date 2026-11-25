@@ -26,7 +26,8 @@ description: >-
 
 1. Edit `content/_layout.html`, `content/routes.txt` (register new `/public/*.png`
    routes), and `public/` assets.
-2. Build and verify on Spark with the pinned `omc` from `native/omc.sha256`:
+2. Build and verify on Spark with the pinned `omc` from `native/omc.sha256`
+   (note: `native/omc.sha256` has two lines — extract the pin with `head -n1 native/omc.sha256 | awk '{print $1}'`):
    ```sh
    OMC="<path-to-pinned-omc>" sh scripts/build-native.sh target/site
    ./target/site build dist dist-hop
@@ -42,6 +43,18 @@ description: >-
    rsync -rt --delete --chmod=D755,F644 --exclude=.well-known dist/ hub:/var/www/interplane.io/
    ~/.local/lib/interplane-forge-ops/edge-mirror.sh
    ```
+
+### Static Verifier & Claims Gotchas (`interplane.io`)
+- **Pinned download routes:** `native/site.om` enforces an exact route count and `.sha256` pin digest for `public/omega-downloads/` (currently 9 routes across 3 checksum files: Arm64 Linux, macOS Arm64, and x86-64 Linux). Adding a release requires updating `content/routes.txt`, `native/site.om` (`od*loadsums`, `od*loadpin`, route count, `omdlcopy`), and `content/omega/index.html` (`download` links).
+- **Private-path & trademark checks:** The verifier refuses `.local` paths in page copy and any un-trademarked `Sovereign Intelligence` (use `Sovereign Intelligence&trade;` in visible text).
+- **Claims gate (`scripts/tests/check-claims.sh`):** Rejects new universal words (`every`, `everything`, `everyone`, `everybody`, `nobody`, `never`, `always`, `all`, `none`) and any drift in `class="reg"` or `class="hf"` sentences against `docs/CLAIMS.md`.
+
+## Part 2b: `aienos.com` Static Site (SiteHub)
+Deploy committed `main` on Spark:
+```sh
+ssh spark "flock ~/handoffs/site-front/publish.lock ~/work/sitehub/deploy.sh <commit-sha>"
+```
+Confirm `RESULT PASS` and `PUBLISH OK release=...` (all 9 gates including Omega verifier and Rust oracle). A trailing `SI-FRONT FAIL` on the retired Radicle `/si` repo leaves `/si` untouched after atomic site publication succeeds.
 
 ## Part 2: Dynamic Forge, Galaxy, and Research (`interplane-forge`)
 
@@ -79,10 +92,15 @@ description: >-
 
 Check **both** `127.0.0.1:18480` on Spark and live `https://interplane.io` across
 all route families:
-- Static: `/`, `/omega/`
+- Static: `/`, `/omega/`, `/public/copy.js` (HTTP 200, plus `Content-Security-Policy` carrying `script-src 'self'` on static pages while `forged` keeps `script-src 'none'`)
 - Forge: `/explore`, `/drakestapleton/omega-mv`, `/drakestapleton/interplane-forge`, `/search`
 - Generated: `/galaxy/`, `/research/`
 
 If `/drakestapleton/*` returns `404` and `/explore` shows `0 projects`, check
 `grep -a "catalog refused" ~/forge-data/logs/forged.log` — `forged` fails closed
 on any malformed line or duplicate project ID in `~/interplane-store-owner/catalog.tsv`.
+
+### Mandatory Live 404 Link Audit
+After deploying page or data changes, verify zero `404` links on all modified pages:
+- Unescape HTML entities (`html.unescape`) before splitting `#fragments` so `&#35;` anchors are not truncated into false `404`s.
+- Check `/drakestapleton/*` forge links against Spark `http://127.0.0.1:18480` (with `Host: interplane.io`) rather than hammering public HTTPS, which triggers nginx `429` rate limits.
