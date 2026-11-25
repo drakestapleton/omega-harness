@@ -31,6 +31,14 @@ Never violate these three Blackwell SM121 laws when mutating or scheduling SASS 
   - Tokenize: `ollm bpeenc MERGES 4096 IN.om OUT.tok`
   - Fine-tune schedule: `ollm tune IN.ck OUT.ck TOTAL LRMICRO` (preserves `OLLMCK03` looped core)
   - Frozen-core specialist: `ollm growpro BASE.ck SPEC.ck NEW_L TOTAL LRMICRO` → `fcache` → `trainfc` → `spext BASE.ck SPEC.ck PACK.sp`
+  - Variable-`NP` looped-core training & eval:
+    - `ollm vtrain CK DATA UNTIL EVERY NP_MIN NP_MAX` (cycles core passes `[NP_MIN..NP_MAX]`, preserves base `OLLMCK03` header)
+    - `ollm veval CK HELD W NP [MERGES]` (evaluates a looped checkpoint at arbitrary `NP`)
+    - `ollm nsample CK SEED N TEMPMILLI PROMPT MERGES ADAPT_EXTRA THRESH_MILLI`
+- **Neuralese `OLLMCK03` & `LTP0` Invariants (`model.om` / `serve.om`)**:
+  - Extra core passes in `onlpass1` must feed **pre-coda core output** (`oaout (LV - coda - 1)`) back into `LP` (never post-coda `HF`), and checkpoints trained at fixed `NP` need `vtrain` before extra test-time passes improve accuracy.
+  - `LTP0` latent injection (`onlinject`) must be **unit-RMS normalized** (`onlv_rms`) before scaling by `alpha` (`HF` norm `~381` saturates layer-0 embeddings otherwise).
+  - `train/omega-llm/native/net/json.om` uses `js_type == 3` for JSON arrays (object=`1`, string=`6`, number=`7`, null=`10`). Reset per-request Neuralese state (`onlreset`) *after* `svnl_reply`, and keep `model.om`/`serve.om` helpers `<= 6` live locals to avoid `omc` `error 12`.
 - **Fast Benchmark Sampling**: Never run 165 sequential `gsample` calls inside an exclusive GPU window (GPU init overhead overruns the 20m lease). Run 16-way parallel CPU `ollm sample` (`xargs -P 16`) outside the GPU window (~27–40 s on Spark Grace cores).
 - **Pure Seeded-OM-2 Zero-Python RLVR Factory**: Use `seed/helix/ollm_factory/{rlvr_broad.om,rlvr_mix.om,rlvr_sp_worker.om}` (static AArch64 ELFs, zero Python) for 10-family broad natural-English RLVR generation (`188` fns/variant, built-in `SEENSUM tasks 165 seen 0`), streaming NUL-delimited corpus mixing/Fisher-Yates shuffling (`66 ms` for `81K` docs), and 5-shape self-play equivalence harness generation (`POS_CTRL`/`NEG_CTRL`).
 - **Latest Verified Champion**: `~/work/ollm-apu-phase2-20261124/ckpt/champ_r17_p21_h2315347.ck` (`21 / 159` pass on frozen 165-task benchmark, `0` Xids across 57 GB10 APU rounds), also served live on Spark CPU `:18098` via `omega-router` as `omega-llm-15.8m-om2`.
