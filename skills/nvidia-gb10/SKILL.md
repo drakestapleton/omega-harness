@@ -72,8 +72,7 @@ If a record and this file disagree, the record wins. Section 11 lists what the r
 ## 3. Before you touch the chip
 
 1. Look: `spark-window status`, `nvidia-smi --query-compute-apps=pid,name,used_memory --format=csv`,
-   `ps`, and the last 40 lines of `HANDOFFS/BOARD.md`. [RULES "Play well together"]
-   `BOARD.md` is about 3 MB: always `tail` it or `grep ... | cut -c1-600`.
+   `ps`, and the last 40 lines of `~/handoffs/BOARD.md` (lowercase `handoffs`, ~3 MB: always `tail` it or `grep ... | cut -c1-600`). [RULES "Play well together"]
 2. If a current CLAIM, START or RESERVED line names the chip or MODEL_PORT, wait or settle it on the board.
 3. Post one board line before you start (what, how long, how to reach or pause you) and a RELEASE or DONE line
    after: `echo "$(date -u +%FT%H:%MZ) CLAIM <lane> to all: ..." >> HANDOFFS/BOARD.md`. [RULES "Team board"]
@@ -98,6 +97,7 @@ If a record and this file disagree, the record wins. Section 11 lists what the r
   [RULES; TEAM-MEMORY:11]
 - `spark-receipt` syntax: always invoke inside `spark-window run` with positional `NAME` (`spark-window run spark-receipt NAME -- CMD`), never `--window` or `--out`, so `window_id` is recorded cleanly.
 - Live 35B `q36-serve` teacher launches: use `~/.local/bin/q36-35b --port PORT` (`--model-dir`, not `--model`) and allow a **90–120 s cold-load readiness wait** when page cache is cold (34.7 GB safetensors observed at `43–72 s`).
+- Multi-shard Full-APU `omega-engine` launches (`qwen3.8-flash-next`, 131 shards / 173 GB): allow **>= 420 s** for `/health` readiness (`~243 s` observed), clean up all 20 forked CPU APU workers with `pkill -P`, and note `q4PrefillSeq` caps prompts at `2048` tokens (`bound 2048`).
 - Never run 165-task `ollm-gb10 gsample` loops inside a 20m exclusive GPU window; run 16-way parallel CPU `ollm sample` outside the window instead.
 
 Automatic actors you will meet:
@@ -252,6 +252,7 @@ Automatic actors you will meet:
     `.fwsignature_gb10y`) on a `GB20B` die (`BOOT_42=0x1bba1000`), and step 8 mistook PRI target-mask lockdown
     (`0xbadf4100`) for lockdown release; port every HAL to `GB20B` (see `./references/gb20b-gsp-boot.md`) before
     spending a Window 0 reboot. [HANDOFFS/L332/window0-20261118T234217Z; BOARD 2026-11-18T23:44:02Z, 23:51Z]
+21. HTTP server binary (`serve_cli.om`) parses a new mode flag (e.g. `--nv4`) without wiring the corresponding decode graph (`q38ReplayPre 10`), causing silent repetition/EOS while `decode_cli.om` works; verify `serve_cli.om` wires the graph and always check output coherence.
 
 ## 8. What we do not use
 

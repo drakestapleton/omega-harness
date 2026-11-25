@@ -16,6 +16,7 @@ Never violate these three Blackwell SM121 laws when mutating or scheduling SASS 
 - **Antibody #14 (6-Cycle ALU Floor)**: Enforce `rawFloor >= 6` unconditionally for general fixed-latency ALU ops (dropping to 4 causes live GB10 GPU timeouts).
 - **Antibody #15 (`I2F` Fixed Latency)**: Never compact `I2F` (`nm==31`) stalls below `rawFloor=6`, even when `wbar < 6` (corrupts W4 unpack kernels).
 - **Safe Warp-Hiding (`G6` Ascetic)**: Setting `yield=1` (`w3 |= 8192`, control bit 109) on `FFMA`/`I2F`/`MUFU` is safe and improves DRAM-bound throughput and overnight training stability.
+- **Helix JIT Serving Parity Gate (`q36-helix-serve`)**: When composing `seed/helix/helix_jit.om` into `q36-serve`, always gate on multi-prompt SHA-256 token parity as well as `hxMonkVerify`: `G6` (`swaps=0`, `yield=1`) achieved 15/15 bit-exact parity (`+1.4%` to `+2.3%` faster), whereas `G2` (`swaps=2524`) degenerated into repeated `'!'` tokens despite passing Monk's static checks.
 
 ## 2. Non-Invasive `helix_jit.om` Composition & Stderr Discipline
 - Genome selection reads `/tmp/helix_genome.cfg` (`0`=Monk, `1`=Predator, `2`=Mitosis Hybrid, `5`=Trickster Chaos, `6`=Ascetic) — seeded OM-2 has no `getenv`.
