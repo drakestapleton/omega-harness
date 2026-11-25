@@ -2,9 +2,9 @@
 name: omega-gpu-om
 description: >-
   Migrate or write Blackwell GPU planners, schedulers, QMD packers, and SM121
-  codegen emitters in pure seeded OM-2 under om/gpu/, bound through om/units.sh.
-  Use when touching omega-mv GPU codegen, om/gpu/*.om, omega_bw_om_ir.h, or
-  regenerating src/omega_om_units.c.
+  codegen/SASS emitters (PTQ1_0, NVFP4, W4, Full-APU) in pure seeded OM-2 under
+  om/gpu/, bound through om/units.sh or om/gpu/engine/. Use when touching
+  omega-mv GPU codegen, om/gpu/**/*.om, omega_bw_om_ir.h, or src/omega_om_units.c.
 ---
 
 # Pure OM-2 Blackwell GPU Migration & Verification
@@ -33,19 +33,38 @@ description: >-
 
 ## SM121 (GB10) Direct SASS Emitter Hazards & Proven Patterns
 When writing direct SM121 emitters (e.g. `om/gpu/q36/emit_{fast,prefill}.om` using `bw_enc_sm121.om`):
-- **`LDS.32`/`STS.32` address-register clobber hazard (silent corruption / `NaN`, 0 Xid):** `LDS` (`op 49`) and `STS` (`op 50`) read their address register asynchronously on scoreboard 1 (`rbar=1`). Never modify an address register (e.g. `IADD addr, addr, 4`) or load into a register that was an address source of an in-flight `LDS` before `qW1`/`qW0`. Compute disjoint address registers first, issue batched `LDS`/`STS`, then emit one `qW0`/`qW1`.
-- **SM121 fixed ALU latency is 6 cycles (`qAlu4 = qcw 6 7 7 0 0`):** Direct dependent `SHF`/`SHR`/`LOP3`/`I2F`/`FMUL`/`FFMA`/`F2FP` pairs need `>= 6` cycles of total stall separation; `stall 4` on a direct dependency silently reads stale values (`NaN`). For two independent chains, `qAlu3` (`3`) + `qAlu3` (`3`) gives `6` cycles of separation; keep `qAlu4` (`6`) on the final producer before a joint consumer.
-- **Never nest `qBssy`/`qBsync` (`B0` hardcoded):** Nesting two `qBssy` pairs deadlocks the warp silently with zero Xid. Use predicated instructions (`@P0` / `@!P0` via `q36Guard = 2` / `1`) or sequential flat `qBssy` blocks.
+- **`LDS`/`STS`/`STG`/`LDG` address-register clobber hazard (silent corruption / MMU fault):** `LDS` (`op 49`), `STS` (`op 50`), and `STG` (`op 12`) read their address register asynchronously on scoreboard 1 (`rbar=1`) — always emit `qW1` after `STG`/`STS` (and `qW0`/`qW1` after `LDS`) before reusing or overwriting the address pair (e.g. `R50:51`). Likewise, `LDG` (`op 11`/`op 57`) issued with `rd_sb=7` reads its address pair asynchronously: never overwrite an `LDG` address register before waiting on its write scoreboard (`qW0Fast`), or it triggers a GPU MMU fault (`nvrm_errors_delta > 0`).
+- **SM121 fixed ALU latency is 6 cycles (`qAlu4 = qcw 6 7 7 0 0`):** Direct dependent `SHF`/`SHR`/`LOP3`/`I2F`/`FMUL`/`FFMA`/`F2FP` pairs need `>= 6` cycles of total stall separation; `stall 4` on a direct dependency silently reads stale values (`NaN`). Terminate multi-accumulator `FFMA` blocks with `qAlu4` (never `qSt1`) before reducing them with `FADD`, or run-to-run nondeterminism appears. For two independent chains, `qAlu3` (`3`) + `qAlu3` (`3`) gives `6` cycles; keep `qAlu4` (`6`) on the final producer before a joint consumer.
+- **Never nest `qBssy`/`qBsync` (`B0` hardcoded) and reserve top 2 GPRs:** Nesting two `qBssy` pairs deadlocks the warp silently with zero Xid; use predicated instructions (`@P0` / `@!P0` via `q36Guard = 2` / `1`) or sequential flat `qBssy` blocks. At `nRegs=64`, Blackwell reserves `R62`/`R63` for `B0` — keep all live GPRs `<= R61`.
 - **Encoder operand & alignment traps:**
+  - `op 19` in `bw_enc_sm121.om` is `LDG.E.STRONG`, **not** register right-shift; for dynamic 0/16-bit shift, use fixed `op 17` (`SHR imm 16`) + predicate select (`@!P0 MOV`).
   - `op 52` (`SHF.L.U32`) computes `o[2] << o[3]` (not `o[4] << o[3]`).
   - `op 57` (`LDG.E.128`) requires a 4-aligned destination (`reg % 4 == 0`); `op 56` (`LDG.E.64`) requires 2-aligned (`reg % 2 == 0`); unaligned destinations hang the GPU.
   - `op 3` (`S2R`) requires scoreboard 0 (`qcw 4 0 7 0 1`) + `qW0` before reading the destination.
 - **Verified GB10 throughput patterns:**
+  - **Avoid 8-way SMEM bank conflicts on `LDS.128`:** SMEM bank period is `128 B` (32 × 4 B), so 8 warp lanes striding by `blk * 128` all collide on 4 banks (`2.68×` slowdown on M=4 NVFP4). Pad each 32-float block by `+16 B` (`144 B/blk`, `1152 B/tok`, 16-byte aligned) so all 8 lanes hit 32 disjoint banks (`0` conflicts).
+  - **Canonical NVFP4 from ternary (`PTQ1_0`) weights:** Ternary `{-1, 0, +1}` maps losslessly into `FP4 E2M1`; pairing global `alpha = 1/256` with refined `(UE4M3, E2M1_mag ∈ {1.0, 1.5})` cuts scale quantization error from `2.285%` to `1.576%` mean and converts 25.6B weights on GPU in `< 1 s`.
+  - **Full-APU `fork()` CPU workers & strict sync:** When forking parallel CPU workers over pipes in `.om`, close inherited pipe fds of earlier workers (`0..w-1`) inside each child (`bonClosePrevPipes`) so parent exit delivers immediate EOF with zero orphan workers. Allocate all CPU↔GPU SHM, staging, LUT, and dynamic load-packet buffers GPU-uncached (`nvalloc(..., false)`), and gate strict `WFI+INVALL` sync behind a runtime flag (`engUseStrictSync`) so unrelated engine paths are unaffected.
   - Use `HMMA.16816.F32.BF16` (`op 16`) + `F2FP.BF16.F32.PACK_AB` (`op 61`) for dense W4/BF16 GEMMs, hot-first deduplicated MoE (`EXP_ORDER` with `cnt > 32` first to eliminate tail-straggler waves), and full Flash-Attention-2 (`Q@K^T` + `P@V` with half-warp `SHFL.BFLY` online softmax).
   - For `D = 128` recurrent reductions (e.g. GDN), assign 1 warp (`32` lanes × `4` dims/lane via `LDG.E.128`) and reduce with `qWarpBflySum` (**0 `BAR.SYNC`, 0 SMEM**).
   - Avoid high-SMEM / high-register scalar GQA-8 fusion when KV fits GB10's 24 MiB L2; occupancy + L2 hits beat scalar fusion, and `HMMA.16816` Flash-Attention beats both.
   - For `B <= 16` decode/verify attention, use Split-K (`S=16`, `Grid=(16,16,1) = 256` CTAs) `HMMA.16816` Batched FA2 (`m_init = -5e8` vs `-1e9` causal mask for exact zero-contribution empty splits) + fused Split-K reduce & sigmoid gate to eliminate the `16`-CTA (`32/48` SMs idle) KV-cache wall (`12K`-ctx `batch8` `+45.7%`, cutting `1K→12K` KV latency tax `2.81×`).
   - Do not ship packed-BF16 GDN (`--w4b`) or INT8 KV (`--kv-int8`) in interactive chat serving without full multi-turn chat verification: BF16 GDN accumulates drift across 30 GDN layers during chat prefill (`0 tok` EOS / `!!!`).
+
+- **SM121 hardware register ceiling (`Xid 13: Out Of Range Register`):** Blackwell reserves 2 warp registers out of `REGISTER_COUNT_V` (`gbq1 35` bits 8..15). `64`-reg kernels may only use **`R0..R61`** (never `R62/R63`); `128`-reg kernels may only use **`R0..R125`** (never `R126/R127`).
+- **Deterministic Tensor Core & ALU spacing (avoid silent `tok=0` / run-to-run drift):**
+  - Never use `stall=1` (`qS1`) in 4-way/8-way ALU unpack (`SHF`/`SHR`/`LOP3`/`FADD`/`FMUL`); use `qAlu1` (`stall=2`) and `qAlu4` (`stall=6`) on the final `F2FP` before `HMMA`.
+  - `HMMA.16816.F32.BF16` same-accumulator RAW latency requires **`22` cycles** (`3× qHmmaFast(4) + qHmma(10)`); `16` cycles (`4×4`) causes non-deterministic output across runs.
+  - Always emit `qW1` after `STS` (`op 50`) before reusing any address register (overwriting `R60` with `1` before `qW1` triggers `Xid 13: Misaligned Address`).
+- **Encoder shift traps:** `op 17` is immediate `SHR.U32` (ignores register `o[3]`). `op 52` (`SHF.L.U32`) is a **left** shift (`o[2] << o[3]`); to extract byte `b = k & 3`, compute `sh = 24 - 8*b`, emit `qic4 52 dst src sh QZ`, then `qic 17 dst dst QZ 24`.
+- **Blackwell Native NVFP4 Tensor Core (`OMMA.SF.16864.F32.E2M1.E2M1.UE4M3.4X`, silicon-verified on GB10):**
+  - **128-bit encoding:** `w0 = 29823 | (rD<<16) | (rA<<24)`, `w1 = 1879048192 | rB | (rSa<<8) | (rSb<<20)`, `w2 = 278016 | rD`, `w3 = qcw(8|15, 7, 7, 0, 0)` (29-cycle same-acc RAW latency; 4-tile interleaved `3×8 + 15 = 39` cycles is safe).
+  - **Fragment layout (`g = lane>>2`, `t = lane&3`):** `Ra` (`4` u32) = `[W[rA,0..3], W[rB,0..3], W[rA,4..7], W[rB,4..7]]`; `Rb` (`2` u32) = `[X[g,0..3], X[g,4..7]]`; `Rsa` (`4× UE4M3`) = row `g` at `t=0`, row `g+8` at `t=1`; `Rsb` (`4× UE4M3`) = col `g` at `t=0`.
+  - **1-cycle hardware quantizers:** `op 65` (`F2FP.SATFINITE.E4M3`, `w2=0x048070ff`) and `op 66` (`F2FP.SATFINITE.E2M1`, `w2=0x042070ff`) in `emit_fast.om`; decode quantized `UE4M3` back to exact `f32` via the 256-entry SMEM FP8 LUT (`SMEM[ue4m3*4]`).
+- **High-throughput GEMM patterns:**
+  - **L2-sharing grid swizzle for prefill:** Launch `(ceil(B/128), N/64, 1)` (not `(N/64, ceil(B/128), 1)`) so all `B`-tiles hit the same weight tile in GB10's 24 MiB L2 (`4×` less LPDDR5X weight traffic).
+  - **Zero-`I2F` W4 unpack:** Use `LOP3.LUT` (`op 51`, `imm=234=0xEA`) IEEE-754 magic bias (`(q & 0x0f) | 0x4b000000 - 8388616.0f`, `(b & 0xf0) | 0x49000000 - 524296.0f`) instead of `I2F`.
+- **Live verification hygiene:** Never accept `PARITY=EXACT` without inspecting actual generated token IDs or English text (guards against `0 == 0` false parity), and poll `/health` up to `60 s` when starting `q38-serve` for HTTP benchmarks.
 
 ## Mandatory 4-Stage Verification Before Landing
 ### Spark Scratch & Pinned Dependencies
