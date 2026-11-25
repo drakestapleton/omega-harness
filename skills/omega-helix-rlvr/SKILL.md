@@ -32,6 +32,8 @@ Never violate these three Blackwell SM121 laws when mutating or scheduling SASS 
   - Fine-tune schedule: `ollm tune IN.ck OUT.ck TOTAL LRMICRO` (preserves `OLLMCK03` looped core)
   - Frozen-core specialist: `ollm growpro BASE.ck SPEC.ck NEW_L TOTAL LRMICRO` → `fcache` → `trainfc` → `spext BASE.ck SPEC.ck PACK.sp`
 - **Fast Benchmark Sampling**: Never run 165 sequential `gsample` calls inside an exclusive GPU window (GPU init overhead overruns the 20m lease). Run 16-way parallel CPU `ollm sample` (`xargs -P 16`) outside the GPU window (~27–40 s on Spark Grace cores).
+- **Pure Seeded-OM-2 Zero-Python RLVR Factory**: Use `seed/helix/ollm_factory/{rlvr_broad.om,rlvr_mix.om,rlvr_sp_worker.om}` (static AArch64 ELFs, zero Python) for 10-family broad natural-English RLVR generation (`188` fns/variant, built-in `SEENSUM tasks 165 seen 0`), streaming NUL-delimited corpus mixing/Fisher-Yates shuffling (`66 ms` for `81K` docs), and 5-shape self-play equivalence harness generation (`POS_CTRL`/`NEG_CTRL`).
+- **Latest Verified Champion**: `~/work/ollm-apu-phase2-20261124/ckpt/champ_r17_p21_h2315347.ck` (`21 / 159` pass on frozen 165-task benchmark, `0` Xids across 57 GB10 APU rounds), also served live on Spark CPU `:18098` via `omega-router` as `omega-llm-15.8m-om2`.
 
 ## 4. Verification Commands (Spark AArch64)
 - Full 4-wall RSI + 4-strand BFT + 29 Lean 4 theorems: `PATH="$HOME/.elan/bin:$PATH" sh seed/helix/rsi-loop1.sh --lean`

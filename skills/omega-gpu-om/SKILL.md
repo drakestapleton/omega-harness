@@ -20,7 +20,8 @@ description: >-
 - Place `export fn` definitions after internal helper `fn`s (calling an `export fn` internally fails `error 16`).
 - Generated C ABI v2 signature puts `uint64_t *result` **first**, followed by `(ptr, len)` pairs for every `view`/`edit` array.
 - Avoid OM-2 reserved keywords as identifiers (`out`, `ops`, `at` → `error 16`; `layout` → `error 29`); use `rem` instead of `mod` (`error 3`); declare `new T N v` only at function top scope (`error 9`).
-- Avoid `error 12` (16-register pool) in large emitters: keep helper signatures ≤ 4–5 params, store vreg handles in `meta[384..511]` and scratch in `meta[16..63]`, read `sp`/`meta` on demand, split chained `if or ...` conditions into separate `if`s, and split nested `for` loops or 6-arg emitter calls into small helpers.
+- Avoid `error 12` (16-register pool) in large emitters: keep helper signatures ≤ 4–5 params, store vreg handles in `meta[384..511]` and scratch in `meta[16..63]`, read `sp`/`meta` on demand, split chained `if or ...` / 4-way `and`/`or` conditions into separate nested `if`s, and split nested `for` loops or 6-arg emitter calls into small helpers.
+- `text` literals reject `\r` (`error 22: malformed text literal`): write `\n` in `text` literals and emit `13` (`CR`) before `10` (`LF`) in a header writer helper.
 - Preserve the exact C vreg allocation order (including scalars initialized on declaration lines before `for` loops) so `omega_bw_regalloc_solve` produces bit-identical SM121 SASS SHA-256 against the C emitter.
 - Verify `BlackwellIROpcode` integer values against `src/omega_blackwell_codegen.h` before encoding (`IMAD=8`, `IMAD_WIDE=9`, `FFMA=33`, `LDG_E_64=56`, `LDG_E_128=57`, `LDS128=58`).
 
@@ -43,6 +44,8 @@ When writing direct SM121 emitters (e.g. `om/gpu/q36/emit_{fast,prefill}.om` usi
   - Use `HMMA.16816.F32.BF16` (`op 16`) + `F2FP.BF16.F32.PACK_AB` (`op 61`) for dense W4/BF16 GEMMs, hot-first deduplicated MoE (`EXP_ORDER` with `cnt > 32` first to eliminate tail-straggler waves), and full Flash-Attention-2 (`Q@K^T` + `P@V` with half-warp `SHFL.BFLY` online softmax).
   - For `D = 128` recurrent reductions (e.g. GDN), assign 1 warp (`32` lanes × `4` dims/lane via `LDG.E.128`) and reduce with `qWarpBflySum` (**0 `BAR.SYNC`, 0 SMEM**).
   - Avoid high-SMEM / high-register scalar GQA-8 fusion when KV fits GB10's 24 MiB L2; occupancy + L2 hits beat scalar fusion, and `HMMA.16816` Flash-Attention beats both.
+  - For `B <= 16` decode/verify attention, use Split-K (`S=16`, `Grid=(16,16,1) = 256` CTAs) `HMMA.16816` Batched FA2 (`m_init = -5e8` vs `-1e9` causal mask for exact zero-contribution empty splits) + fused Split-K reduce & sigmoid gate to eliminate the `16`-CTA (`32/48` SMs idle) KV-cache wall (`12K`-ctx `batch8` `+45.7%`, cutting `1K→12K` KV latency tax `2.81×`).
+  - Do not ship packed-BF16 GDN (`--w4b`) or INT8 KV (`--kv-int8`) in interactive chat serving without full multi-turn chat verification: BF16 GDN accumulates drift across 30 GDN layers during chat prefill (`0 tok` EOS / `!!!`).
 
 ## Mandatory 4-Stage Verification Before Landing
 ### Spark Scratch & Pinned Dependencies
