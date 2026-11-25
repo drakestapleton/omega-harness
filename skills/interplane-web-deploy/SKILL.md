@@ -49,6 +49,13 @@ description: >-
 - **Private-path & trademark checks:** The verifier refuses `.local` paths in page copy and any un-trademarked `Sovereign Intelligence` (use `Sovereign Intelligence&trade;` in visible text).
 - **Claims gate (`scripts/tests/check-claims.sh`):** Rejects new universal words (`every`, `everything`, `everyone`, `everybody`, `nobody`, `never`, `always`, `all`, `none`) and any drift in `class="reg"` or `class="hf"` sentences against `docs/CLAIMS.md`.
 
+### Upstream Freshness & Zero-JS Animation Guardrails
+- **Fetch upstream repos before writing showcase copy:** Always run `git fetch --all --tags` and inspect `main` and `github/main` (e.g., in `omega-helix` and `omega-mv`) before writing feature/installer copy, and verify any new GitHub receipt URLs return HTTP 200.
+- **Kinetic CSS animations on `interplane.io`:** `native/site.om` refuses SMIL `<animate*>` tags inside `<svg>`, inline `style=` / `<style>` blocks, and any raw hex/`rgb()`/`hsl()` color in `public/style.css` outside line 1 (`:root{...}`). Put all `@keyframes` and SVG motion in `public/style.css` using `:root` tokens only, wrap flying/sweeping elements in `overflow: hidden` (`overflow-x: clip`), gate motion with `@media(prefers-reduced-motion:no-preference)`, and run `check-render.sh` (`1280 390 360`) to verify zero horizontal overflow.
+- **Kinetic CSS animations on `aienos.com`:** Inside `om/site/floor.om` (`ffcss`), use only CSS tokens from `fftokens` / `om/site/css.om` (zero raw hex/`rgb`/`rgba`/`hsl` colors), keep strict first-person singular voice (`I`/`me`/`my`), and never add `github.com` or `github.io` links.
+- **Git-only vs. forge-HTML links:** Before linking `https://interplane.io/drakestapleton/<repo>` in an `<a href>`, confirm HTTP 200 on Spark `http://127.0.0.1:18480/drakestapleton/<repo>` (`Host: interplane.io`). Newly mirrored git-only repos serve `git clone .../drakestapleton/<repo>.git` (`200`) while their HTML page stays `404` until owner-signed via `ipl`.
+- **Pinned `omc` fallback on Spark:** If `~/canon/omega-mv/seed/out/omc` has moved past `interplane.io/native/omc.sha256`, locate the exact pinned `omc` binary matching `head -n1 native/omc.sha256` on Spark and pass `OMEGA_GIT=/nonexistent` to `scripts/tests/check-site.sh` if `~/git/omega-mv.git` `main` has advanced.
+
 ## Part 2b: `aienos.com` Static Site (SiteHub)
 Deploy committed `main` on Spark:
 ```sh
