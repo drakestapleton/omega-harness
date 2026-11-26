@@ -49,6 +49,30 @@ description: >-
 3. **Receipt-logged JIT promotions (`native/gpu/ejit.om`):** Admit only bit-identical schedules through the 4-wall gate, record `(step_index, gen, kernel_sha256)` on every flip, and verify exact digest & step order on deterministic replay (`EJ_ERR_REPLAY_DIGEST` / `EJ_ERR_REPLAY_ORDER`).
 4. **Exact fixed-point reversible residuals (`native/rev.om`):** Preserve `REV_FL_Q32` (`i64` Q30 `(x + F) - F == x`, 0-bit reconstruction error across extreme dynamic range / BF16 branch outputs) and bit-identical backward passes (`rev_det_bwd_selftest`).
 
-## 7. Omega Helix Studio UI & SSH Remote Conventions (`tools/studio/`)
-- Keep `tools/studio/ui/` aligned with `aienos.com` craft: pitch-black `#000000` starry dark mode + clean light mode, native `<dialog closedby="any">`, and zero inline `<script>` under `script-src 'self'` CSP (use synchronous external `theme-init.js` for FOUC prevention).
-- Preserve Orca-style SSH remote/pairing/tunneling CLI & API patterns (`tools/studio/ssh_remote.py`, `~/.ssh/config` discovery, managed `ssh -L` `TunnelManager`, `/api/remotes*`).
+## 7. Omega Helix Studio UI, Security & Remote Contracts (`tools/studio/`)
+- Keep `tools/studio/ui/` aligned with `aienos.com` craft: pitch-black `#000000` starry dark mode + clean light mode (semantic CSS vars only — never hardcode dark hexes), native `<dialog closedby="any">`, and zero inline `<script>` under `script-src 'self'` CSP (use synchronous external `theme-init.js` for FOUC prevention).
+- **CSS specificity & dedup hygiene:** Define modifier badge classes (e.g. `.badge.apu-b-{sps,ov,merkle}`) *after* base `.badge` with explicit `border: 1px solid ...`, and never duplicate rule blocks inside `@media` queries.
+- **Headless Spark Studio launch:** Start headless Studio with `--headless --no-open` (there is no `--no-browser` flag); preserve Orca-style SSH remote/pairing/tunneling CLI & API patterns (`tools/studio/ssh_remote.py`, `~/.ssh/config` discovery, managed `ssh -L` `TunnelManager`, `/api/remotes*`).
+- **Bounded manifest & cross-platform `apuweave` security invariants (`DRA-1021`, `#23`, `#25`):**
+  - Open caller-selected shard manifests with `O_RDONLY | O_NONBLOCK`, verify `stat.S_ISREG(fstat(fd).st_mode)` (rejecting FIFOs/devices/dirs without blocking), and enforce `MAX_MANIFEST_BYTES = 1 MiB` (`1048576` B) + `MAX_MANIFEST_ENTRIES = 2048` before spawning workers.
+  - On non-Linux hosts when `shards_dir` is a directory, synthesize `out_dir/shards.list` from `sorted(p for p in src.glob("*.tok") if p.is_file() and not p.name.startswith("."))` (skipping macOS `._*` AppleDouble files and `*.tok/` subdirs); clamp `workers <= 16` (`APU_MAX_WORKERS`); match native `apu_parse_list_line` 2/3-column parsing so `out_packs` never pulls stale `.sp2` files.
+- **Tokenizer alignment & Arboris bypass:** Default `V=256` presets (`OMG` / `nano`) must set `tokenizer: "byte"` (not `"bpe"`); use multi-order `3/2/1-gram` Arboris recall + multi-seed OMG corpora so demo bypass telemetry is realistically non-zero (`33–94%`).
+
+## 8. Spiral-2048 (`OLLMSP02`), Full-APU `apuweave` & SM121 78-Slot Silicon Baselines
+- **Pure-Omega Spiral & Full-APU CLIs (`native/spiral.om`, `native/apu_weave.om`):**
+  - `ollm spcryst <base.ck> <domain.tok> <out.sp2> <f_exp> <lambda_milli> [max_toks=4096] [strand_id=1] [quant_bits=4]` — zero-backprop analytical Cholesky crystallization with Arboris/Rho-1 surprisal weighting into 80-byte Merkle `OLLMSP02` W4/f64 packs (1-bit header/payload tamper `rc=61`, base mismatch `rc=62`).
+  - `ollm spweval <base.ck> <eval.tok> <top_k> <W> <s1.sp2> ...` and `ollm spwsamp` (or `spsamp` auto-dispatch — always probe `OLLMSP02` via non-fatal `fopen`/`read`/`fclose`, never `oprd`, so 8-arg `OLLMSP01` `spsamp` with numeric seed never exits `70`).
+  - `ollm-gb10 apuweave <base.ck> <shards_dir_or_list> <out_dir> <f_exp> <lambda_milli> <max_toks> <quant_bits> [workers=16]` — fires 48 Blackwell SMs (`gfcache` + `ggxw` over uncached `nvalloc(..., false)`) simultaneously with 20 Grace ARMv9 cores (`fork()` + `bonClosePrevPipes` + `MAP_SHARED` ring).
+  - `ollm-gb10 nvfp4 4096 4096 8192 20` — live SM121 `OMMA.SF.16864` NVFP4 Tensor Core benchmark & exactness check.
+- **Verified DGX Spark GB10 Baselines (do not regress; tip `193389d`):**
+  - `GPU_DISASM_OK slots=78 bad=0` across default, `D=1536`, and `D=2048 T=512 F=8192` (`RMSF`/`RMSB`/`CE_BF16 <= 72 GPR`).
+  - `15.83M` H2H (`B=64 T=256 L=8`): **`63.34 ms/step` (`258,648 tok/s`, `24.57 TF`)** — beats `torch.compile` (`63.64 ms`).
+  - `116.6M` (`D=768 L=16`): **`104.52 ms/step` (`39,190 tok/s`, `27.43 TF` full / `31.97 TF` fwd+bwd)**.
+  - `Spiral-2048` (`D=2048 L_phys=8×NP=4=32L`, `1.083B` eff): **`368.28 ms/step` (`5,561 tok/s`, `36.12 TF` full / `40.46 TF` fwd+bwd)**.
+  - Live SM121 `OMMA.SF.16864` NVFP4: **`458.9–462.9 TFLOP/s`** (`91.8%–92.6%` of `500 TF` peak, bit-exact `PASS`).
+  - Full-APU `apuweave` (64 W4 strands): **`3.915 s` steady-state (`16.35 strands/s`)**, live `90%` GPU + `91.7%` all 20 Grace cores (`93.8%` of `2.0×` overlap), `64/64` tamper `rc=61` PASS.
+- **120M+ / Cross-Platform Native Invariants (Do Not Regress):**
+  - All parameter & GPU arena loops (`spec.om:osp_basehash`, `osp_hsnap`/`osp_hrest`, `context.om` `nvalloc > 15.26 GiB`) must use `bound 9223372036854775807` or `OCKC`-chunking; keep `spclip` max depth `>= 24`.
+  - Linux `apu_scan_dir_entry` (`native/apu_fabric_linux.om`): check `linux_dirent64.d_type` at offset `p + 18` (`DT_REG=8`, `DT_LNK=10`, `DT_UNKNOWN=0`) and verify `DT_LNK`/`DT_UNKNOWN` via Omega's arch-portable 1-syscall `stat` (`and apu_get4_io 16 61440 == 32768`, `S_ISREG`) — never `fopen+fseek+getdnts` heuristics (misclassifies `/dev/null` symlinks and opens untrusted targets).
+  - macOS cold store (`native/mio.om`): grow dynamically on demand to avoid `rc=103` bounds traps on large checkpoints (`tests/test_sp_closed_form.py` 19/19).
+  - Avoid AArch64-only `fma` in portable `x86linux` tests (`add mul` instead); keep `verify-om.sh` Sections 11 (`SPIRAL_WEAVE_OM_PASS`) & 12 (`APU_WEAVE_OM_PASS`) green across macOS and Spark.
