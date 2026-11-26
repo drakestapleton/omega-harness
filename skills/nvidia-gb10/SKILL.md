@@ -264,10 +264,12 @@ Automatic actors you will meet:
 - Still used, and say so: NVIDIA's open kernel modules 580.173.02 (nvidia, nvidia-uvm) and NVIDIA's signed GSP
   firmware. "No CUDA" does not mean "no driver". Never claim "no NVIDIA code at all".
   [cortex omp-learn-6ef9994f2b45d5ef, omp-learn-b654f9a92d110794; operator memory note `sovereignty-no-outside-deps.md`]
-- Own kernel driver work (L332 / `aien-gpu`) as of 2026-11-18: Stage A (`aien_gpu.ko` PCI bind, `BOOT_0=0x1bb000a1`,
-  `BOOT_42=0x1bba1000`, 7-unit Omega self-test, firmware hash check) and pure-`.om` `doctor` passed on live Spark
-  silicon (`HANDOFFS/L332/window0-20261118T234217Z`), while Stage B (`GB20B` SEC2/GSP boot) and Stage C remain
-  `HOST_TESTED` + `QEMU` (`hardware=NOT_RUN` pending a reviewed Window 0 cold boot).
+- Own kernel driver work (L332 / `aien-gpu`, public on Interplane & GitHub `drakestapleton/aien-gpu` @ `8f7070c`):
+  **Window 1 LIVE PASS (2026-11-26)** on bare-metal Spark with **ZERO `nvidia.ko`** and `/dev/nvidia*` absent —
+  Stage A/B/C, M16 (`0x16c0ffee` on `0xcec0`), 16 KB pure-Omega `aien-m16-om`, and full `ollm-gb10` compute
+  (`456.80 TF` NVFP4, `D=2048` `gtrain4` `12,840 ms` = `1.17x` faster than `nvidia.ko`, `17/17` runs `fault_st=0x0`).
+  Receipts: `aien-gpu/docs/evidence/window1-20261126T123915Z/` (`26` files + `SHA256SUMS.txt`).
+  Guided installer & rollback: `sh scripts/install-gsp.sh` (`--status`, `--restore-nvidia`).
 - NVIDIA user-space CUDA appears only as the comparison arm in head-to-heads. [`HANDOFFS/H2H9B/PROTOCOL.md`]
 
 ## 9. Where evidence goes
@@ -370,4 +372,11 @@ read [gsp-firmware-580-173-02.md](./references/gsp-firmware-580-173-02.md). Summ
   `MSGQ` (`0x840c80/84`, `TAIL` before `HEAD` ack), Stage C bit-30 `RUNLIST_DOORBELL_ENABLE` (`| 0x40000000`),
   backwards-compatible `AGPU_ABI_VERSION=1` (version sub-blocks instead), `_Static_assert` wire layouts, and full
   fresh-clone + QEMU + mutation gates.
+- **Live GB20B Window 0 Proven Invariants (2026-11-26, `~/work/claude-fresh-4c9fe76` @ `c974b3f`, receipts `~/handoffs/L332/`):**
+  - **Pre-bootstrap hardware requirements:** Enable **9 MSI-X vectors** (`pci_alloc_irq_vectors`) and program the **sysmem flush buffer** (`NV_PFB_FBHUB0_PCIE_FLUSH_SYSMEM_ADDR_{LO,HI}` at `0x008a1d58/5c`) before `kgspBootstrap_GH100`; omitting either causes `GSP_INIT_DONE` to fail with `0x40 (NV_ERR_INVALID_STATE)`.
+  - **Pre-boot RPC & `statq` link:** Queue both `GspSystemInfo` (`fn=72`, incl. `acpiMethodData.jt/caps=0x59`, `bPreserveVideoMemoryAllocations=1`, live `sysTimerOffsetNs`) AND `SET_REGISTRY` (`fn=73`, 37 keys incl. `OpenRmEnableUnsupportedGpus=1`, `EnableGpuFirmware=18`, `RMSecBusResetEnable=1`) before boot; retry `!linked && code == 1` in `agpu_boot_wait` (avoiding 0 us `statq` race) and assert `GSP_INIT_DONE` `rpc_result == 0`.
+  - **Stage C channel & GMMU invariants:** Bound `om_call` refusal check to `[1000000, 1000100)` (valid 64-bit PDE/PTE words are `>= 1 MB`); allocate GPFIFO ring GPU-VA-only (not `M_CONTIG`); place `kva` at `8 GiB` (`< 40-bit`, avoiding `0x1000000000000` 48-bit truncation to `0x0`); patch `SC_PDB(0)` (`inst+0x2a0`) and promote global GR buffers (`engine[17..23]`) to eliminate `HUB_SCC_NB` NULL MMU faults.
+  - **Window 1 `B_COMPUTE (0xcec0)` unlock (2026-11-26, `c0e2873` / `8f7070c`):** On GB20B (`bOverrideContextBuffersToGpuCached = NV_FALSE`), map ALL GR context buffers (`MAIN`, `PATCH`, `PAM`, `GCB[0..6]`) **GPU-uncached** (`VER3 PTE PCF=0x11`); otherwise FECS golden-context writes stay trapped in GPU L2 and GSP returns `NV_ERR_NO_MEMORY (0x51)`. Guard `GCB[5..6]` `bInitialize=1` once (`rm->gcb_init`) and unmap/free `gcb_map` on release/unload.
+  - **Pure-Omega final state (Drake, 2026-11-26):** Stop iterating on Linux C shims. All new GB20B driver/OS/Helix code goes into pure seeded `.om`: `aienux/native/omega/gpu/` (16/16 `kcheck` units incl. `gb20b_policy.om`), `aienux/native/omega/helix/` (`aienos_helix.om` + QEMU-tested `AIENOS-HELIX-AA64.EFI` staged strictly in `build/`), `omega-gpu-driver/chan/gb20b_policy.om`, and `omega-helix/native/gpu/aien_m16.om`.
+  - **UEFI guarddog hygiene:** Never include literal blocked firmware tool/path tokens even inside `# comments` of `run_command` shell scripts (the `PreToolUse` UEFI guarddog matches raw command text).
 

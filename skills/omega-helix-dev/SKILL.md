@@ -76,3 +76,16 @@ description: >-
   - Linux `apu_scan_dir_entry` (`native/apu_fabric_linux.om`): check `linux_dirent64.d_type` at offset `p + 18` (`DT_REG=8`, `DT_LNK=10`, `DT_UNKNOWN=0`) and verify `DT_LNK`/`DT_UNKNOWN` via Omega's arch-portable 1-syscall `stat` (`and apu_get4_io 16 61440 == 32768`, `S_ISREG`) — never `fopen+fseek+getdnts` heuristics (misclassifies `/dev/null` symlinks and opens untrusted targets).
   - macOS cold store (`native/mio.om`): grow dynamically on demand to avoid `rc=103` bounds traps on large checkpoints (`tests/test_sp_closed_form.py` 19/19).
   - Avoid AArch64-only `fma` in portable `x86linux` tests (`add mul` instead); keep `verify-om.sh` Sections 11 (`SPIRAL_WEAVE_OM_PASS`) & 12 (`APU_WEAVE_OM_PASS`) green across macOS and Spark.
+- **`D=2048` Helix Razor Overnight Training & Bundling Invariants:**
+  - `V` is hard-capped at `4096` (`ogok`); `D=2048 T=128 H=32 F=4096 L_phys=8 NP=4 (LV=32) B=32` (`277.1M` base / `1.08B` 32L eff, `6.65 GB` `.ck`) is the verified fastest `D=2048` shape (`~636 ms/step`, `41.8 TF` BF16).
+  - Use `LR_MICRO=250` (`2.5e-4`) for `D=2048 32L-eff` (`LR_MICRO=1500` diverges post-warmup).
+  - Keep `.tok` chunks `<= 30 MiB` (`ODCAP=33,554,432 B`), pass `<merges4096.bin>` as the **5th arg** to `ollm-gb10 geval` whenever `V > 256` (4 args exits `2`), and use `APU_SUMMARY` from Full-APU `apuweave` (~14 min/2,048-strand bundle) rather than blocking on the slow 45-min CPU `spweval` probe.
+- **SM121 NVFP4 (`OMMA.SF.16864`) Training-Loop Invariants (slots `88..95`, `gtrain4`/`gnv4gemm`/`gnv4cmp`):**
+  - Apply 2-level tensor pre-scaling (`pre_scale` in `gkarg[9]` + `alpha = 1/(sA*sB)` in `gkarg[25]`: `sW=16.0`, `sGrad=4096.0`) so backward gradients (`~1e-4`) do not underflow `UE4M3`'s `2^-6` normal floor.
+  - Reset `ggmm4_sc 1.0 1.0` on **every** BF16 / Split-K fallback path in `ggxwh`/`ggxwth`/`ggwgh` so scales never leak into subsequent `ggmm4` calls.
+  - In `gkgemmnv4_128`, never use `gkldc64 10 ...` while `R11` holds live `tid >> 1` (`gkldc64` writes the `R10:R11` pair).
+- **`/dev/aien-gpu` Pure-Omega Backend & Live Baselines (`a909888` / PR #39):**
+  - `native/gpu/context.om` matches `aien_gpu_uapi.h` ABI v1 (`handle @20`, `mmap_off @24`, `st @32`) and auto-selects `/dev/aien-gpu` whenever `/dev/nvidiactl` is absent (zero `nvidia.ko`, no env var needed).
+  - Build standalone 16 KB pure-Omega M16 hardware gate via `TARGET=aien-m16 sh scripts/build.sh` (`native/gpu/aien_m16.om`).
+  - Verified live on Spark `/dev/aien-gpu`: `nvfp4 4096 4096 8192 20` **`456.80 TF`**, `gnv4gemm 4096` Case 4 `cos=0.999118`, `D=2048 8x4 gtrain4` **`12,840 ms`** (**`1.17×` faster** than `nvidia.ko`'s `14,960 ms`), `verify-om.sh` PASS.
+  - Exact test invocations: `sh tests/gpu-disasm.sh --all` (`--all` required -> `GPU_DISASM_OK slots=86 bad=0`) and `python3 tests/test_gpu_nvfp4_train.py`.
