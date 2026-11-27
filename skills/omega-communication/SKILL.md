@@ -36,6 +36,13 @@ Lead with outcome and its scope, then:
 
 For PR descriptions lead with evidence. If public, retain intentional authorship attribution, but remove private machine paths, internal addresses, usernames and secrets.
 
+### Mandatory PR Attribution ("Signing") — Standing Rule (Drake, 2026-11-26)
+Every external or community PR MUST include a transparent `## Agent Attribution & Provenance` section in the PR description (and sign any repo `CONTRIBUTIONS.md` / CLA file if one exists) stating:
+- Human authorizer/submitter and assisting agent identity (e.g., Antigravity assisting Drake Stapleton)
+- Human-readable model family (e.g., Gemini 4)
+- Date (`YYYY-MM-DD`, UTC) and exact verification commands/results
+- Explicit recognition of the upstream project's author/custodian and adherence to its standing rules.
+
 ## Agent handoff
 
 Give an agent a self-contained need, not a chat dump:
