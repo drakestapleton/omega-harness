@@ -383,3 +383,17 @@ read [gsp-firmware-580-173-02.md](./references/gsp-firmware-580-173-02.md). Summ
   - **Pure-Omega final state (Drake, 2026-11-26):** Stop iterating on Linux C shims. All new GB20B driver/OS/Helix code goes into pure seeded `.om`: `aienux/native/omega/gpu/` (16/16 `kcheck` units incl. `gb20b_policy.om`), `aienux/native/omega/helix/` (`aienos_helix.om` + QEMU-tested `AIENOS-HELIX-AA64.EFI` staged strictly in `build/`), `omega-gpu-driver/chan/gb20b_policy.om`, and `omega-helix/native/gpu/aien_m16.om`.
   - **UEFI guarddog hygiene:** Never include literal blocked firmware tool/path tokens even inside `# comments` of `run_command` shell scripts (the `PreToolUse` UEFI guarddog matches raw command text).
 
+## 14. Pure-Omega Userspace VFIO & Verified `spark-b87b` Silicon Inventory (2026-11-26)
+
+- **Zero-C Userspace GPU Path (`vfio-pci` + ARM SMMUv3):** Preferred Linux GPU path (zero `nvidia.ko`, zero custom C `.ko`). `000f:01:00.0` (GB20B `10de:2e12`) sits **alone** in `IOMMU group 20` (`type = DMA`), so ARM SMMUv3 hardware physically blocks a userspace GPU bug from corrupting Linux kernel VFS/mm memory.
+- **Spark `7.0.0-1019-nvidia` VFIO/IOMMUFD Kernel Config:** `CONFIG_VFIO=m`, `CONFIG_VFIO_PCI=m`, `CONFIG_VFIO_DEVICE_CDEV=y`, `CONFIG_IOMMUFD=m`, `CONFIG_IOMMUFD_VFIO_CONTAINER=y`. Do **not** look for `vfio_iommu_type1` (`CONFIG_VFIO_CONTAINER` is unset — `iommufd` provides `/dev/vfio/vfio` container compatibility). Bind via `sudo modprobe iommufd && sudo modprobe vfio-pci` + `driver_override=vfio-pci` + `drivers_probe` (never trigger sysfs PCIe FLR `reset`, Trap 18).
+- **Built-in `omc` VFIO Support:** `seed/omc/omc.om` already provides standalone VFIO descriptor-kind tracking (~line 8933), `DSB SY`-bracketed 32/64-bit `mmapio` (~line 10693), and bounded `GET_IRQ_INFO`/`SET_IRQS` ioctls (no arbitrary `USERPTR`).
+- **Verified Grace ARMv9.2 CPU Silicon Flags (`lscpu`, 10× Cortex-X925 + 10× Cortex-A725, 25 MiB L2 + 24 MiB L3):**
+  - Hardware crypto: `sha3`, `svesha3`, `sha512`, `sha2`, `aes`, `sveaes`, `pmull`, `svepmull`, `sm3`, `sm4`, `crc32`
+  - Hardware vector/matrix: `sve`, `sve2`, `svei8mm`, `svebf16`, `svebitperm`
+  - Hardware security: `paca`, `pacg` (Pointer Authentication), `bti` (Branch Target ID), `dit` (Data-Independent Timing), `sb`
+- **Verified `spark-b87b` Peripherals & Hardware Monitors (`lspci -nnk`, `lsusb`, `/sys/bus/event_source`):**
+  - Monitors & hypervisor: `15× smmuv3_pmcg_*`, `arm_spe_0`, `armv8_pmuv3_{0,1}`, `/dev/kvm`, `/dev/vhost-{net,vsock}`
+  - Security & resilience: `/dev/hwrng` (`arm_smccc_trng`), `/dev/watchdog0` (`sbsa_gwdt`), YubiKey 4/5 (`1050:0407`, Bus 005), CyberPower `PR1500LCDRT2U` UPS (`0764:0601`, Bus 001)
+  - NICs & storage: Realtek `RTL8127` 10GbE (`10ec:8127`, `enP7s7`), unused MediaTek `MT7925E` Wi-Fi 7 + BT 5.4 (`14c3:7925`, `wlP9s9` currently `DOWN`), Samsung 4 TB NVMe (`144d:a810`, `/dev/nvme0`), HDMI Audio / Tensilica HiFi DSPs. Note: **no `mlx5` ConnectX-7 PCI function** currently enumerates in `lspci` on `spark-b87b`.
+
