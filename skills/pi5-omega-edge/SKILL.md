@@ -60,6 +60,7 @@ All **12 pure seeded-OM-2 systemd units** (`~26.8 MiB` total baseline RSS; `ngin
 3. **Pre-fork Forge bot & 40-hex lane isolation:** Never bypass rate-limiting in async proxy mode on `forged` routes! Live internet crawlers targeting `/(blob|tree|raw|commits?)/<40-hex>`, `/blame/`, and `.patch` saturate `forged`'s `listen(64)` queue and trigger `fork()` OOM storms (`MemoryMax=96M`) if admitted unconstrained:
    - Detect heavy Forge paths + crawler UAs (`bot`, `crawl`, `spider`, `slurp`, `googleother`, `bytespider`, `claudebot`, `gptbot`, `meta-external`, `semrush`, `ahrefs`, `yandex`, `baidu`, etc.) inside `omega-edge-v3-pi` **before** `fork()` and **before** connecting to `127.0.0.1:18480`.
    - Cap the bot/40-hex lane to max `1` global in-flight slot (yielding to human requests) and reject excess immediately in-worker with `HTTP/1.1 429 Too Many Requests` + `Retry-After: 10`, while preserving an isolated human Forge lane (`10 r/s` per IP, burst `20`).
+4. **Never pass `--filter=blob:none` to `interplane.io` dumb-HTTP Git:** `omega-edge-v3-pi` serves bare Git via dumb HTTP (`info/refs`, static packs), not smart `git-upload-pack` protocol v2. Partial-clone `--filter=blob:none` triggers recursive promisor `git-remote-http` retries on TLS drops and can wedge the client host; always resolve `refs/heads/main` with `git ls-remote` and use plain `git fetch` (or Spark's local `$HOME/git/<repo>.git` when on Spark).
 
 ## 4. Pure-OM-2 High-Concurrency TLS 1.3 Perf (`Rung 0 → Rung 3`)
 
