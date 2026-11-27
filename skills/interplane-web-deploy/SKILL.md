@@ -36,11 +36,11 @@ description: >-
    ```
 3. Commit and push `main` to `spark:git/interplane.io.git`.
 4. Export the committed tree on Spark (`git archive`), build & verify, sync to
-   `hub:/var/www/interplane.io/` (`--exclude=.well-known`), and **run the Spark
+   `hub:/var/www/interplane.io/` (`--exclude=.well-known`, preferring `rsync -rc` checksum mode over `-rt` so edited pages with matching timestamps or sizes are never skipped), and **run the Spark
    edge mirror** (without this, live `https://interplane.io` keeps serving the
    stale Spark copy):
    ```sh
-   rsync -rt --delete --chmod=D755,F644 --exclude=.well-known dist/ hub:/var/www/interplane.io/
+   rsync -rc --delete --chmod=D755,F644 --exclude=.well-known dist/ hub:/var/www/interplane.io/
    ~/.local/lib/interplane-forge-ops/edge-mirror.sh
    ```
 
@@ -48,6 +48,7 @@ description: >-
 - **Pinned download routes:** `native/site.om` enforces an exact route count and `.sha256` pin digest for `public/omega-downloads/` (currently 9 routes across 3 checksum files: Arm64 Linux, macOS Arm64, and x86-64 Linux). Adding a release requires updating `content/routes.txt`, `native/site.om` (`od*loadsums`, `od*loadpin`, route count, `omdlcopy`), and `content/omega/index.html` (`download` links).
 - **Private-path & trademark checks:** The verifier refuses `.local` paths in page copy and any un-trademarked `Sovereign Intelligence` (use `Sovereign Intelligence&trade;` in visible text).
 - **Claims gate (`scripts/tests/check-claims.sh`):** Rejects new universal words (`every`, `everything`, `everyone`, `everybody`, `nobody`, `never`, `always`, `all`, `none`) and any drift in `class="reg"` or `class="hf"` sentences against `docs/CLAIMS.md`.
+- **Adding or flipping `class="reg"` status claims:** Keep `docs/CLAIMS.md` sorted alphabetically when adding or updating `reg check` or `reg build` rows (e.g., `/si-2/` badge flips), synchronize `content/llms.txt` with the same status/boundary statements, and verify zero non-ASCII bytes alongside `check-claims.sh`.
 
 ### Upstream Freshness & Zero-JS Animation Guardrails
 - **Fetch upstream repos before writing showcase copy:** Always run `git fetch --all --tags` and inspect `main` and `github/main` (e.g., in `omega-helix` and `omega-mv`) before writing feature/installer copy, and verify any new GitHub receipt URLs return HTTP 200.

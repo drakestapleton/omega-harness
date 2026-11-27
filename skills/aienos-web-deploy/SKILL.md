@@ -26,6 +26,7 @@ Every SiteHub release must pass **both** the Omega verifier (`build/verify --sou
 
 - **CSP unused-grant check:** When retiring any JS file from `om/site/route-assets.om`, also remove its grants from **both** `om/site/csp.om` and `crates/site-builder/src/components/csp.rs` (otherwise `site-builder verify dist` panics with `granted a policy addition, but no page loads it`).
 - **Root vs. `/aien/` ID isolation:** `sv_noentr` / `oracle::check_root` forbid `id="allen"` and `id="site-door"` on `/`. Homepage drawers/widgets must use distinct IDs (`id="aien-drawer"`).
+- **Homepage source & adding new routes:** `/` is rendered by `om/site/floor.om` (`sm_home true` in `machine.om`), **not** `om/site/door.om` (which holds legacy `#site-door`, forbidden on `/` by `sv_noentr`/`oracle::check_root`). Adding a new static route (e.g. `/si-2/`) requires updating **both** the Omega pipeline (`om/site/modules.txt`, `site.om`, `route-assets.om`, `pages.json`, `verify-data.om`, `verify-site.om` `vpages` count) **and** the Rust oracle (`crates/site-builder/src/seo.rs` `PAGES`, `main.rs` `GENERATED_PAGES`).
 - **`/aien/` contracts (`verify-seo.om`, `oracle.rs`, `components/allen.rs`):**
   - Real DOM must carry `id="allen"`, `id="allen-form"`, `/classic/` links both inside and outside `<noscript>`, and `aien-reach-foot` with `https://x.com/drakestapleton` + `mailto:drake@aienos.com`.
   - Keep `public/js/allen.js` free of `innerHTML`, `outerHTML`, `insertAdjacentHTML`, `localStorage`, `sessionStorage`, `document.cookie`, and external fetches (same-origin `/aien/api/chat` and `/aien/api/presence` only).
@@ -60,6 +61,7 @@ Every SiteHub release must pass **both** the Omega verifier (`build/verify --sou
    ssh spark "flock ~/handoffs/site-front/publish.lock ~/work/sitehub/deploy.sh <40-char-sha>"
    ```
    Confirm `RESULT PASS` across gates `1-ledger`..`9-verify-rust` and `PUBLISH OK release=...` on both `hub` and `spark`. A trailing `SI-FRONT FAIL` on the retired Radicle repo leaves `/si` untouched after atomic publication succeeds.
+   - Always pass the **exact verified `<40-char-sha>`** to `deploy.sh` rather than relying on floating `main`, so concurrent unverified commits on `spark:git/aienos.com.git` do not block publishing a verified release.
 3. Verify live HTTPS end-to-end from the MacBook:
    ```sh
    curl -fsS https://www.aienos.com/aien/api/presence
