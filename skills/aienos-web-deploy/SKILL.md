@@ -33,6 +33,10 @@ Every SiteHub release must pass **both** the Omega verifier (`build/verify --sou
   - Keep copy in `om/allen-page/` and `allen.rs` free of em/en dashes and in first-person singular (`I`/`my`, not `we`/`our`).
   - Keep `om/site/verify-mutations.jsonl` (`O4-a`) in sync with `/aien/` required IDs.
 - **Canonical palette tokens in `public/assets/allen.css`:** Use only `:root` tokens from `site-tokens.css` (`--bg-base`, `--bg-surface`, `--bg-card`, `--border-subtle`, `--border-strong`, `--text-primary`, `--text-secondary`, `--text-muted`, `--accent-blue`, `--btn-primary-bg`, `--btn-primary-ink`, `--strand-a/b/c`) — not homepage-only `fftokens` aliases (`--bg-secondary`, `--border`, `--accent-fill`). Never add `#` hex literals, `@import`, `url()`, or non-compositor transitions.
+- **Microsecond spelling (`us` pronoun trap):** Never abbreviate microseconds as `"us"` in `aienos.com` copy — the first-person singular verifier flags `"us"` as a plural pronoun. Write `"microseconds"`.
+- **`8-verify-omega` `V5` (`vforbid`) comparative wording:** Never use `"faster than"`, `"x faster"`, `"beats "`, `"beat the"`, `"llama.cpp"`, `"vllm"`, or `"ollama"` in `aienos.com` copy — report raw measured numbers and `"Nx ratio"` instead.
+- **`9-verify-rust` (`machines::comparison_errors`) inline source rule:** Every sentence or table row stating a cross-system comparison must contain **both** an ISO date (`YYYY-MM-DD`) **and** an `https://interplane.io/drakestapleton/<repo>.git` URL inside that **exact same sentence** (no `. ` period breaking the metric from its date/URL).
+- **Clean temporary worktree when local checkout has WIP:** Always inspect `git status --short` first; if `~/workspace/aienos.com` has unrelated uncommitted edits from another session, apply, commit, and push from a clean detached worktree (`git worktree add --detach /tmp/aienos-deploy spark/main`) and remove it after live HTTP 200 verification.
 
 ## 3. Pure-OM-2 Public Chat Gateway (`allen-chat.service`)
 
