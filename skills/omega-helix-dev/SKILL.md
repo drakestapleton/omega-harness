@@ -34,7 +34,7 @@ description: >-
 ## 4. `oracle.py`, `OLLMSP01` & Python Stdlib Test Contracts
 - Run Python suites with `python3 -W error::ResourceWarning` (use `with` on `urlopen`, close `urllib.error.HTTPError` via `try: ... finally: e.close()`, and call `srv.shutdown(); srv.server_close()` in `finally:`) and `python3 -W error::SyntaxWarning -m py_compile`.
 - `tests/oracle.py` `xprep` requires `<|endoftext|>` delimiters so `ollm-held.bin` is non-empty for `xeval`.
-- `ollm gcheck` takes 2 args (`ck`, `corpus`); `ollm kvcmp` requires `V > 256` and a `bpefit` merges file.
+- `ollm gcheck` takes 2 args (`ck`, `corpus`); for `V > 256` (`init` or `initpg`), `odopen` reads 2-byte `u16` tokens and exits `25` on raw UTF-8 text (`README.md`), so always `bpefit`+`bpeenc` a `.tok` file first and keep CPU `f64` `gcheck` shapes small (e.g. `V=4096 T=32 D=64 H=1 F=128 L=2 B=4`, not `V=4096 D=256 T=64 B=8`). `ollm kvcmp` requires `V > 256` and a `bpefit` merges file.
 - Fast negative controls: `OLLM_ORACLE_MUTANT=tiemaxa python3 tests/oracle.py selftest-v1` (`rc=1`), and flipping 1 bit at byte offset 48 of an `OLLMSP01` `.sp` trips `ollm spapp` with `rc=61`.
 - In POSIX `sh`, never check `$?` after `cmd | tail` (pipe masks exit code to `0`); redirect to a temp file, capture `$?`, then `tail`.
 
@@ -101,6 +101,8 @@ description: >-
   - **Pure-GEMM & `G > 1` Microbatch Alignment Invariants:**
     - Keep `LSTR` (`og[32]`) a multiple of 8 `f64`s (`32`-aligned) so Layer `l >= 1` BF16 weight shadows `ggwh(o)` stay 16-byte aligned for `LDG.E.128` (`slots 67/68`); place non-8-aligned per-layer params (e.g., Linear Attention `dg[L, H]`) **after `gf`** (`og[33] + D + l*H`).
     - Whenever `G = og[44] > 1`, ALL sequence/attention launches (`ggatt`, `ggfa_bwd`, `grcol`, row grids) MUST use `ggbmicro` (`B / G`) — launching full `B` triggers a `4×`/`8×` OOB MMU fault. Scale `grce_bf1` by `1/(B_eff * T)` in `gkarg[10]`, and keep `ggfwd_lcnt`/`ggbwd_lcnt` exact for `gbbegin(cnt)`.
+    - `initpg` syntax (`17`/`18` argc): `initpg CK V T D H F L B SEED TOTAL LRMICRO G LP LC NP [ARCH_FLAGS]` (default `896` = Linear Attn `128` | DyT `256` | NV4 Act `512`; `384` = Linear Attn | DyT). On the Pure-GEMM 112-slot table, `sh tests/gpu-disasm.sh --all` validates `94` active SM121 slots (`GPU_DISASM_OK slots=94 bad=0`).
+    - Before running live Spark GPU commands (`gtrain*`/`gtrainpg`/`gbcmp2`/`gnv4cmp`), check `ls /dev/aien-gpu /dev/nvidiactl`; when Spark is in `NO_GPU_MOD`, stop after CPU `verify-om.sh`, `gcheck`, and `gpu-disasm.sh --all` and report the GPU driver prerequisite cleanly.
 - **`/dev/aien-gpu` Pure-Omega Backend & Live Baselines (`a909888` / PR #39; Fused NVFP4 `3a22339` / PR #45):**
   - `native/gpu/context.om` matches `aien_gpu_uapi.h` ABI v1 (`handle @20`, `mmap_off @24`, `st @32`) and auto-selects `/dev/aien-gpu` whenever `/dev/nvidiactl` is absent (zero `nvidia.ko`, no env var needed).
   - Build standalone 16 KB pure-Omega M16 hardware gate via `TARGET=aien-m16 sh scripts/build.sh` (`native/gpu/aien_m16.om`).
