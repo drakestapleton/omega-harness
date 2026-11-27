@@ -20,6 +20,9 @@ Use this skill when building or extending portable pure-Omega compilers (such as
 - **Master copy:** `omega-mv/seed/ng/target/chips.tsv` and `chips_tsv.om` (`omega-mv/seed/ng/target/chips_tsv.om`) serve as the master copy of the universal hardware table and parser; keep project-local tables/parsers synced from them rather than diverging schemas.
 - Sync each loaded chip's limits (`exec`, `isa`, `ngpr`, `smem`, `subgroup`, `mma`, `feat`) into a scratch `TargetDesc` slot (`tdRegIsa`..`tdRegFeat`) and enforce contracts via `omega-mv/seed/ng/target/target_desc.om` (`tdCheckKernelContract`).
 - Always include a **zero-recompile maintainer gate**: append a synthetic chip row (e.g., `future-chip-2030`) to a temporary TSV copy, verify valid recipes pass and emit without recompiling the compiler, and verify an over-limit recipe fails closed (`exit 72`, `TDK_ERR_2`).
+- **Verified GB10 L2 & memory caps:** Physical GB10 (`sm121` / `apu-gb10`) GPU L2 is **`24576 KiB`** (`24 MiB`, not `65536 KiB`), and `spark-ring` (2-node) is `49152 KiB` (not `131072 KiB`).
+- **No silent CPU contract bypasses:** Enforce `ngpr` and `smem` (fail closed when a kernel requests `smem > 0` on a `smem == 0` CPU target or exceeds `ngpr`, e.g., Grace X925 `ngpr=30`) on all targets — never skip contract checks when `exec == cpu`.
+- **I-cache crystallization ceiling (`<= 25% L0I`):** Never crystallize dense weight matrices directly into `.text` immediates (`7.1×–78.2×` L0I/L1I blowup on SM121). Cap Tier-1 `.text` crystallization to `25%` of L0I (`4 KiB` SM121, `16 KiB` Grace, `32 KiB` Apple M) and stream large matrices through interleaved/MSDF weight storage (`OMWT0002`).
 
 ## 2. Cross-Platform `omc` Rules (`target a64macos` + Linux `aarch64`)
 

@@ -90,3 +90,10 @@ rm -f /tmp/SPARK.EFI.new'
    - Always include `om2` on line 2 when compiling host tests with `0x...` hex literals (omitting it causes `error 6`); avoid reserved words (`sub`, `ne`, `u16` → `error 16`); keep functions under the 16-register local budget (`error 12`); never pass `global` arrays as `fn` arguments (`error 19`).
    - Validate all packed reflex/CLI fields **atomically before mutating state**, and require explicit `--sec` on `spark-ctl watchdog` (never default omitted `--sec` to `0`/disarm).
 7. **Unbrickable NVMe `OMVOL01` Fence:** Size deny tables for all 128 legal GPT partitions (`>= 136` entries) with fail-closed overflow (`NVS_FENCE_SEALED_RO`) and unsigned wrap guards on `plo`/`phi`/`dst_pa`.
+
+## 4. Physical HDMI Fault Triage & Anti-BIOS-Detour Protocol
+
+1. **Check the active bare-metal worktree first (not just `main`):** Before diagnosing any `[SPARK FAIL stage=S code=C]` halt, run `git worktree list` and inspect the branch that actually built the USB-staged `BOOTAA64.EFI` (e.g., `feat/bm-spark-efi` at `/private/tmp/omv-bm-spark/aienux/spark/spark_main.om`), and grep `const SPK_E_`.
+2. **Watch for the trailing-`]` misread (`202]` → `2021`):** `spk_fail` prints `[SPARK FAIL stage=S code=C]` with `]` flush against the digits; voice ASR or visual skim often appends a phantom `1`. Always match against the 3-digit `SPK_E_*` constants (`101..504`).
+3. **Never send the user into AMI Aptio BIOS Setup for a `SPARK FAIL` code:** `SPARK.EFI` failures are `.om` firmware/MMIO/driver bugs (there is no `"PCIe Interrupt Mode = Native"` BIOS toggle). Only enter boot menu/BIOS to choose USB vs Ubuntu; if accidentally inside AMI Aptio Setup, always direct **`Save & Exit` → `Discard Changes and Exit`** to boot cleanly back into Ubuntu.
+4. **One failure point = one distinct code + HDMI address readout:** Never reuse a single `SPK_E_*` code (such as `SPK_E_BAR0_MAP = 202`) across GPU BAR0, NVMe, and RTL8127 checks. Emit distinct sub-codes and print the failing device/BAR on HDMI so every physical boot isolates the fault in one shot.
