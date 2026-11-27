@@ -4,7 +4,7 @@ description: >-
   Build, verify, debug, and safely USB-stage the pure seeded-Omega bare-metal
   Aienux UEFI image (SPARK.EFI) and its MacBook controller (omega-link /
   spark-ctl) for Drake's DGX Spark (GB10 SoC). Covers verified GB10 MMIO/ACPI
-  IORT/USB/HDA hardware addresses, HDMI panic hold, Spark CPU build & 12/12
+  IORT/USB/HDA hardware addresses, HDMI panic hold, Spark CPU build & 13/13
   QEMU gates, safe AIENOSRECOV USB staging, and bare-metal OM-2/silicon traps.
   Use whenever editing aienux/spark/*, aienux/usb/*, aienux/audio/*,
   aienux/disk/nvme_sovereign.om, seed/build/sparkefi.om, or omega-link spark-ctl.
@@ -32,11 +32,15 @@ Read-only verified against Drake's physical Spark (`192.168.1.108`, Ubuntu `7.0.
   - `USB3` `0x1de10000`, `USB4` `0x1d860000`, `USB5` `0x1d870000` (IMC BT/Wi-Fi `13d3:3630`)
 - **HDMI Audio (`NVDA2014:00` / `\_SB_.HDA0`, `SMMUv3-B` `CCA=0`):** MMIO `0x36078000..0x3607ffff`, Codec `Nvidia SoC 33 HDMI/DP` (`0x10de0033`), AFG `0x01`, Converter `0x08`, Pin Complexes `0x04..0x07`.
 - **TPM 2.0 & GOP:** Nuvoton `NTC0702:00` CRB `0x933c0000` (`ctrl_area_pa=0x933c0040`, start method 15); UEFI GOP `BOOTFB` `0x300000000..0x30086ffff` (inside `SPK_RMR2`).
+- **Live NVMe Root, Firmware Bundle, IORT & MIT NVIDIA Reference on Spark:**
+  - `nvme0n1p2` (Ubuntu root ext4) uses Microsoft Basic Data GUID `EBD0A0A2-B9E5-4433-87C0-68B6B72699C7` (must remain supported as fallback in `gpt_ro.om` alongside `0FC63DAF`/`B921B045`, never matching ESP).
+  - Live `/aienos/spark-bundle.img` (`75,460,608 B`, `OMFWBND1`, `580.173.02`, `appver=0`, `7` entries) must be loaded via 128 KiB PRP bursts (`spk_load_bnd_fast` with temporary SMMU map/unmap). Live ACPI IORT is `3,904 B` — keep IORT buffers `>= 16 KiB`, `MMU_MAX_PT_FRAMES >= 1024`, `SMMU_MAX_STREAMS >= 16`, `SMMU_MAX_SPANS >= 64`.
+  - Authoritative **MIT-licensed** NVIDIA host boot source sits on Spark at `~/workspace/_ext/open-gpu-kernel-modules-580.173.02` (`kernel_sec2_gb20b.c`, `nvstatuscodes.h`, `nverror.h`, `dev_sec_pri.h`): always verify GB20B SEC2/GSP registers and error codes directly against these MIT headers rather than guessing or disassembling closed binaries.
 
 ## 2. Authoritative Build, Verification & Safe USB Staging
 
-### Build & 12/12 Gate on Spark CPU (Zero GPU/ESP Touch)
-MacBook `omc-macos` runs fast host unit tests (`{ printf 'target a64macos\nom2\n'; cat ...; } | ~/.local/bin/omc`), while authoritative `SPARK.EFI` (`PLAT=gb10`) and full `run_phase3_gate.sh` (`12/12` + 20-core QEMU + SMMUv3 + RAMFB) run on Spark CPU:
+### Build & 13/13 Gate on Spark CPU (Zero GPU/ESP Touch)
+MacBook `omc-macos` runs fast host unit tests (`{ printf 'target a64macos\nom2\n'; cat ...; } | ~/.local/bin/omc`), while authoritative `SPARK.EFI` (`PLAT=gb10`) and full `run_phase3_gate.sh` (`13/13`: 20-core QEMU + SMMUv3 + RAMFB + pure-OM `spec_audit.om` verifying all 84 unique `spk_fail_d` sites + 3 negative controls) run on Spark CPU:
 
 ```sh
 # CRITICAL: leading slashes on --exclude! NEVER `--exclude build` (deletes seed/build/).
@@ -86,14 +90,16 @@ rm -f /tmp/SPARK.EFI.new'
 5. **Intel HDA (`NVDA2014:00`):** Perform §3.3.21 `CORBRPRST` (`0x8000` → poll `1` → `0` → poll `0`), bounded `STATESTS != 0` settle wait (`>= 521 us`), emit the 13 `0x10de0033` HDMI routing verbs (`AFG 0x01`, `Conv 0x08`, `Pins 0x04..0x07`), and fill the entire cyclic BDL ring (`4096` frames) phase-continuously.
 6. **OM-2 Bare-Metal Runtime & Compiler Traps:**
    - **Never use `while true bound N` for MMIO polls:** on real `CNTVCT_EL0` wall clocks, iteration `N+1` triggers **OM-2 Trap 4 (exit 104 / bare-metal panic)**! Always write counted loops (`while lt it N bound N`) with `cpurelax` and test against a frozen mock clock.
-   - **Never cast a negative `long` directly to `ulong`:** triggers **OM-2 Trap 5 (exit 105)** (e.g., `-1` sensor values or negative Q15 audio samples). Always branch `if lt val 0` first.
-   - Always include `om2` on line 2 when compiling host tests with `0x...` hex literals (omitting it causes `error 6`); avoid reserved words (`sub`, `ne`, `u16` → `error 16`); keep functions under the 16-register local budget (`error 12`); never pass `global` arrays as `fn` arguments (`error 19`).
+   - **Never cast a negative `long`/`int` directly to `ulong` (including inside `spk_fail_d`!):** triggers **OM-2 Trap 5 (exit 105)** *before* the fault prints on HDMI (observed on negative sensor values, Q15 audio, and negative driver `rc`s). Always convert signed error codes via `spk_err_u`/`spk_err_i` (`if lt v 0: ret or 0x8000000000000000 ulong add add v 9223372036854775807 1`).
+   - **Avoid `omc` `error 12` (16-register limit) & map unified lines fast:** reuse a single `rc`/`rci` local across sequential error checks instead of distinct `r_*` names, and split nested loops or multi-term `if` checks (especially in OM-1 `slice_c_gate` files like `boot.om`) into `<= 8`-local helpers. Because `sparkefi.om` deletes `.spark_unified.om` on failure, map `omc: line N` by summing line counts of `se_w*/se_s*/se_h*` + `plat_gb10.om` (+ 2 header lines).
+   - Always include `om2` on line 2 when compiling host tests with `0x...` hex literals (`error 6`); avoid reserved words (`sub`, `ne`, `u16`, `fresh`, `le` → `error 16`) and colliding globals (`rs`); never pass `global` arrays as `fn` arguments (`error 19`).
    - Validate all packed reflex/CLI fields **atomically before mutating state**, and require explicit `--sec` on `spark-ctl watchdog` (never default omitted `--sec` to `0`/disarm).
 7. **Unbrickable NVMe `OMVOL01` Fence:** Size deny tables for all 128 legal GPT partitions (`>= 136` entries) with fail-closed overflow (`NVS_FENCE_SEALED_RO`) and unsigned wrap guards on `plo`/`phi`/`dst_pa`.
+8. **GB20B Stage 4–5 Contracts (`580.173.02`):** Populate full `GspSystemInfo` (`hostPageSize=4096`, `oorArch=3`, live ECAM IDs, mapped `notifyOpSharedSurfacePhysAddr`) + `SET_GUEST_SYSTEM_INFO` (`VGX 43.19`, `"580.173.02"`), set `WprMeta` `target=2` (`NONCOHERENT_SYSTEM`), `s2cfg=[2,2,500000,500000,1,1,1]`, drain non-fatal async GSP-RM events (`>= 4096`, quarantine only `0x101c`), filter `SWGEN1` in bare-metal `irqbm.om` (`bmmio_mode==1`), keep VAS `vaBase=2 GiB` (`< RAM`), pass `ALL_CHANNELS` in `SET_PAGE_DIRECTORY`, and in Stage 5 SASS codegen copy `meta[64..351]->scratch[0..287]`, pass `stats[1]` as `peak_gpr`, and call `bw_enc_sm121` with `pad=1` (verified by `test_stage5_sass.om`).
 
 ## 4. Physical HDMI Fault Triage & Anti-BIOS-Detour Protocol
 
 1. **Check the active bare-metal worktree first (not just `main`):** Before diagnosing any `[SPARK FAIL stage=S code=C]` halt, run `git worktree list` and inspect the branch that actually built the USB-staged `BOOTAA64.EFI` (e.g., `feat/bm-spark-efi` at `/private/tmp/omv-bm-spark/aienux/spark/spark_main.om`), and grep `const SPK_E_`.
 2. **Watch for the trailing-`]` misread (`202]` → `2021`):** `spk_fail` prints `[SPARK FAIL stage=S code=C]` with `]` flush against the digits; voice ASR or visual skim often appends a phantom `1`. Always match against the 3-digit `SPK_E_*` constants (`101..504`).
 3. **Never send the user into AMI Aptio BIOS Setup for a `SPARK FAIL` code:** `SPARK.EFI` failures are `.om` firmware/MMIO/driver bugs (there is no `"PCIe Interrupt Mode = Native"` BIOS toggle). Only enter boot menu/BIOS to choose USB vs Ubuntu; if accidentally inside AMI Aptio Setup, always direct **`Save & Exit` → `Discard Changes and Exit`** to boot cleanly back into Ubuntu.
-4. **One failure point = one distinct code + HDMI address readout:** Never reuse a single `SPK_E_*` code (such as `SPK_E_BAR0_MAP = 202`) across GPU BAR0, NVMe, and RTL8127 checks. Emit distinct sub-codes and print the failing device/BAR on HDMI so every physical boot isolates the fault in one shot.
+4. **One failure point = one unique `(code, sub)` + pure-OM `spec_audit.om` gate:** Every failure site in `spark_main.om` must call `spk_fail_d(stage, code, subc, aux)` (never raw `spk_fail`) with a unique `(code, subc)` registered in `aienux/spark/specs/spark_error_codes.tsv` and enforced by Gate `[13/13]` (`spec_audit.om`).
