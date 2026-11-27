@@ -49,8 +49,12 @@ description: >-
 - **Private-path & trademark checks:** The verifier refuses `.local` paths in page copy and any un-trademarked `Sovereign Intelligence` (use `Sovereign Intelligence&trade;` in visible text).
 - **Claims gate (`scripts/tests/check-claims.sh`):** Rejects new universal words (`every`, `everything`, `everyone`, `everybody`, `nobody`, `never`, `always`, `all`, `none`) and any drift in `class="reg"` or `class="hf"` sentences against `docs/CLAIMS.md`.
 - **Adding or flipping `class="reg"` status claims:** Keep `docs/CLAIMS.md` sorted alphabetically when adding or updating `reg check` or `reg build` rows (e.g., `/si-2/` badge flips), synchronize `content/llms.txt` with the same status/boundary statements, and verify zero non-ASCII bytes alongside `check-claims.sh`.
+- **`scripts/tests/check-site.sh` invocation:** Run with **zero positional arguments** and explicit pinned `OMC` (`OMC="$OMC" sh scripts/tests/check-site.sh`). Do **not** pass `dist dist-hop` — `$1` is treated as an optional `CHAIN_BIN` executable (`check-site.sh:236`).
+- **Control 94 button-token coupling:** `scripts/tests/check-site.sh:508` hardcodes `--btn-orange-bg:#2563eb` and `--btn-orange-press:#1e40af` in its contrast negative control. Changing primary button tokens in `public/style.css` without updating that test causes control 94 to fail.
+- **Static `.no-list` strikethroughs:** Keep `.no-list li::after` static (`height: 3px; transform: scaleX(1); opacity: 1`) rather than animating from `scaleX(0)` with staggered `sibling-index()` delays.
 
 ### Upstream Freshness & Zero-JS Animation Guardrails
+- **Pre-deploy visual gate & calm motion:** Before deploying visual, layout, or theme changes to `/`, run `~/workspace/omega-harness/scripts/sandbox-visual-gate.sh dist` and visually inspect desktop (`1280px`/`1106px`) and mobile (`390px`) renders. Keep experimental 3D canvases on standalone routes (e.g. `/acropolis/`), never replacing the `/` hero without Drake's explicit visual approval, and keep background animations slow, low-contrast, and subtle.
 - **Fetch upstream repos before writing showcase copy:** Always run `git fetch --all --tags` and inspect `main` and `github/main` (e.g., in `omega-helix` and `omega-mv`) before writing feature/installer copy, and verify any new GitHub receipt URLs return HTTP 200.
 - **Kinetic CSS animations on `interplane.io`:** `native/site.om` refuses SMIL `<animate*>` tags inside `<svg>`, inline `style=` / `<style>` blocks, and any raw hex/`rgb()`/`hsl()` color in `public/style.css` outside line 1 (`:root{...}`). Put all `@keyframes` and SVG motion in `public/style.css` using `:root` tokens only, wrap flying/sweeping elements in `overflow: hidden` (`overflow-x: clip`), gate motion with `@media(prefers-reduced-motion:no-preference)`, and run `check-render.sh` (`1280 390 360`) to verify zero horizontal overflow.
 - **Kinetic CSS animations on `aienos.com`:** Inside `om/site/floor.om` (`ffcss`), use only CSS tokens from `fftokens` / `om/site/css.om` (zero raw hex/`rgb`/`rgba`/`hsl` colors), keep strict first-person singular voice (`I`/`me`/`my`), and never add `github.com` or `github.io` links.
@@ -100,7 +104,7 @@ Confirm `RESULT PASS` and `PUBLISH OK release=...` (all 9 gates including Omega 
 
 Check **both** `127.0.0.1:18480` on Spark and live `https://interplane.io` across
 all route families:
-- Static: `/`, `/omega/`, `/public/copy.js` (HTTP 200, plus `Content-Security-Policy` carrying `script-src 'self'` on static pages while `forged` keeps `script-src 'none'`)
+- Static: `/`, `/public/style.css`, `/omega/`, `/public/copy.js` (HTTP 200, plus `Content-Security-Policy` carrying `script-src 'self'` on static pages while `forged` keeps `script-src 'none'`). Always check **both** live `index.html` and live `public/style.css` (e.g. `:root` `--paper` and edited rules) after `hub` `rsync` + `edge-mirror.sh`, since a stalled or partial `hub` transfer can leave updated HTML paired with stale CSS.
 - Forge: `/explore`, `/drakestapleton/omega-mv`, `/drakestapleton/interplane-forge`, `/search`
 - Generated: `/galaxy/`, `/research/`
 

@@ -37,6 +37,9 @@ Every SiteHub release must pass **both** the Omega verifier (`build/verify --sou
 - **`8-verify-omega` `V5` (`vforbid`) comparative wording:** Never use `"faster than"`, `"x faster"`, `"beats "`, `"beat the"`, `"llama.cpp"`, `"vllm"`, or `"ollama"` in `aienos.com` copy — report raw measured numbers and `"Nx ratio"` instead.
 - **`9-verify-rust` (`machines::comparison_errors`) inline source rule:** Every sentence or table row stating a cross-system comparison must contain **both** an ISO date (`YYYY-MM-DD`) **and** an `https://interplane.io/drakestapleton/<repo>.git` URL inside that **exact same sentence** (no `. ` period breaking the metric from its date/URL).
 - **Clean temporary worktree when local checkout has WIP:** Always inspect `git status --short` first; if `~/workspace/aienos.com` has unrelated uncommitted edits from another session, apply, commit, and push from a clean detached worktree (`git worktree add --detach /tmp/aienos-deploy spark/main`) and remove it after live HTTP 200 verification.
+- **Homepage `fftokens` `:where(...)` section-class trap:** `om/site/floor.om` defines homepage CSS tokens inside an explicit `:where(...)` list of `.home-*` classes. Any homepage `<section class="home-*">` omitted from that selector (such as `.home-noneed` or `.home-download`) gets undefined CSS variables (e.g., `var(--danger)` silently resolving to `rgba(0,0,0,0)` on `.home-nolist li::after`). Whenever adding or editing a homepage section, add its class to `fftokens` and verify computed styles in headless Chrome.
+- **`legacy-assets.om` `--bg-base` override:** `om/site/legacy-assets.om` (`public/assets/style.css`) redeclares `--bg-base: var(--turing-night)` (`#08090c`), which overrides `site-tokens.css` `--bg-base` unless `--turing-night` in `om/site/css.om` (`sspal`) is kept aligned.
+- **Bi-directional WebAssembly CSP parity:** When adding or removing WebAssembly instantiation in any `/js/*.js` script, update **both** `om/site/csp.om` and `crates/site-builder/src/components/csp.rs` (`WASM_SCRIPTS`) in the same commit (`9-verify-rust` enforces `COMPILES_WASM` bi-directionally).
 
 ## 3. Pure-OM-2 Public Chat Gateway (`allen-chat.service`)
 
@@ -58,15 +61,16 @@ Every SiteHub release must pass **both** the Omega verifier (`build/verify --sou
 
 ## 4. SiteHub Publish & Live HTTPS Verification
 
-1. Commit locally on `main` and push to Interplane (`git push spark main`). Verify `origin/main` matches `HEAD` and `https://interplane.io/drakestapleton/aienos.com` returns HTTP `200`.
+1. **Pre-deploy local visual gate (for layout, theme, or animation changes):** Run `~/workspace/omega-harness/scripts/sandbox-visual-gate.sh <dist-dir>` and inspect desktop (`1280px`/`1106px`) and mobile (`390px`) renders before publishing live. Never replace `/` with an experimental canvas or theme without Drake's explicit visual approval; experimental worlds belong on standalone routes (e.g. `/acropolis/`).
+2. Commit locally on `main` and push to Interplane (`git push spark main`). Verify `origin/main` matches `HEAD` and `https://interplane.io/drakestapleton/aienos.com` returns HTTP `200`.
    *(Note: `github` remote `drakestapleton/aienos.com` currently rejects pushes due to GitHub Push Protection on legacy test fixtures in `crates/hive-feed/src/privacy.rs`; Interplane is the canonical source.)*
-2. Publish via SiteHub on Spark:
+3. Publish via SiteHub on Spark:
    ```sh
    ssh spark "flock ~/handoffs/site-front/publish.lock ~/work/sitehub/deploy.sh <40-char-sha>"
    ```
-   Confirm `RESULT PASS` across gates `1-ledger`..`9-verify-rust` and `PUBLISH OK release=...` on both `hub` and `spark`. A trailing `SI-FRONT FAIL` on the retired Radicle repo leaves `/si` untouched after atomic publication succeeds.
+   Confirm `RESULT PASS` across gates `1-ledger`..`9-verify-rust` **and** `PUBLISH OK release=...` on both `hub` and `spark` (SiteHub can pass `RESULT PASS` and then hang during SSH transfer to `hub` — never treat `RESULT PASS` alone as live). A trailing `SI-FRONT FAIL` on the retired Radicle repo leaves `/si` untouched after atomic publication succeeds.
    - Always pass the **exact verified `<40-char-sha>`** to `deploy.sh` rather than relying on floating `main`, so concurrent unverified commits on `spark:git/aienos.com.git` do not block publishing a verified release.
-3. Verify live HTTPS end-to-end from the MacBook:
+4. Verify live HTTPS HTML, CSS/computed styles on modified sections, and `/aien/` chat end-to-end from the MacBook:
    ```sh
    curl -fsS https://www.aienos.com/aien/api/presence
    curl -fsS -N -H "Origin: https://www.aienos.com" -H "Content-Type: application/json" \
