@@ -10,6 +10,9 @@ description: >-
 
 # Deploying Changes Across All of `interplane.io`
 
+> [!NOTE]
+> Public `https://interplane.io` is served directly from **Raspberry Pi 5 `omega-edge.target`** (`omega-sni :443` → `omega-edge-interplane :4448` + Pi-local `omega-forged :18480`, `omega-playground :18490`, `omega-strand-hub :18491`, and in-process pure-OM-2 Git Dumb-HTTP backed by `/mnt/omega-sd/interplane-git`, zero `nginx`/Apache; see `pi5-omega-edge` skill). Spark `edge-mirror.sh` is only needed while Spark runs Linux.
+
 `https://interplane.io` is served by two repositories. Any site-wide change
 (head meta tags, social cards, global assets) must cover **both**:
 
@@ -60,6 +63,8 @@ description: >-
 - **Kinetic CSS animations on `aienos.com`:** Inside `om/site/floor.om` (`ffcss`), use only CSS tokens from `fftokens` / `om/site/css.om` (zero raw hex/`rgb`/`rgba`/`hsl` colors), keep strict first-person singular voice (`I`/`me`/`my`), and never add `github.com` or `github.io` links.
 - **Git-only vs. forge-HTML links:** Before linking `https://interplane.io/drakestapleton/<repo>` in an `<a href>`, confirm HTTP 200 on Spark `http://127.0.0.1:18480/drakestapleton/<repo>` (`Host: interplane.io`). Newly mirrored git-only repos serve `git clone .../drakestapleton/<repo>.git` (`200`) while their HTML page stays `404` until owner-signed via `ipl`.
 - **Pinned `omc` fallback & clean worktree on Spark:** If `~/canon/omega-mv/seed/out/omc` has moved past `interplane.io/native/omc.sha256`, check Spark's cache (`~/.cache/interplane/omc-<sha256>`, e.g., `omc-85b84c6de85083e4d9d2368015c1ddcab3d863aada922be0e63d774dddf23134`) and pass `OMEGA_GIT=/nonexistent` to `scripts/tests/check-site.sh` if `~/git/omega-mv.git` `main` has advanced. Always check `git status --short` on `~/workspace/interplane.io` first; if unrelated WIP exists, deploy from a clean temporary worktree (`git worktree add --detach /tmp/interplane-deploy spark/main`) and remove it after verification.
+- **Mobile `390px` overflow, `.doc-nav` flex whitespace & flat SVG bounds:** Wrap wide tables in `.table-wrap` (`overflow-x: auto`) and keep `min-width: 0` + `overflow-wrap: anywhere` on inline `<code>` hashes so full SHA-256 digests cause `0px` horizontal overflow on `390px` phones. Avoid text inside flex `.doc-nav a` links that triggers `<span translate="no">` splits (e.g., `TLS 1.3` collapsing spaces). Register new `/public/<name>.{png,svg}` assets as flat routes in `content/routes.txt` (zero SMIL `<animate*>`) and inspect desktop + mobile screenshots for right-edge SVG text clipping.
+- **Strand Exchange (`/strands/` & `/strands/clip`):** Served by pure seeded-OM-2 `omega-strand-hub.service` (`:18491` on Pi 5, backed by `/mnt/omega-sd/om-strand-hub`).
 
 ## Part 2b: `aienos.com` Static Site (SiteHub)
 Deploy committed `main` on Spark:
