@@ -91,11 +91,18 @@ description: >-
   - Use `LR_MICRO=250` (`2.5e-4`) for `D=2048 32L-eff` (`LR_MICRO=1500` diverges post-warmup).
   - Keep `.tok` chunks `<= 30 MiB` (`ODCAP=33,554,432 B`), pass `<merges4096.bin>` as the **5th arg** to `ollm-gb10 geval` whenever `V > 256` (4 args exits `2`), and use `APU_SUMMARY` from Full-APU `apuweave` (~14 min/2,048-strand bundle) rather than blocking on the slow 45-min CPU `spweval` probe.
 - **SM121 NVFP4 (`OMMA.SF.16864`) Training-Loop Invariants (slots `88..95`, `gtrain4`/`gnv4gemm`/`gnv4cmp`):**
-  - Apply 2-level tensor pre-scaling (`pre_scale` in `gkarg[9]` + `alpha = 1/(sA*sB)` in `gkarg[25]`: `sW=16.0`, `sGrad=4096.0`) so backward gradients (`~1e-4`) do not underflow `UE4M3`'s `2^-6` normal floor.
+  - Apply 2-level tensor pre-scaling (`pre_scale` in `gkarg[9]` + `alpha = 1/(sA*sB)` in `gkarg[25]`: `sW=16.0`, dynamic `gggrad_sc = max(4096, 2*R)`) and keep LM-head backward in BF16 so `dLogits` never underflows `UE4M3`'s `2^-6` normal floor.
   - Reset `ggmm4_sc 1.0 1.0` on **every** BF16 / Split-K fallback path in `ggxwh`/`ggxwth`/`ggwgh` so scales never leak into subsequent `ggmm4` calls.
-  - In `gkgemmnv4_128`, never use `gkldc64 10 ...` while `R11` holds live `tid >> 1` (`gkldc64` writes the `R10:R11` pair).
-- **`/dev/aien-gpu` Pure-Omega Backend & Live Baselines (`a909888` / PR #39):**
+  - **SM121 SASS & QMD hazards (`gk.om` / `gr.om`):**
+    - QMD CB0 (`gbq1 43` `SIZE_SHIFTED4=64`) is capped at `1,024 B` (`gkarg[0..31]`, `cb < 1024`); reuse unused aligned slots (`gkarg[6..7]`, `[14..15]`, `[26..27]`) for fused epilogues when `nz == 1`.
+    - Separate `ISETP` from `@P0 BRA` / `@P1 LDG` by `>= 14` cycles (hide behind `OMMA.SF`); drain (`NOP wt=gkpend`) or save/restore `gkpend` around `grbfwd_mk` after `LDG`/`STG`/`STS` (`grbfwd_mk` clears `gkpend`).
+    - Never use `gkldc64 10 ...` while `R11` holds live `tid >> 1`, never put `R125` on a `.WIDE` instruction in a 128-GPR kernel (`gpu-disasm.sh` counts `R125+1 = R126 > 128`), and route fused epilogue outputs to separate buffers (`gga1 43/44`) to avoid cross-CTA aliasing with inputs (`gga1 41/42`).
+    - Split-K `s > 1` requires `gkmagic(nz, nz)` with `gkarg[24] = -nz` (`gkmagic(nz, 1)` fails `GX 99 -33`); for BF16-activation `dW`, keep `ggdw_nv4_ok` (`m*n >= 786432`) so standalone `grqnv4t` DRAM reads don't regress small `D=384` shapes.
+  - **Pure-GEMM & `G > 1` Microbatch Alignment Invariants:**
+    - Keep `LSTR` (`og[32]`) a multiple of 8 `f64`s (`32`-aligned) so Layer `l >= 1` BF16 weight shadows `ggwh(o)` stay 16-byte aligned for `LDG.E.128` (`slots 67/68`); place non-8-aligned per-layer params (e.g., Linear Attention `dg[L, H]`) **after `gf`** (`og[33] + D + l*H`).
+    - Whenever `G = og[44] > 1`, ALL sequence/attention launches (`ggatt`, `ggfa_bwd`, `grcol`, row grids) MUST use `ggbmicro` (`B / G`) — launching full `B` triggers a `4×`/`8×` OOB MMU fault. Scale `grce_bf1` by `1/(B_eff * T)` in `gkarg[10]`, and keep `ggfwd_lcnt`/`ggbwd_lcnt` exact for `gbbegin(cnt)`.
+- **`/dev/aien-gpu` Pure-Omega Backend & Live Baselines (`a909888` / PR #39; Fused NVFP4 `3a22339` / PR #45):**
   - `native/gpu/context.om` matches `aien_gpu_uapi.h` ABI v1 (`handle @20`, `mmap_off @24`, `st @32`) and auto-selects `/dev/aien-gpu` whenever `/dev/nvidiactl` is absent (zero `nvidia.ko`, no env var needed).
   - Build standalone 16 KB pure-Omega M16 hardware gate via `TARGET=aien-m16 sh scripts/build.sh` (`native/gpu/aien_m16.om`).
-  - Verified live on Spark `/dev/aien-gpu`: `nvfp4 4096 4096 8192 20` **`456.80 TF`**, `gnv4gemm 4096` Case 4 `cos=0.999118`, `D=2048 8x4 gtrain4` **`12,840 ms`** (**`1.17×` faster** than `nvidia.ko`'s `14,960 ms`), `verify-om.sh` PASS.
-  - Exact test invocations: `sh tests/gpu-disasm.sh --all` (`--all` required -> `GPU_DISASM_OK slots=86 bad=0`) and `python3 tests/test_gpu_nvfp4_train.py`.
+  - Verified live on Spark `/dev/aien-gpu`: `nvfp4 4096 4096 8192 20` **`456.80 TF`**, standalone `gnv4gemm` `4096×4096×8192` **`239.07 TF`** (Fused 2× unroll, `3a22339`) / **`280.27 TF`** (3-stage XOR-swizzled), `15.83M` `gtrain4` **`64.54 ms` (`253.9k tok/s`)** / `loop2x4` **`62.32 ms` (`262.9k tok/s`)** (`+0.0038 nats` vs BF16), `58.7M d2048_l1_b16` **`37.35 ms` (`+29.0%` full / `+49.6%` fwd+bwd)**, `D=2048 8x4 gtrain4` **`12,840 ms`** (`1.17×` vs `nvidia.ko`), `verify-om.sh` PASS.
+  - Exact test invocations: `sh tests/gpu-disasm.sh --all` (`--all` required -> `bad=0`) and `OLLM_GB10_LIVE=1 python3 -m unittest tests/test_gpu_nvfp4_train.py -v`.

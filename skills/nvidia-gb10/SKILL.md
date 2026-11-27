@@ -253,6 +253,8 @@ Automatic actors you will meet:
     (`0xbadf4100`) for lockdown release; port every HAL to `GB20B` (see `./references/gb20b-gsp-boot.md`) before
     spending a Window 0 reboot. [HANDOFFS/L332/window0-20261118T234217Z; BOARD 2026-11-18T23:44:02Z, 23:51Z]
 21. HTTP server binary (`serve_cli.om`) parses a new mode flag (e.g. `--nv4`) without wiring the corresponding decode graph (`q38ReplayPre 10`), causing silent repetition/EOS while `decode_cli.om` works; verify `serve_cli.om` wires the graph and always check output coherence.
+22. Heavy NVMe I/O (`du`, multi-100 GB `rm -f` cleanup) on a >90%-full Spark SSD running concurrently with an exclusive `spark-window` can starve `sshd` (ping stays alive while SSH banner exchange stalls/resets); serialize bulk disk cleanup outside live GPU windows.
+23. After a GPU `ETIMEDOUT` reboot leaves `NO_GPU_MOD` (no `nvidia.ko` loaded) during an already-approved `/dev/aien-gpu` session, first close any stale `spark-window` + post `RELEASE`, fix the offending kernel hazard, and reload `aien_gpu.ko` without stalling for duplicate permission (unlike hot-swapping off `nvidia.ko`, trap 17, which always needs cold boot + explicit approval).
 
 ## 8. What we do not use
 
