@@ -30,8 +30,10 @@ Every SiteHub release must pass **both** the Omega verifier (`build/verify --sou
 - **`/aien/` contracts (`verify-seo.om`, `oracle.rs`, `components/allen.rs`):**
   - Real DOM must carry `id="allen"`, `id="allen-form"`, `/classic/` links both inside and outside `<noscript>`, and `aien-reach-foot` with `https://x.com/drakestapleton` + `mailto:drake@aienos.com`.
   - Keep `public/js/allen.js` free of `innerHTML`, `outerHTML`, `insertAdjacentHTML`, `localStorage`, `sessionStorage`, `document.cookie`, and external fetches (same-origin `/aien/api/chat` and `/aien/api/presence` only).
-  - Keep copy in `om/allen-page/` and `allen.rs` free of em/en dashes and in first-person singular (`I`/`my`, not `we`/`our`).
+  - Keep copy in `om/allen-page/` and `allen.rs` free of em/en dashes and in first-person singular (`I`/`my`, not `we`/`our`). Note that `components::allen::tests::copy_stays_first_person_singular_and_dash_clean` tokenizes **all** ASCII-alphabetic words in `public/js/allen.js` (including JS identifiers and comments), and `om/allen-page/contract.om` uses `~N~` template expansion (never put literal `~` in `allen-js.om`).
   - Keep `om/site/verify-mutations.jsonl` (`O4-a`) in sync with `/aien/` required IDs.
+  - **Crisp HiDPI `<canvas>` rendering:** Size 2D canvas backing stores to `Math.round(cssW * Math.min(window.devicePixelRatio || 1, 3))` via `ResizeObserver` + `resize` + `ctx.setTransform(backW / W, 0, 0, backH / H, 0, 0)` (gating `getBoundingClientRect()` behind a `needResize` flag to avoid per-frame layout thrash), and prefer opaque frame clears + crisp full-opacity orbs over translucent fade-clears (`rgba(..., 0.28)`) or low-alpha blur halos.
+  - **Regenerating `om/allen-page/` from macOS:** Stage `om/allen-page/`, `public/js/allen.js`, and Spark's `om/hive-page/{omc,omc.sha256}` to a temp dir on Spark (`aarch64`), run `OMEGA_ACCEPT_CHANGE=1 sh om/allen-page/check.sh && sh om/allen-page/check.sh`, copy back `public/js/allen.js` + `om/allen-page/allen.js.sha256`, then verify with `node --check public/js/allen.js` and `cargo test --manifest-path crates/site-builder/Cargo.toml components::allen`.
 - **Canonical palette tokens in `public/assets/allen.css`:** Use only `:root` tokens from `site-tokens.css` (`--bg-base`, `--bg-surface`, `--bg-card`, `--border-subtle`, `--border-strong`, `--text-primary`, `--text-secondary`, `--text-muted`, `--accent-blue`, `--btn-primary-bg`, `--btn-primary-ink`, `--strand-a/b/c`) — not homepage-only `fftokens` aliases (`--bg-secondary`, `--border`, `--accent-fill`). Never add `#` hex literals, `@import`, `url()`, or non-compositor transitions.
 - **Audience wording ("users only, never customers"):** Drake has **users only, nothing for sale**. Never write `"customer"`, `"customers"`, `"pricing"`, or commercial SaaS framing in `aienos.com` / `interplane.io` copy or UX flows.
 - **Microsecond spelling (`us` pronoun trap):** Never abbreviate microseconds as `"us"` in `aienos.com` copy — the first-person singular verifier flags `"us"` as a plural pronoun. Write `"microseconds"`.
@@ -84,6 +86,7 @@ Every SiteHub release must pass **both** the Omega verifier (`build/verify --sou
      -d '{"messages":[{"role":"user","content":"WTF is AienOS?"}]}' \
      https://www.aienos.com/aien/api/chat | head -n 12
    ```
+   - For `<canvas>` or animation edits, verify live HTTPS with a `deviceScaleFactor: 2` headless Chrome CDP screenshot (asserting `canvas.width > rect.width`) and visually inspect the captured PNG with `read_file`.
 
 ## 5. Blog Articles, Mobile Visual Checks & Search Indexing
 
