@@ -1,0 +1,11 @@
+{
+  "category": "gpu_silicon",
+  "sm_arch": "sm_121",
+  "verdict": "PASS",
+  "workload_scope": "FULL_WORKLOAD_GPU_PASS",
+  "workload_kind": "gemm",
+  "payload_bytes": 67108864,
+  "gemm_shape": "4096x4096x4096",
+  "xid_delta": 0,
+  "summary": "Full 4096x4096x4096 NVFP4 GEMM verified on GB10 with XID_DELTA=0."
+}

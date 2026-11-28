@@ -1,0 +1,18 @@
+{
+  "category": "lean4",
+  "lean_toolchain": "leanprover/lean4:v4.35.0",
+  "theorem": "lanes_disjoint",
+  "trust": "standard",
+  "sorry_count": 0,
+  "native_decide_count": 0,
+  "axioms": ["propext", "Quot.sound"],
+  "broken_model_controls": [
+    {
+      "name": "overlapping_lanes_6_7",
+      "broken_model": "lanes 6 and 7 both assigned core 1",
+      "refuted": true,
+      "status": "REFUTED_AS_EXPECTED"
+    }
+  ],
+  "summary": "PROVED (axioms: [propext, Quot.sound]) with broken-model negative control refuted."
+}

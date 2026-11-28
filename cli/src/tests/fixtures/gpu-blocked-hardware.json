@@ -1,0 +1,7 @@
+{
+  "category": "gpu_silicon",
+  "sm_arch": "sm_121",
+  "verdict": "BLOCKED_HARDWARE",
+  "workload_kind": "vfio_bind",
+  "summary": "Stock 7.0.0-1019-nvidia ACPI IORT RMR_NODE idx=50 remap_permitted=0 returns -EINVAL."
+}

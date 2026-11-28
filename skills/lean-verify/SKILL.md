@@ -130,6 +130,14 @@ Every Lean result must state its **model-to-system link**: which file, config, `
 - A new `axiom` declaration, `unsafe`, `@[implemented_by]` or `@[extern]` in a proof file is forbidden.
 - Report the verdict with the axiom list: `PROVED (axioms: [propext]) model=<source>` or `FAILED: <error>`.
 
+## Mandatory Receipt Linter Gate (2026-11-28 Audit Standard)
+
+Every Lean 4 verification receipt produced by a `/swarm` or PR MUST pass `omega-receipt-lint check` (`skills/audit-receipt-linter/SKILL.md`). Hard-blocked unless ALL four hold:
+1. `sorry_count: 0` and zero `sorryAx` in `#print axioms` (even if `lean_run_code` returned `success: true`).
+2. `native_decide_count: 0` and zero `Lean.ofReduceBool` / `Lean.trustCompiler` / `*._native.native_decide.ax*`.
+3. `axioms` explicitly recorded and strictly a subset of `[propext, Classical.choice, Quot.sound]` (empty `[]` best).
+4. `broken_model_controls` (or `negative_controls`) contains at least one executed broken-model control whose invariant was **refuted** (`refuted: true` / `REFUTED_AS_EXPECTED`), proving non-vacuity.
+
 ## Running outside MCP
 
 ```bash

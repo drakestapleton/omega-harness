@@ -1,0 +1,11 @@
+{
+  "category": "rlwe_fhe",
+  "scheme": "BFV",
+  "N": 4096,
+  "log2_q": 109,
+  "depth": 2,
+  "secret_distribution": "ternary",
+  "claims_crypto_security": true,
+  "verdict": "PASS",
+  "summary": "BFV Depth=2 parameters (N=4096, log2(Q)=109, ternary) within HES v1.1 128-bit classical table."
+}

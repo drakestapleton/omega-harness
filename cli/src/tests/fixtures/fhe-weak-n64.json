@@ -1,0 +1,10 @@
+{
+  "category": "rlwe_fhe",
+  "scheme": "BFV",
+  "N": 64,
+  "log2_q": 29,
+  "depth": 1,
+  "secret_distribution": "ternary",
+  "verdict": "PASS",
+  "summary": "128-bit secure BFV homomorphic encryption verified at N=64."
+}

@@ -1,0 +1,13 @@
+{
+  "category": "zk_stark",
+  "scheme": "FRI-STARK",
+  "base_field": "Goldilocks",
+  "base_field_bits": 64,
+  "challenge_field": "F_p",
+  "extension_degree": 1,
+  "fri_queries": 16,
+  "blowup_factor": 8,
+  "conjectured_soundness_bits": 48,
+  "verdict": "PASS",
+  "summary": "ZK-STARK verifier passed with 16 FRI queries."
+}

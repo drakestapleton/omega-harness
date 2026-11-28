@@ -184,6 +184,7 @@ Automatic actors you will meet:
   fix, retest. [cortex omp-learn-3d51cac320c021a3]
 - Receipts: `spark-receipt` writes `YARDSTICKS/receipts/<date>-<NAME>.json` (energy, GPU W, load, MemAvailable,
   lock holders, NVRM error delta, exit code, git head). Wall energy under about 20 J is noise.
+- **2026-11-28 Silicon Scope & Honesty Gate (`omega-receipt-lint`):** Every passing GPU receipt MUST explicitly tag its workload scope — **`MICROKERNEL_SASS_PASS`** for `<= 512 B` arithmetic/SASS/M16 probes vs **`FULL_WORKLOAD_GPU_PASS`** for full GEMM, attention, or multi-layer transformer runs (with concrete scale metadata) — AND record **`XID_DELTA=0`**. Never conflate a `512 B` micro-kernel pass with a full workload pass, never emit bare `PASS` without scope, and preserve `PASS / FAIL / NOT_RUN / BLOCKED_HARDWARE` discipline (`skills/audit-receipt-linter/SKILL.md`).
 
 ## 7. Known traps (symptom; cause; fix; source)
 

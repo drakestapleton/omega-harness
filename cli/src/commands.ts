@@ -7,7 +7,7 @@ export interface SlashCommandDef {
 export const SLASH_COMMANDS: SlashCommandDef[] = [
   { name: '/help', usage: '/help', description: 'Show commands and keyboard shortcuts' },
   { name: '/status', usage: '/status', description: 'Probe Inkling server health, KV slots & Arboris hits' },
-  { name: '/tools', usage: '/tools', description: 'List all 27 available agent tools' },
+  { name: '/tools', usage: '/tools', description: 'List all available agent tools' },
   { name: '/agents', usage: '/agents', description: 'List active and completed Inkling subagents' },
   { name: '/tasks', usage: '/tasks', description: 'Show current session task checklist' },
   { name: '/memory', usage: '/memory [key]', description: 'Show persistent cross-session memories' },

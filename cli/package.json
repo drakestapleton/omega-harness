@@ -4,12 +4,14 @@
   "description": "Omega Harness interactive CLI powered by the Google GenAI SDK",
   "type": "module",
   "bin": {
-    "omega": "./dist/index.js"
+    "omega": "./dist/index.js",
+    "omega-receipt-lint": "./dist/receipt-lint-cli.js"
   },
   "scripts": {
-    "build": "tsc && chmod +x dist/index.js",
+    "build": "tsc && chmod +x dist/index.js dist/receipt-lint-cli.js",
     "dev": "tsx src/index.tsx",
     "typecheck": "tsc --noEmit",
+    "lint:receipts": "node dist/receipt-lint-cli.js",
     "test": "node --test dist/tests/*.test.js"
   },
   "dependencies": {

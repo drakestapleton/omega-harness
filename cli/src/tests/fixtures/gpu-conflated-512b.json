@@ -1,0 +1,10 @@
+{
+  "category": "gpu_silicon",
+  "sm_arch": "sm_121",
+  "verdict": "PASS",
+  "workload_scope": "FULL_WORKLOAD_GPU_PASS",
+  "workload_kind": "microkernel",
+  "payload_bytes": 512,
+  "xid_delta": 0,
+  "summary": "512B arithmetic SASS micro-kernel passed on GB10; claimed as full transformer pass."
+}

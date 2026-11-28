@@ -25,6 +25,16 @@ These are reporting labels, not substitutes for repository verdicts. For gates u
 
 Mark numbers MEASURED or MODELED, with units, conditions and source. Use tools for arithmetic. Unobserved inference gets an explicit `[INFERENCE]` label.
 
+## 2026-11-28 Audit Standards: Cryptographic Floors, Silicon Scope & Pre-Publish URLs
+
+Every future `/swarm`, receipt, README table, and release note across all Omega repositories MUST enforce these hard floors and run `omega-receipt-lint` (`skills/audit-receipt-linter/SKILL.md`):
+
+- **RLWE / BFV / FHE cryptographic floor:** Any receipt claiming cryptographic security MUST have power-of-two `N >= 2048` (`N >= 4096` for `Depth >= 2`) and `(N, log2(Q))` within the Homomorphic Encryption Standard (HES v1.1) 128-bit classical table (`N=2048 -> <=54`, `4096 -> <=109`, `8192 -> <=218`, `16384 -> <=438`, `32768 -> <=881` for ternary/error secrets; `56/111/220/440/880` for uniform). Smaller rings (e.g. `N=64`, `1024`) or out-of-table moduli MUST be tagged strictly **`PROTOTYPE_ALGEBRA_ONLY`** with `claims_crypto_security: false` and zero security claims.
+- **ZK-STARK cryptographic floor:** Any 64-bit base-field STARK claiming security MUST draw challenges from an extension field **`F_{p^2}+`** (`>= 100`-bit challenge field) and MUST explicitly report **BOTH** `conjectured_soundness_bits` AND `proven_johnson_bits` (consistent with `fri_queries`, `blowup_factor`, and `pow_grinding_bits`). Any configuration `< 100` bits (e.g. 16-query prototypes) MUST be tagged strictly **`PROTOTYPE_ONLY`** with `claims_crypto_security: false`.
+- **Lean 4 proof floor:** Require **`0 sorry`**, **`0 native_decide`** (no `sorryAx`, `Lean.ofReduceBool`, `Lean.trustCompiler`), **standard core axioms only** (`[propext, Classical.choice, Quot.sound]` or empty `[]`), and at least one executed **broken-model negative control** confirming the theorem refutes a deliberately broken model.
+- **GPU silicon scope labeling & telemetry:** Every passing GPU receipt MUST explicitly label **`MICROKERNEL_SASS_PASS`** (for `<= 512 B` arithmetic/SASS micro-kernels and probes) OR **`FULL_WORKLOAD_GPU_PASS`** (for real full GEMM, attention, or multi-layer transformer runs with concrete scale metadata). Bare `PASS` without scope, or conflating a `512 B` micro-kernel as `FULL_WORKLOAD_GPU_PASS`, is hard-rejected. Preserve `PASS / FAIL / NOT_RUN / BLOCKED_HARDWARE / BLOCKED_OPERATOR / MISSING_IMPLEMENTATION` discipline, and require **`XID_DELTA=0`** telemetry on every passing GPU receipt.
+- **Pre-publish external URL HTTP 200 gate:** Before generating release notes or README tables, run `omega-receipt-lint urls <files...>` (or `omega lint-urls`) and verify every referenced external URL (including `interplane.io` and GitHub mirror links) returns **HTTP 200**.
+
 ## Report shape
 
 Lead with outcome and its scope, then:

@@ -10,13 +10,14 @@ Interactive terminal CLI for operating **Inkling-2-Mini** through Omega Harness,
   - Optional Gemini SDK (`@google/genai`) backend available via `--provider gemini` or `/provider gemini`.
 - **Omega Harness skills**: automatically discovers every skill in `../skills/*/SKILL.md` (`load_skill`, `/skills`, `/skill <name>`).
 - **Omega compiler integration**: `omc_compile`, `omc_run`, `/compile`, `/run`, and `--omega-only` mode (`.om` / `NOTES.md` writes only, automatic `omc` compilation, error enrichment from `../data/reference.tsv`).
-- **27 modern agent tools** (`omega --tools` / `/tools`):
+- **29 modern agent tools** (`omega --tools` / `/tools`):
   - **File & Code**: `read_file`, `write_file`, `edit_file`, `delete_file`, `list_dir`, `glob_files`, `grep_search`
   - **Execution & Git**: `run_shell`, `git_status`, `git_diff`, `git_log`, `git_commit`
   - **Web**: `web_fetch`, `web_search`
   - **Planning & Memory**: `todo_write`, `todo_read` (`/tasks`), `memory_save`, `memory_read` (`/memory`)
   - **Autonomous Inkling Subagents**: `spawn_subagent`, `spawn_parallel_subagents`, `list_subagents` (`/agents`), `message_subagent` — spins up isolated Inkling-2-Mini subagents using the same model across `inkling2-serve`'s `N=8` static KV slots
-  - **Omega Harness Native**: `list_skills`, `load_skill`, `omc_compile`, `omc_run`, `omega_pin`
+  - **Omega Harness Native**: `list_skills`, `load_skill`, `omc_compile`, `omc_run`, `omega_pin`, `lint_receipt`, `check_publish_urls`
+- **Static Receipt & Pre-Publish URL Honesty Linter (`omega-receipt-lint`)**: enforces the 2026-11-28 audit standards across RLWE/BFV/FHE (HES v1.1 128-bit floors / `PROTOTYPE_ALGEBRA_ONLY`), ZK-STARKs (`F_{p^2}+` extension fields, dual `conjectured_soundness_bits` + `proven_johnson_bits`, `PROTOTYPE_ONLY`), Lean 4 (`0 sorry`, `0 native_decide`, standard core axioms, broken-model negative controls), GPU silicon scope (`MICROKERNEL_SASS_PASS` vs `FULL_WORKLOAD_GPU_PASS`, `XID_DELTA=0`), and HTTP 200 verification on every referenced external URL (`interplane.io` + GitHub mirrors).
 
 ## Build & Install
 

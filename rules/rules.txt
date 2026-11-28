@@ -518,3 +518,16 @@ order 27
 | - Keep inbox tags to `task`, `turn`, `fail`, `fyi` and `result`; `fyi` and `result` never wake.
 | - Separate landed v1 wire tools (`tools/trit` and `tools/codebook` in `omega-mv`, R45 Omegese in `aien-train`) from PROPOSED extensions (R45 instruction-id slots `041-099`, unlanded codebook revisions, and Gen 3 error-resistant ternary codebooks).
 end
+
+rule audit-standards-20261128
+date 2026-11-28
+for all watchdog
+order 28
+| ## Audit standards: cryptographic floors, silicon scope and pre-publish URLs (2026-11-28)
+| Full linter schema and commands live in `skills/audit-receipt-linter/SKILL.md` (`cli/dist/receipt-lint-cli.js` / `omega-receipt-lint`). Every `/swarm` across all Omega repositories must enforce these gates before merging receipts, README tables or release notes:
+| - RLWE/BFV/FHE: require power-of-two `N >= 2048` (`N >= 4096` for `Depth >= 2`) and `(N, log2(Q))` within the Homomorphic Encryption Standard (HES v1.1) 128-bit classical table (`2048 -> 54`, `4096 -> 109`, `8192 -> 218`, `16384 -> 438`, `32768 -> 881` ternary; `56/111/220/440/880` uniform). Tag smaller rings or out-of-table moduli strictly as `PROTOTYPE_ALGEBRA_ONLY` with `claims_crypto_security: false`.
+| - ZK-STARKs: require extension-field challenges (`F_{p^2}+` for 64-bit base fields, `>= 100`-bit challenge field) and explicitly report BOTH `conjectured_soundness_bits` and `proven_johnson_bits` (consistent with FRI queries, blowup and grinding). Tag `< 100`-bit configs strictly as `PROTOTYPE_ONLY` with `claims_crypto_security: false`.
+| - Lean 4 proofs: require `0 sorry`, `0 native_decide` (no `sorryAx`, `Lean.ofReduceBool`, `Lean.trustCompiler`), standard core axioms only (`[propext, Classical.choice, Quot.sound]` or empty), and at least one executed broken-model negative control confirming refutation.
+| - GPU silicon scope and telemetry: label passing GPU receipts explicitly as `MICROKERNEL_SASS_PASS` (for `<= 512 B` arithmetic/SASS probes) or `FULL_WORKLOAD_GPU_PASS` (for full GEMM/attention/transformer runs with scale metadata); never conflate micro-kernels with full workloads, preserve `PASS / FAIL / NOT_RUN / BLOCKED_HARDWARE` discipline, and require `XID_DELTA=0` telemetry on every passing GPU receipt.
+| - Pre-publish URL check: before generating release notes or README tables, run `omega-receipt-lint urls` (or `omega lint-urls`) and verify every referenced external URL (including `interplane.io` and GitHub mirrors) returns HTTP 200.
+end

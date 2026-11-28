@@ -1,0 +1,16 @@
+{
+  "category": "zk_stark",
+  "scheme": "FRI-STARK",
+  "base_field": "Goldilocks",
+  "base_field_bits": 64,
+  "challenge_field": "F_{p^2}",
+  "extension_degree": 2,
+  "fri_queries": 16,
+  "blowup_factor": 8,
+  "conjectured_soundness_bits": 48,
+  "proven_johnson_bits": 24,
+  "tag": "PROTOTYPE_ONLY",
+  "claims_crypto_security": false,
+  "verdict": "PASS",
+  "summary": "16-query STARK algebraic smoke test; prototype only, no cryptographic security."
+}

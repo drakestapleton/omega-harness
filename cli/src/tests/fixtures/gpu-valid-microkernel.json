@@ -1,0 +1,10 @@
+{
+  "category": "gpu_silicon",
+  "sm_arch": "sm_121",
+  "verdict": "PASS",
+  "workload_scope": "MICROKERNEL_SASS_PASS",
+  "workload_kind": "arithmetic_microkernel",
+  "payload_bytes": 512,
+  "xid_delta": 0,
+  "summary": "512B sm_121 arithmetic SASS micro-kernel verified on GB10 with XID_DELTA=0."
+}

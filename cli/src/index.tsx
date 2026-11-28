@@ -18,6 +18,13 @@ import {
 import { probeInkling } from './inkling.js';
 import { rebuildSparkInkling, stackDown, stackUp } from './stack.js';
 import { TOOL_DECLARATIONS } from './tools.js';
+import {
+  checkUrlsHttp200,
+  formatLintReport,
+  formatUrlCheckReport,
+  lintPrePublishUrls,
+  lintReceiptPaths,
+} from './receipt-linter.js';
 import { OmegaAgent } from './agent.js';
 import { App } from './ui/App.js';
 
@@ -30,6 +37,8 @@ interface ParsedArgs {
   showStatus: boolean;
   resumeSession?: string;
   stackCommand?: 'up' | 'down' | 'rebuild';
+  lintCommand?: 'lint-receipt' | 'lint-urls';
+  jsonOutput: boolean;
   launchAfterUp: boolean;
   rebuildOnUp: boolean;
   sparkHost: string;
@@ -52,6 +61,7 @@ function parseArgs(argv: string[]): ParsedArgs {
     listTools: false,
     showPin: false,
     showStatus: false,
+    jsonOutput: false,
     launchAfterUp: false,
     rebuildOnUp: false,
     sparkHost: process.env.OMEGA_SPARK_HOST || 'spark',
@@ -75,6 +85,9 @@ function parseArgs(argv: string[]): ParsedArgs {
     out.stackCommand = 'up';
     out.launchAfterUp = true;
     startIdx = 1;
+  } else if (argv[0] === 'lint-receipt' || argv[0] === 'lint-urls') {
+    out.lintCommand = argv[0];
+    startIdx = 1;
   }
 
   for (let i = startIdx; i < argv.length; i++) {
@@ -91,6 +104,8 @@ function parseArgs(argv: string[]): ParsedArgs {
       out.showPin = true;
     } else if (a === '--status') {
       out.showStatus = true;
+    } else if (a === '--json') {
+      out.jsonOutput = true;
     } else if (a === '--launch') {
       out.launchAfterUp = true;
     } else if (a === '--rebuild') {
@@ -141,6 +156,8 @@ function printHelp(): void {
   console.log('  omega rebuild                         Recompile pure-Omega inkling2-serve on Spark');
   console.log('  omega --status                        Check Inkling-2-Mini health, KV slots & Arboris hits');
   console.log('  omega -p "<prompt>"                   Non-interactive headless mode (supports piped stdin)');
+  console.log('  omega lint-receipt <path...> [--json] Run 2026-11-28 audit receipt linter (FHE/STARK/Lean/GPU)');
+  console.log('  omega lint-urls <file|url...> [--json] Verify every external URL returns HTTP 200 before publishing');
   console.log('  omega config set endpoint <url>       Save default Inkling HTTP endpoint');
   console.log('  omega config set provider <name>      Save default provider (inkling | gemini)');
   console.log('');
@@ -154,7 +171,7 @@ function printHelp(): void {
   console.log('      --omega-only        Restrict writes to .om / NOTES.md with auto-omc checks');
   console.log('  -s, --skill <name>      Pin an Omega Harness skill into the system prompt (repeatable)');
   console.log('      --status            Probe Inkling server health and exit');
-  console.log('      --tools             List all 27 available agent tools and exit');
+  console.log('      --tools             List all available agent tools and exit');
   console.log('      --skills            List all available Omega Harness skills and exit');
   console.log('      --pin               Show omega-harness PIN and local omc status and exit');
   console.log('      --api-key <key>     Optional bearer token (Inkling) or Gemini API key');
@@ -281,6 +298,51 @@ async function main(): Promise<void> {
     apiKey: args.apiKey,
     approvalMode: args.approvalMode,
   });
+
+  if (args.lintCommand === 'lint-receipt') {
+    if (args.positional.length === 0) {
+      const msg = 'Usage: omega lint-receipt <file|dir...> [--json]';
+      console.error(args.jsonOutput ? JSON.stringify({ ok: false, error: msg }) : msg);
+      process.exit(2);
+    }
+    const report = lintReceiptPaths(args.positional);
+    console.log(args.jsonOutput ? JSON.stringify(report, null, 2) : formatLintReport(report));
+    if (!report.ok) process.exit(1);
+    return;
+  }
+
+  if (args.lintCommand === 'lint-urls') {
+    if (args.positional.length === 0) {
+      const msg = 'Usage: omega lint-urls <file|url...> [--json]';
+      console.error(args.jsonOutput ? JSON.stringify({ ok: false, error: msg }) : msg);
+      process.exit(2);
+    }
+    const directUrls = args.positional.filter((t) => /^https?:\/\//i.test(t));
+    const files = args.positional.filter((t) => !/^https?:\/\//i.test(t));
+    const rep =
+      files.length > 0 && directUrls.length === 0
+        ? await lintPrePublishUrls(files)
+        : directUrls.length > 0 && files.length === 0
+          ? await checkUrlsHttp200(directUrls)
+          : await (async () => {
+              const r1 = await lintPrePublishUrls(files);
+              const r2 = await checkUrlsHttp200(directUrls);
+              const results = [...r1.results, ...r2.results];
+              const findings = [...r1.findings, ...r2.findings];
+              const passed = results.filter((r) => r.ok).length;
+              return {
+                ok: passed === results.length,
+                totalUrls: results.length,
+                passed,
+                failed: results.length - passed,
+                results,
+                findings,
+              };
+            })();
+    console.log(args.jsonOutput ? JSON.stringify(rep, null, 2) : formatUrlCheckReport(rep));
+    if (!rep.ok) process.exit(1);
+    return;
+  }
 
   if (args.stackCommand === 'rebuild') {
     const res = rebuildSparkInkling(args.sparkHost);

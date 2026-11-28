@@ -16,6 +16,13 @@ import {
   saveMemory,
   type TodoItem,
 } from './state.js';
+import {
+  checkUrlsHttp200,
+  formatLintReport,
+  formatUrlCheckReport,
+  lintPrePublishUrls,
+  lintReceiptPaths,
+} from './receipt-linter.js';
 
 export interface ToolContext {
   cwd: string;
@@ -54,6 +61,8 @@ export const READ_ONLY_TOOLS = new Set([
   'load_skill',
   'omega_pin',
   'omc_compile',
+  'lint_receipt',
+  'check_publish_urls',
 ]);
 
 export const EDIT_TOOLS = new Set(['write_file', 'edit_file', 'delete_file']);
@@ -388,6 +397,35 @@ export const TOOL_DECLARATIONS: FunctionDeclaration[] = [
     name: 'omega_pin',
     description: 'Inspect omega-harness PIN and compare it against local omc sha256.',
     parameters: { type: Type.OBJECT, properties: {} },
+  },
+  {
+    name: 'lint_receipt',
+    description:
+      'Run the static 2026-11-28 audit receipt linter (RLWE/BFV/FHE HES 128-bit floors, ZK-STARK extension-field & Johnson/conjectured soundness, Lean 4 0-sorry/0-native_decide/axioms/negative-controls, GPU MICROKERNEL_SASS_PASS vs FULL_WORKLOAD_GPU_PASS & XID_DELTA=0) on a file or directory.',
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        path: { type: Type.STRING, description: 'Path to a receipt file (.json/.md/.txt/.log) or directory' },
+      },
+      required: ['path'],
+    },
+  },
+  {
+    name: 'check_publish_urls',
+    description:
+      'Verify every external HTTP/HTTPS URL (including interplane.io and GitHub mirror links) in a README/release-notes file or explicit URL list returns HTTP 200 before publishing.',
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        path: { type: Type.STRING, description: 'Optional path to Markdown/text file to scan for URLs' },
+        urls: {
+          type: Type.ARRAY,
+          items: { type: Type.STRING },
+          description: 'Optional explicit list of URLs to check for HTTP 200',
+        },
+        timeout_ms: { type: Type.INTEGER, description: 'Per-URL timeout in ms (default 8000)' },
+      },
+    },
   },
 ];
 
@@ -1022,6 +1060,44 @@ export async function executeTool(
         ];
         const output = lines.join('\n');
         return { ok: true, output, preview: `PIN ${pin.omegaMvCommit?.slice(0, 8) || '?'} · omc ${pin.localOmcPath ? 'found' : 'missing'}` };
+      }
+
+      case 'lint_receipt': {
+        const target = resolvePath(ctx.cwd, String(args.path || ''));
+        if (!fs.existsSync(target)) {
+          return { ok: false, output: `Path not found: ${target}`, preview: `Missing: ${target}` };
+        }
+        const report = lintReceiptPaths([target]);
+        const output = formatLintReport(report);
+        return {
+          ok: report.ok,
+          output,
+          preview: `RECEIPT_LINT ${report.ok ? 'PASS' : 'FAIL'} (${report.filesChecked} files, ${report.errorCount} errors)`,
+        };
+      }
+
+      case 'check_publish_urls': {
+        const timeoutMs = Number(args.timeout_ms) || 8000;
+        const explicitUrls = Array.isArray(args.urls)
+          ? args.urls.filter((u): u is string => typeof u === 'string')
+          : [];
+        const filePath = args.path ? resolvePath(ctx.cwd, String(args.path)) : undefined;
+        if (!filePath && explicitUrls.length === 0) {
+          return {
+            ok: false,
+            output: 'Provide either path (file to scan) or urls (explicit URL array).',
+            preview: 'Missing path or urls',
+          };
+        }
+        const report = filePath
+          ? await lintPrePublishUrls([filePath], { timeoutMs })
+          : await checkUrlsHttp200(explicitUrls, { timeoutMs });
+        const output = formatUrlCheckReport(report);
+        return {
+          ok: report.ok,
+          output,
+          preview: `URL_CHECK ${report.ok ? 'PASS' : 'FAIL'} (${report.passed}/${report.totalUrls} HTTP 200)`,
+        };
       }
 
       default:

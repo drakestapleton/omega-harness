@@ -1,0 +1,11 @@
+{
+  "category": "lean4",
+  "lean_toolchain": "leanprover/lean4:v4.35.0",
+  "theorem": "dma_disjoint_safe",
+  "lean_run_code_success": true,
+  "trust": "incomplete",
+  "sorry_count": 1,
+  "native_decide_count": 0,
+  "axioms": ["propext", "sorryAx"],
+  "summary": "Lean check returned success:true with warning: declaration uses 'sorry'."
+}
